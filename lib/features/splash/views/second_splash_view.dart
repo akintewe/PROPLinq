@@ -9,20 +9,64 @@ class SecondSplashView extends StatefulWidget {
 }
 
 class _SecondSplashViewState extends State<SecondSplashView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _fadeController;
+  late AnimationController _logoMoveController;
+  late AnimationController _textSlideController;
+  
   late Animation<double> _fadeAnimation;
+  late Animation<Offset> _logoMoveAnimation;
+  late Animation<Offset> _textSlideAnimation;
+  late Animation<double> _textOpacityAnimation;
 
   @override
   void initState() {
     super.initState();
     
-    // Initialize fade animation
+    // Initialize animation controllers
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     
+    _logoMoveController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
+    _textSlideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    // Logo move animation (from center to left position)
+    _logoMoveAnimation = Tween<Offset>(
+      begin: const Offset(0.15, 0), // Start slightly right of final position
+      end: Offset.zero, // End at final position
+    ).animate(CurvedAnimation(
+      parent: _logoMoveController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    // Text slide animation (slide in from right)
+    _textSlideAnimation = Tween<Offset>(
+      begin: const Offset(0.5, 0), // Start from right
+      end: Offset.zero, // End at final position
+    ).animate(CurvedAnimation(
+      parent: _textSlideController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    // Text opacity animation
+    _textOpacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _textSlideController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // Fade out animation for transition to onboarding
     _fadeAnimation = Tween<double>(
       begin: 1.0,
       end: 0.0,
@@ -31,8 +75,11 @@ class _SecondSplashViewState extends State<SecondSplashView>
       curve: Curves.easeInOut,
     ));
     
-    // Start fade out after 2 seconds and navigate to onboarding
-    Future.delayed(const Duration(seconds: 2), () {
+    // Start animations with delays
+    _startAnimations();
+    
+    // Navigate to onboarding after delay
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         _fadeController.forward().then((_) {
           Navigator.of(context).pushReplacement(
@@ -49,10 +96,24 @@ class _SecondSplashViewState extends State<SecondSplashView>
       }
     });
   }
+  
+  void _startAnimations() {
+    // Start logo movement immediately
+    _logoMoveController.forward();
+    
+    // Start text slide in after a short delay
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        _textSlideController.forward();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _logoMoveController.dispose();
+    _textSlideController.dispose();
     super.dispose();
   }
 
@@ -66,36 +127,48 @@ class _SecondSplashViewState extends State<SecondSplashView>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
-              Image.asset(
-                'assets/icons/Layer_x0020_1.png',
-                width: 60,
-                height: 60,
+              // Animated Logo
+              SlideTransition(
+                position: _logoMoveAnimation,
+                child: Hero(
+                  tag: 'splash_logo',
+                  child: Image.asset(
+                    'assets/icons/Layer_x0020_1.png',
+                    width: 60,
+                    height: 60,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
-              // Text
-              RichText(
-                text: const TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'PROP',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A90E2), // Blue color
-                        letterSpacing: 1.0,
-                      ),
+              // Animated Text
+              SlideTransition(
+                position: _textSlideAnimation,
+                child: FadeTransition(
+                  opacity: _textOpacityAnimation,
+                  child: RichText(
+                    text: const TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'PROP',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4A90E2), // Blue color
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'LINQ',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4ECDC4), // Teal color
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
                     ),
-                    TextSpan(
-                      text: 'LINQ',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF4ECDC4), // Teal color
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],

@@ -42,7 +42,7 @@ class _SplashViewState extends State<SplashView>
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
                 return FadeTransition(opacity: animation, child: child);
               },
-              transitionDuration: const Duration(milliseconds: 500),
+              transitionDuration: const Duration(milliseconds: 1200),
             ),
           );
         });
@@ -63,10 +63,13 @@ class _SplashViewState extends State<SplashView>
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
-          child: Image.asset(
-            'assets/icons/Layer_x0020_1.png',
-            width: 120,
-            height: 120,
+          child: Hero(
+            tag: 'splash_logo',
+            child: Image.asset(
+              'assets/icons/Layer_x0020_1.png',
+              width: 120,
+              height: 120,
+            ),
           ),
         ),
       ),
