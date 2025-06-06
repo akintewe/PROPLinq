@@ -79,7 +79,7 @@ class _SecondSplashViewState extends State<SecondSplashView>
     _startAnimations();
     
     // Navigate to onboarding after delay
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) {
         _fadeController.forward().then((_) {
           Navigator.of(context).pushReplacement(
@@ -101,8 +101,8 @@ class _SecondSplashViewState extends State<SecondSplashView>
     // Start logo movement immediately
     _logoMoveController.forward();
     
-    // Start text slide in after a short delay
-    Future.delayed(const Duration(milliseconds: 400), () {
+    // Start text slide in after a shorter delay
+    Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) {
         _textSlideController.forward();
       }
@@ -124,52 +124,80 @@ class _SecondSplashViewState extends State<SecondSplashView>
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
-          child: Row(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Animated Logo
-              SlideTransition(
-                position: _logoMoveAnimation,
-                child: Hero(
-                  tag: 'splash_logo',
-                  child: Image.asset(
-                    'assets/icons/Layer_x0020_1.png',
-                    width: 60,
-                    height: 60,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Animated Text
-              SlideTransition(
-                position: _textSlideAnimation,
-                child: FadeTransition(
-                  opacity: _textOpacityAnimation,
-                  child: RichText(
-                    text: const TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'PROP',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4A90E2), // Blue color
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                        TextSpan(
-                          text: 'LINQ',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4ECDC4), // Teal color
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
+              // Logo and main text row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start, // Align to top
+                children: [
+                  // Hero animated logo
+                  SlideTransition(
+                    position: _logoMoveAnimation,
+                    child: Hero(
+                      tag: 'splash_logo',
+                      child: Image.asset(
+                        'assets/icons/Layer_x0020_1.png',
+                        width: 80, // Increased from 60 to 80
+                        height: 80, // Increased from 60 to 80
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 16), // Slightly more spacing
+                  // Animated PROPLINQ text and tagline column
+                  SlideTransition(
+                    position: _textSlideAnimation,
+                    child: FadeTransition(
+                      opacity: _textOpacityAnimation,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // PROPLINQ text
+                          RichText(
+                            text: const TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'PROP',
+                                  style: TextStyle(
+                                    fontSize: 40, // Increased from 32 to 40
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF4A90E2), // Blue color
+                                    letterSpacing: 1.0,
+                                    fontFamily: 'Gabarito',
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: 'LINQ',
+                                  style: TextStyle(
+                                    fontSize: 40, // Increased from 32 to 40
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF4ECDC4), // Teal color
+                                    letterSpacing: 1.0,
+                                    fontFamily: 'Gabarito',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 2), // Minimal spacing
+                          // Tagline
+                          const Text(
+                            '...your link to verified homes',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.normal,
+                              color: Color(0xFF4A90E2), // Same blue as PROP
+                              letterSpacing: 0.5,
+                              fontFamily: 'Gabarito',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
