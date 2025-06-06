@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_strings.dart';
-import 'features/home/views/home_view.dart';
+import 'features/splash/views/splash_view.dart';
 
 void main() {
   runApp(const PropLinqApp());
@@ -15,7 +15,7 @@ class PropLinqApp extends StatelessWidget {
     return MaterialApp(
       title: AppStrings.appName,
       theme: AppTheme.lightTheme,
-      home: const HomeView(),
+      home: const SplashView(),
       debugShowCheckedModeBanner: false,
     );
   }

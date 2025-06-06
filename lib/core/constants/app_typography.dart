@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 /// App Typography based on Figma Design System
 class AppTypography {
   AppTypography._();
 
-  // Base font family - update this based on your chosen font
-  static const String _fontFamily = 'Gabarito'; // iOS default, can be changed
-
   /// Heading 1 - This is PropLinq (36px)
-  static const TextStyle h1 = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle h1 = GoogleFonts.gabarito(
     fontSize: 36,
     fontWeight: FontWeight.w700, // Bold
     height: 1.2,
@@ -19,8 +16,7 @@ class AppTypography {
   );
 
   /// Heading 2 - This is PropLinq (32px)
-  static const TextStyle h2 = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle h2 = GoogleFonts.gabarito(
     fontSize: 32,
     fontWeight: FontWeight.w600, // Semi-bold
     height: 1.25,
@@ -29,18 +25,16 @@ class AppTypography {
   );
 
   /// Heading 3 - This is PropLinq (28px)
-  static const TextStyle h3 = TextStyle(
-    fontFamily: _fontFamily,
-    fontSize: 28,
-    fontWeight: FontWeight.w600, // Semi-bold
+  static TextStyle h3 = GoogleFonts.gabarito(
+    fontSize: 24,
+    fontWeight: FontWeight.w700, // Semi-bold
     height: 1.3,
     letterSpacing: -0.3,
     color: AppColors.onBackground,
   );
 
   /// Heading 4 - This is PropLinq (24px)
-  static const TextStyle h4 = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle h4 = GoogleFonts.gabarito(
     fontSize: 24,
     fontWeight: FontWeight.w600, // Semi-bold
     height: 1.35,
@@ -49,8 +43,7 @@ class AppTypography {
   );
 
   /// Heading 5 - This is PropLinq (20px)
-  static const TextStyle h5 = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle h5 = GoogleFonts.gabarito(
     fontSize: 20,
     fontWeight: FontWeight.w500, // Medium
     height: 1.4,
@@ -59,8 +52,7 @@ class AppTypography {
   );
 
   /// Heading 6 - This is PropLinq (18px)
-  static const TextStyle h6 = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle h6 = GoogleFonts.gabarito(
     fontSize: 18,
     fontWeight: FontWeight.w500, // Medium
     height: 1.45,
@@ -69,8 +61,7 @@ class AppTypography {
   );
 
   /// Body Large - Regular body text (16px)
-  static const TextStyle bodyLarge = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle bodyLarge = GoogleFonts.gabarito(
     fontSize: 16,
     fontWeight: FontWeight.w400, // Regular
     height: 1.5,
@@ -79,8 +70,7 @@ class AppTypography {
   );
 
   /// Body Medium - Medium body text (14px)
-  static const TextStyle bodyMedium = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle bodyMedium = GoogleFonts.gabarito(
     fontSize: 14,
     fontWeight: FontWeight.w400, // Regular
     height: 1.5,
@@ -89,8 +79,7 @@ class AppTypography {
   );
 
   /// Body Small - Small body text (12px)
-  static const TextStyle bodySmall = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle bodySmall = GoogleFonts.gabarito(
     fontSize: 12,
     fontWeight: FontWeight.w400, // Regular
     height: 1.5,
@@ -99,8 +88,7 @@ class AppTypography {
   );
 
   /// Caption - Caption text (11px)
-  static const TextStyle caption = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle caption = GoogleFonts.gabarito(
     fontSize: 11,
     fontWeight: FontWeight.w400, // Regular
     height: 1.4,
@@ -109,8 +97,7 @@ class AppTypography {
   );
 
   /// Label Large - Button and form labels (14px)
-  static const TextStyle labelLarge = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle labelLarge = GoogleFonts.gabarito(
     fontSize: 14,
     fontWeight: FontWeight.w500, // Medium
     height: 1.4,
@@ -119,8 +106,7 @@ class AppTypography {
   );
 
   /// Label Medium - Small button labels (12px)
-  static const TextStyle labelMedium = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle labelMedium = GoogleFonts.gabarito(
     fontSize: 12,
     fontWeight: FontWeight.w500, // Medium
     height: 1.3,
@@ -129,8 +115,7 @@ class AppTypography {
   );
 
   /// Label Small - Tiny labels (10px)
-  static const TextStyle labelSmall = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle labelSmall = GoogleFonts.gabarito(
     fontSize: 10,
     fontWeight: FontWeight.w500, // Medium
     height: 1.2,
@@ -139,8 +124,7 @@ class AppTypography {
   );
 
   // Specific text styles for PropLinq branding
-  static const TextStyle propLinqLogo = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle propLinqLogo = GoogleFonts.gabarito(
     fontSize: 24,
     fontWeight: FontWeight.w700, // Bold
     height: 1.2,
@@ -148,8 +132,7 @@ class AppTypography {
     color: AppColors.primary600,
   );
 
-  static const TextStyle propLinqTagline = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle propLinqTagline = GoogleFonts.gabarito(
     fontSize: 16,
     fontWeight: FontWeight.w400, // Regular
     height: 1.4,
