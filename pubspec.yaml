@@ -46,6 +46,9 @@ dependencies:
   
   # Path provider for Google Fonts caching
   path_provider: ^2.1.1
+  
+  # Video player for splash screen
+  video_player: ^2.8.1
 
 dev_dependencies:
   flutter_test:
@@ -73,6 +76,7 @@ flutter:
   assets:
   - assets/images/
   - assets/icons/
+  - assets/videos/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
