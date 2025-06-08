@@ -12,6 +12,7 @@ class CustomTextField extends StatefulWidget {
   final String? errorMessage;
   final bool showVisibilityToggle;
   final Widget? suffixIcon;
+  final Widget? prefixIcon;
   final Function(String)? onChanged;
   final VoidCallback? onTap;
   final bool readOnly;
@@ -29,6 +30,7 @@ class CustomTextField extends StatefulWidget {
     this.errorMessage,
     this.showVisibilityToggle = false,
     this.suffixIcon,
+    this.prefixIcon,
     this.onChanged,
     this.onTap,
     this.readOnly = false,
@@ -78,7 +80,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
               color: Color(0xFF868686),
             ),
             filled: true,
-            fillColor: const Color(0xFFFAFAFA),
+            fillColor: Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: const BorderSide(
@@ -109,7 +111,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                       width: 20,
                       height: 20,
                       colorFilter: const ColorFilter.mode(
-                        Color(0xFF868686),
+                        Colors.black,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -120,6 +122,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                     },
                   )
                 : widget.suffixIcon,
+            prefixIcon: widget.prefixIcon,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,

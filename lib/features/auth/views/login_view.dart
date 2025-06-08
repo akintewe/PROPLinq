@@ -5,6 +5,7 @@ import 'package:proplinq/core/constants/app_typography.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import 'forgot_password_view.dart';
+import 'sign_up_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -73,9 +74,8 @@ class _LoginViewState extends State<LoginView> {
   }
 
   void _signUp() {
-    // Navigate to sign up screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigate to Sign Up')),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const SignUpView()),
     );
   }
 
