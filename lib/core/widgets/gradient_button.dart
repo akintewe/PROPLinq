@@ -15,7 +15,7 @@ class GradientButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 335,
+      width: double.infinity,
       height: 45,
       child: DecoratedBox(
         decoration: BoxDecoration(

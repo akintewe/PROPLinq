@@ -65,11 +65,34 @@ class _SecondSplashViewState extends State<SecondSplashView> {
             ),
           ),
           
-          // Logo at the bottom
+          // Dark gradient overlay at the bottom
           Positioned(
             left: 0,
             right: 0,
-            bottom: 40,
+            bottom: 0,
+            height: 200, // Height of gradient overlay
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.7),
+                    Colors.black.withOpacity(0.9),
+                  ],
+                  stops: const [0.0, 0.4, 0.8, 1.0],
+                ),
+              ),
+            ),
+          ),
+          
+          // Logo at the bottom - positioned higher
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 80, // Moved up from 40 to 80
             child: Center(
               child: Hero(
                 tag: 'splash_logo',

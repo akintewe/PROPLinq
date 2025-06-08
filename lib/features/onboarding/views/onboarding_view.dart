@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/constants/app_typography.dart';
 import '../../home/views/home_view.dart';
+import '../../auth/views/login_view.dart';
 import '../../../core/widgets/gradient_button.dart';
 
 class OnboardingView extends StatefulWidget {
@@ -49,7 +50,7 @@ class _OnboardingViewState extends State<OnboardingView> {
 
   void _navigateToHome() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const HomeView()),
+      MaterialPageRoute(builder: (context) => const LoginView()),
     );
   }
 
