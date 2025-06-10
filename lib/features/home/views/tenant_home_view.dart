@@ -82,25 +82,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          Color(0xFF426DC2),
-                          Color(0xFF63ADDC),
-                          Color(0xFF75CFEA),
-                        ],
-                        stops: [0.0, 1.0, 1.0],
+                      image: const DecorationImage(
+                        image: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'),
+                        fit: BoxFit.cover,
                       ),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'JD',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
+                      border: Border.all(
+                        color: const Color(0xFFECF0F9),
+                        width: 2,
                       ),
                     ),
                   ),
