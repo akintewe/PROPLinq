@@ -44,7 +44,7 @@ class _SecondSplashViewState extends State<SecondSplashView> {
           // Animated GIF background - covers full screen
           SizedBox.expand(
             child: Image.asset(
-              'assets/videos/splash_animation.gif',
+              'assets/videos/7578838-uhd_2160_3840_30fps.gif',
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 // Fallback in case GIF fails to load

@@ -6,6 +6,8 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import 'forgot_password_view.dart';
 import 'sign_up_view.dart';
+import '../../home/views/tenant_home_view.dart';
+import '../../home/views/agent_home_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -46,24 +48,67 @@ class _LoginViewState extends State<LoginView> {
         _hasError = false;
         _errorMessage = '';
       });
-      // Navigate to home or handle successful login
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login successful!')),
+      
+      // Navigate based on email content (temporary logic)
+      _navigateToHome();
+    }
+  }
+
+  void _navigateToHome() {
+    final email = _emailController.text.toLowerCase();
+    
+    // Temporary routing logic based on email content
+    if (email.contains('agent')) {
+      // Navigate to agent home
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const AgentHomeView(),
+        ),
+      );
+    } else if (email.contains('tenant')) {
+      // Navigate to tenant home
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const TenantHomeView(),
+        ),
+      );
+    } else {
+      // Default to tenant home
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const TenantHomeView(),
+        ),
       );
     }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Login successful!')),
+    );
   }
 
   void _continueWithGoogle() {
     // Handle Google sign in
+    // For demo purposes, navigate to tenant home (since no email input for social login)
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const TenantHomeView(),
+      ),
+    );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Continue with Google')),
+      const SnackBar(content: Text('Continue with Google - Navigated to Tenant Home')),
     );
   }
 
   void _continueWithApple() {
     // Handle Apple sign in
+    // For demo purposes, navigate to tenant home (since no email input for social login)
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const TenantHomeView(),
+      ),
+    );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Continue with Apple')),
+      const SnackBar(content: Text('Continue with Apple - Navigated to Tenant Home')),
     );
   }
 

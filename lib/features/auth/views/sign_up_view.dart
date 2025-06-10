@@ -6,6 +6,8 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import 'login_view.dart';
 import 'email_verification_view.dart';
+import '../../home/views/tenant_home_view.dart';
+import '../../home/views/agent_home_view.dart';
 
 class SignUpView extends StatefulWidget {
   const SignUpView({super.key});
@@ -73,27 +75,72 @@ class _SignUpViewState extends State<SignUpView> {
       return;
     }
     
-    // Navigate to email verification screen
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => EmailVerificationView(
-          email: _emailController.text.isEmpty 
-              ? 'johndoe22@gmail.com' 
-              : _emailController.text,
+    // For demo purposes, navigate directly to appropriate home based on user type
+    _navigateToHome();
+  }
+
+  void _navigateToHome() {
+    // Navigate based on user type selection (temporary logic)
+    if (_isHomeSeeker) {
+      // Navigate to tenant home
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const TenantHomeView(),
         ),
+      );
+    } else {
+      // Navigate to agent home
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const AgentHomeView(),
+        ),
+      );
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Sign up successful! Welcome ${_isHomeSeeker ? 'Home Seeker' : 'Agent'}!'),
       ),
     );
   }
 
   void _continueWithGoogle() {
+    // For demo purposes, navigate to appropriate home based on current selection
+    if (_isHomeSeeker) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const TenantHomeView(),
+        ),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const AgentHomeView(),
+        ),
+      );
+    }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Continue with Google')),
+      SnackBar(content: Text('Continue with Google - Welcome ${_isHomeSeeker ? 'Home Seeker' : 'Agent'}!')),
     );
   }
 
   void _continueWithApple() {
+    // For demo purposes, navigate to appropriate home based on current selection
+    if (_isHomeSeeker) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const TenantHomeView(),
+        ),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const AgentHomeView(),
+        ),
+      );
+    }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Continue with Apple')),
+      SnackBar(content: Text('Continue with Apple - Welcome ${_isHomeSeeker ? 'Home Seeker' : 'Agent'}!')),
     );
   }
 
