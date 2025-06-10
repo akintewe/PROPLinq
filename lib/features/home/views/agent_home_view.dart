@@ -147,10 +147,13 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     width: 1,
                   ),
                 ),
-                child: const Icon(
-                  Icons.notifications_outlined,
-                  color: Color(0xFF426DC2),
-                  size: 20,
+                child: SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: SvgPicture.asset(
+                    'assets/icons/notification (2).svg',
+                    fit: BoxFit.scaleDown,
+                  ),
                 ),
               ),
             ],
@@ -158,62 +161,72 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           
           const SizedBox(height: 24),
           
-          // Search bar
+          // Row with search bar and filter button
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: const Color(0xFFECF0F9),
-                      width: 1,
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search properties or hotels',
+                                      hintStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFFB0B5BB), // rgba(176, 181, 187, 1)
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFFAFAFA), // rgba(250, 250, 250, 1)
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                                      prefixIcon: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SvgPicture.asset(
+                      'assets/icons/search-normal (1).svg',
+                      width: 20,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF868686),
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search properties or hotels',
-                      hintStyle: TextStyle(
-                        color: Color(0xFF868686),
-                        fontSize: 14,
+                    suffixIcon: Container(
+                      margin: const EdgeInsets.all(8),
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            Color(0xFF426DC2),
+                            Color(0xFF63ADDC),
+                            Color(0xFF75CFEA),
+                          ],
+                          stops: [0.0, 1.0, 1.0],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: Color(0xFF868686),
-                        size: 20,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                      child: const Icon(
+                        Icons.tune,
+                        color: Colors.white,
+                        size: 16,
                       ),
                     ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Color(0xFF426DC2),
-                      Color(0xFF63ADDC),
-                      Color(0xFF75CFEA),
-                    ],
-                    stops: [0.0, 1.0, 1.0],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Icon(
-                  Icons.tune,
-                  color: Colors.white,
-                  size: 20,
                 ),
               ),
             ],
@@ -226,11 +239,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   }
 
   Widget _buildFeaturedSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: Column(
-        children: [
-          Row(
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
@@ -254,23 +267,24 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               ),
             ],
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Featured properties carousel
-          SizedBox(
-            height: 176,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: 3,
-              separatorBuilder: (context, index) => const SizedBox(width: 16),
-              itemBuilder: (context, index) {
-                return _buildFeaturedPropertyCard(index);
-              },
-            ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Featured properties carousel
+        SizedBox(
+          height: 176,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(left: 24.0, right: 0),
+            itemCount: 3,
+            separatorBuilder: (context, index) => const SizedBox(width: 16),
+            itemBuilder: (context, index) {
+              return _buildFeaturedPropertyCard(index);
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -424,12 +438,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.star,
-                            size: 16,
-                            color: Colors.orange,
-                          ),
-                          const SizedBox(width: 4),
+                       
                           Text(
                             properties['rating']!,
                             style: const TextStyle(
@@ -437,6 +446,13 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                               color: Colors.white,
                             ),
                           ),
+                             const SizedBox(width: 4),
+                             const Icon(
+                            Icons.star,
+                            size: 16,
+                            color: Colors.green,
+                          ),
+                       
                           const Spacer(),
                           Text(
                             properties['price']!,
@@ -458,7 +474,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4CAF50),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -467,15 +483,15 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                         const Icon(
                           Icons.verified,
                           size: 14,
-                          color: Colors.white,
+                          color: Colors.green,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           properties['badge']!,
                           style: const TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black,
                           ),
                         ),
                       ],
@@ -496,7 +512,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     child: const Icon(
                       Icons.favorite_border,
                       size: 18,
-                      color: Color(0xFF868686),
+                      color: Colors.black,
                     ),
                   ),
                 ),
@@ -771,12 +787,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(width: 4),
+                   
                       Text(
                         properties['rating'] as String,
                         style: const TextStyle(
@@ -784,6 +795,13 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                           color: Color(0xFF868686),
                         ),
                       ),
+                          const SizedBox(width: 4),
+                         const Icon(
+                        Icons.star,
+                        size: 16,
+                        color: Colors.green,
+                      ),
+                  
                       const Spacer(),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
