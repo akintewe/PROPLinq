@@ -232,7 +232,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             ],
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 7),
         ],
       ),
     );
@@ -300,15 +300,25 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                   color: Colors.black,
                 ),
               ),
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'View all',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF426DC2),
-                  ),
+              Transform.translate(
+                offset: Offset(20, 0),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        'View all',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF426DC2),
+                        ),
+                      ),
+                    ),
+                     Transform.translate(
+                      offset: Offset(-20, 0),
+                      child: Icon(Icons.arrow_forward, size: 16, color: Color(0xFF426DC2),)),
+                  ],
                 ),
               ),
             ],

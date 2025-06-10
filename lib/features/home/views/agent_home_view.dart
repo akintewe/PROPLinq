@@ -232,7 +232,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             ],
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 7),
         ],
       ),
     );
@@ -254,17 +254,29 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   color: Colors.black,
                 ),
               ),
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'View all',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF426DC2),
-                  ),
+       
+              Transform.translate(
+                offset: Offset(20, 0),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        'View all',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF426DC2),
+                        ),
+                      ),
+                    ),
+                     Transform.translate(
+                      offset: Offset(-20, 0),
+                      child: Icon(Icons.arrow_forward, size: 16, color: Color(0xFF426DC2),)),
+                  ],
                 ),
               ),
+             
             ],
           ),
         ),
@@ -418,11 +430,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Colors.white,
-                          ),
+                            SvgPicture.asset(
+                    'assets/icons/location (3).svg',
+                    width: 16,
+                    height: 16,
+                   ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -767,11 +779,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.location_on,
-                        size: 16,
-                        color: Color(0xFF868686),
-                      ),
+                         SvgPicture.asset(
+                    'assets/icons/location (3).svg',
+                    width: 16,
+                    height: 16,
+                   ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
