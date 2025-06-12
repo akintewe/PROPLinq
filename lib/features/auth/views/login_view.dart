@@ -81,9 +81,9 @@ class _LoginViewState extends State<LoginView> {
       );
     }
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Login successful!')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login successful!')),
+      );
   }
 
   void _continueWithGoogle() {

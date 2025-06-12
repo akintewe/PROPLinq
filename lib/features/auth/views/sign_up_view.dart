@@ -91,7 +91,7 @@ class _SignUpViewState extends State<SignUpView> {
     } else {
       // Navigate to agent home
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
+      MaterialPageRoute(
           builder: (context) => const AgentHomeView(),
         ),
       );
