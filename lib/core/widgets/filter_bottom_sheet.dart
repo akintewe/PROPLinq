@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'gradient_button.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final Function(Map<String, dynamic>) onFiltersApplied;
@@ -173,6 +174,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                 keyboardType: TextInputType.number,
                                 decoration: const InputDecoration(
                                   border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                  errorBorder: InputBorder.none,
+                                  focusedErrorBorder: InputBorder.none,
                                   hintText: '0',
                                   hintStyle: TextStyle(
                                     color: Color(0xFF868686),
@@ -225,6 +231,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                 keyboardType: TextInputType.number,
                                 decoration: const InputDecoration(
                                   border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                  errorBorder: InputBorder.none,
+                                  focusedErrorBorder: InputBorder.none,
                                   hintText: '0',
                                   hintStyle: TextStyle(
                                     color: Color(0xFF868686),
@@ -268,19 +279,26 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(
                         color: const Color(0xFF426DC2),
                         width: 1,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          color: Color(0xFF868686),
-                          size: 20,
+                        SvgPicture.asset(
+                          'assets/icons/location.svg',
+                          width: 20,
+                          height: 20,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -288,6 +306,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                             controller: _locationController,
                             decoration: const InputDecoration(
                               border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
                               hintText: 'Enter location',
                               hintStyle: TextStyle(
                                 color: Color(0xFF868686),
@@ -393,6 +416,25 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   }
 
   Widget _buildCategoryChip(String title, bool isSelected) {
+    String? svgAsset;
+    Color? iconColor;
+    switch (title) {
+      case 'Real Estate':
+        svgAsset = 'assets/icons/emojione_houses.svg';
+       // blue
+        break;
+      case 'Hotels':
+        svgAsset = 'assets/icons/emojione_houses.svg'; 
+      
+        break;
+      case 'Shortlets':
+        svgAsset = 'assets/icons/emojione_houses.svg'; // placeholder, replace with correct shortlet SVG if available
+     
+        break;
+      default:
+        svgAsset = null;
+        iconColor = null;
+    }
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -424,52 +466,13 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (title == 'Real Estate')
-              Container(
+            if (svgAsset != null)
+              SvgPicture.asset(
+                svgAsset,
                 width: 16,
                 height: 16,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : const Color(0xFF426DC2),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Icon(
-                  Icons.business,
-                  size: 10,
-                  color: isSelected ? const Color(0xFF426DC2) : Colors.white,
-                ),
               ),
-            if (title == 'Hotels')
-              Container(
-                width: 16,
-                height: 16,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : const Color(0xFFE91E63),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Icon(
-                  Icons.hotel,
-                  size: 10,
-                  color: isSelected ? const Color(0xFFE91E63) : Colors.white,
-                ),
-              ),
-            if (title == 'Shortlets')
-              Container(
-                width: 16,
-                height: 16,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : const Color(0xFF4CAF50),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Icon(
-                  Icons.apartment,
-                  size: 10,
-                  color: isSelected ? const Color(0xFF4CAF50) : Colors.white,
-                ),
-              ),
-            if (title == 'Real Estate' || title == 'Hotels' || title == 'Shortlets') const SizedBox(width: 6),
+            if (svgAsset != null) const SizedBox(width: 6),
             Text(
               title,
               style: TextStyle(

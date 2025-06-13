@@ -33,7 +33,7 @@ class _OnboardingViewState extends State<OnboardingView> {
     OnboardingPage(
       title: 'Rent-now, Pay Later',
       subtitle: 'Get the home you want and pay in\n flexible installments.',
-      imagePath: 'assets/images/53dcb97b346979c9bc8fb130d10122d4f378270c.png', // Placeholder for woman with keys
+      imagePath: 'assets/images/Frame 148.png', // Updated image for third onboarding screen
     ),
   ];
 

@@ -6,6 +6,7 @@ import 'settings_view.dart';
 import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
+import 'package:proplinq/features/home/views/property_details_view.dart';
 
 class TenantHomeView extends StatefulWidget {
   const TenantHomeView({super.key});
@@ -784,163 +785,170 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       },
     ][index];
     
-    return SizedBox(
-      width: 284,
-      height: 176,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(properties['image']!),
-                fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+        );
+      },
+      child: SizedBox(
+        width: 284,
+        height: 176,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-            ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
             child: Container(
+              width: double.infinity,
+              height: double.infinity,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.7),
-                  ],
+                image: DecorationImage(
+                  image: NetworkImage(properties['image']!),
+                  fit: BoxFit.cover,
                 ),
               ),
-              child: Stack(
-                children: [
-                  // Property title and details overlay
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          properties['title']!,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.7),
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // Property title and details overlay
+                    Positioned(
+                      bottom: 16,
+                      left: 16,
+                      right: 16,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            properties['title']!,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                          SvgPicture.asset(
-                    'assets/icons/location (3).svg',
-                    width: 16,
-                    height: 16,
-                   ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                properties['location']!,
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                            SvgPicture.asset(
+                      'assets/icons/location (3).svg',
+                      width: 16,
+                      height: 16,
+                     ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  properties['location']!,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                             
+                              Text(
+                                properties['rating']!,
                                 style: const TextStyle(
                                   fontSize: 13,
                                   color: Colors.white,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                           
-                            Text(
-                              properties['rating']!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.white,
+                                 const SizedBox(width: 4),
+                               const Icon(
+                                Icons.star,
+                                size: 16,
+                                color: Colors.green,
                               ),
-                            ),
-                               const SizedBox(width: 4),
-                             const Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Colors.green,
-                            ),
-                         
-                            const Spacer(),
-                            Text(
-                              properties['price']!,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                             
+                              const Spacer(),
+                              Text(
+                                properties['price']!,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Badge
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.verified,
-                            size: 14,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            properties['badge']!,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black,
-                            ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  // Favorite button
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border,
-                        size: 18,
-                        color: Colors.black,
+                    // Badge
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.verified,
+                              size: 14,
+                              color: Colors.green,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              properties['badge']!,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    // Favorite button
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.favorite_border,
+                          size: 18,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1063,428 +1071,442 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       },
     ][index];
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          children: [
-            // Property image
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(properties['image'] as String),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.3),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Badges
-                    Positioned(
-                      top: 16,
-                      left: 16,
-                      child: Row(
-                        children: (properties['badges'] as List<String>).map((badge) {
-                          return Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: badge == 'For sale' 
-                                  ? Colors.white
-                                  :  Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (badge == 'Verified Agent')
-                                  const Icon(
-                                    Icons.verified,
-                                    size: 14,
-                                    color: Colors.green,
-                                  ),
-                                if (badge == 'Verified Agent') const SizedBox(width: 4),
-                                Text(
-                                  badge,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    // Favorite button
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.favorite_border,
-                          size: 18,
-                          color: Color(0xFF868686),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            
-            // Property details
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            children: [
+              // Property image
+              Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(properties['image'] as String),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.3),
+                      ],
+                    ),
+                  ),
+                  child: Stack(
                     children: [
-                      Expanded(
-                        child: Text(
-                          properties['title'] as String,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
+                      // Badges
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: Row(
+                          children: (properties['badges'] as List<String>).map((badge) {
+                            return Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: badge == 'For sale' 
+                                    ? Colors.white
+                                    :  Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (badge == 'Verified Agent')
+                                    const Icon(
+                                      Icons.verified,
+                                      size: 14,
+                                      color: Colors.green,
+                                    ),
+                                  if (badge == 'Verified Agent') const SizedBox(width: 4),
+                                  Text(
+                                    badge,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECF0F9),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          properties['type'] as String,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF426DC2),
+                      // Favorite button
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.favorite_border,
+                            size: 18,
+                            color: Color(0xFF868686),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      SvgPicture.asset(
-                        'assets/icons/location.svg',
-                        width: 16,
-                        height: 16,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Color(0xFF868686),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          properties['location'] as String,
+                ),
+              ),
+              
+              // Property details
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            properties['title'] as String,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECF0F9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            properties['type'] as String,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF426DC2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        SvgPicture.asset(
+                          'assets/icons/location.svg',
+                          width: 16,
+                          height: 16,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.location_on,
+                              size: 16,
+                              color: Color(0xFF868686),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            properties['location'] as String,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF868686),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          properties['rating'] as String,
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFF868686),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Text(
-                        properties['rating'] as String,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF868686),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.star,
+                          size: 16,
+                          color: Colors.green,
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Colors.green,
-                      ),
-                      const Spacer(),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            properties['price'] as String,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF426DC2),
-                            ),
-                          ),
-                          if (properties.containsKey('period'))
+                        const Spacer(),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
                             Text(
-                              properties['period'] as String,
+                              properties['price'] as String,
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
                                 color: Color(0xFF426DC2),
                               ),
                             ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                            if (properties.containsKey('period'))
+                              Text(
+                                properties['period'] as String,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF426DC2),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildSearchPropertyCard(Map<String, dynamic> property) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          children: [
-            // Property image
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(property['image'] as String),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.3),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Badges
-                    Positioned(
-                      top: 16,
-                      left: 16,
-                      child: Row(
-                        children: (property['badges'] as List<String>).map((badge) {
-                          return Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (badge == 'Verified Agent')
-                                  const Icon(
-                                    Icons.verified,
-                                    size: 14,
-                                    color: Colors.green,
-                                  ),
-                                if (badge == 'Verified Agent') const SizedBox(width: 4),
-                                Text(
-                                  badge,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    // Favorite button
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.favorite_border,
-                          size: 18,
-                          color: Color(0xFF868686),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            
-            // Property details
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            children: [
+              // Property image
+              Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(property['image'] as String),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.3),
+                      ],
+                    ),
+                  ),
+                  child: Stack(
                     children: [
-                      Expanded(
-                        child: Text(
-                          property['title'] as String,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
+                      // Badges
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: Row(
+                          children: (property['badges'] as List<String>).map((badge) {
+                            return Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (badge == 'Verified Agent')
+                                    const Icon(
+                                      Icons.verified,
+                                      size: 14,
+                                      color: Colors.green,
+                                    ),
+                                  if (badge == 'Verified Agent') const SizedBox(width: 4),
+                                  Text(
+                                    badge,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECF0F9),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          property['type'] as String,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF426DC2),
+                      // Favorite button
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.favorite_border,
+                            size: 18,
+                            color: Color(0xFF868686),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      SvgPicture.asset(
-                        'assets/icons/location.svg',
-                        width: 16,
-                        height: 16,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Color(0xFF868686),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          property['location'] as String,
+                ),
+              ),
+              
+              // Property details
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            property['title'] as String,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECF0F9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            property['type'] as String,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF426DC2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        SvgPicture.asset(
+                          'assets/icons/location.svg',
+                          width: 16,
+                          height: 16,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.location_on,
+                              size: 16,
+                              color: Color(0xFF868686),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            property['location'] as String,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF868686),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          property['rating'] as String,
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFF868686),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Text(
-                        property['rating'] as String,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF868686),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.star,
+                          size: 16,
+                          color: Colors.green,
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Colors.green,
-                      ),
-                      const Spacer(),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            property['price'] as String,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF426DC2),
-                            ),
-                          ),
-                          if (property.containsKey('period'))
+                        const Spacer(),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
                             Text(
-                              property['period'] as String,
+                              property['price'] as String,
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
                                 color: Color(0xFF426DC2),
                               ),
                             ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                            if (property.containsKey('period'))
+                              Text(
+                                property['period'] as String,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF426DC2),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
