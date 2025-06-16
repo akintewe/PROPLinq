@@ -59,33 +59,19 @@ class _SplashViewState extends State<SplashView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background image
-          Image.asset(
-            'assets/images/image_2025-06-12_093807951 1.png',
-            fit: BoxFit.cover,
-          ),
-          // Green overlay
-          Container(
-            color: const Color(0xFF66F3C0).withOpacity(0.9),
-          ),
-          // Centered logo with fade animation
-          Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Hero(
-                tag: 'splash_logo',
-                child: Image.asset(
-                  'assets/icons/Layer_x0020_1.png',
-                  width: 120,
-                  height: 120,
-                ),
-              ),
+      backgroundColor: Colors.white,
+      body: Center(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Hero(
+            tag: 'splash_logo',
+            child: Image.asset(
+              'assets/icons/Layer_x0020_1.png',
+              width: 120,
+              height: 120,
             ),
           ),
-        ],
+        ),
       ),
     );
   }

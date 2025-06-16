@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:proplinq/core/constants/app_colors.dart';
+import 'package:proplinq/features/finance/views/rent_now_pay_later_view.dart';
 
 class PropertyDetailsView extends StatefulWidget {
-  const PropertyDetailsView({super.key});
+  final Map<String, dynamic>? propertyData;
+  
+  const PropertyDetailsView({super.key, this.propertyData});
 
   @override
   State<PropertyDetailsView> createState() => _PropertyDetailsViewState();
@@ -25,8 +29,35 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     super.dispose();
   }
 
+  Map<String, dynamic> _getDefaultProperty() {
+    return {
+      'badges': ['Verified Agent'],
+      'title': '3-Bedroom Apartment',
+      'location': 'Lekki Phase 1, Lagos Nigeria',
+      'rating': '(5.0)',
+      'price': '#2,500,000',
+      'type': 'Apartment',
+      'category': 'Real Estate',
+      'description': 'Step into luxury with this fully furnished 3-bedroom apartment located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+      'agent': {
+        'name': 'James Mark',
+        'title': 'Agent',
+        'phone': '09011111111',
+        'email': 'jamesmark@gmail.com',
+        'whatsapp': '08111111111',
+      },
+      'features': ['3-bedroom', '3 Bathrooms', 'Dedicated Parking', 'Gated & Secured Estate'],
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Get property data or use defaults
+    final property = widget.propertyData ?? _getDefaultProperty();
+    final isHotel = property['type'] == 'Hotel';
+    final category = property['category'] as String? ?? 'Real Estate';
+    final isForSale = (property['badges'] as List<String>?)?.contains('For sale') ?? false;
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -82,7 +113,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                 ),
                                 child: const Icon(
                                   Icons.arrow_back,
-                                  color: Colors.black,
+                                  color: Color(0xFF426DC2),
                                   size: 20,
                                 ),
                               ),
@@ -100,7 +131,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                   ),
                                   child: const Icon(
                                     Icons.share,
-                                    color: Colors.black,
+                                    color: Color(0xFF426DC2),
                                     size: 20,
                                   ),
                                 ),
@@ -114,7 +145,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                   ),
                                   child: const Icon(
                                     Icons.favorite_border,
-                                    color: Colors.black,
+                                    color: Color(0xFF426DC2),
                                     size: 20,
                                   ),
                                 ),
@@ -172,21 +203,42 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Property badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFECF0F9),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Apartment',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF426DC2),
-                              ),
-                            ),
+                          // Property badges
+                          Row(
+                            children: (property['badges'] as List<String>).map((badge) {
+                              return Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: badge == 'For sale' 
+                                      ? const Color(0xFFE8F5E8)
+                                      : const Color(0xFFECF0F9),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (badge == 'Verified Agent')
+                                      const Icon(
+                                        Icons.verified,
+                                        size: 14,
+                                        color: Colors.green,
+                                      ),
+                                    if (badge == 'Verified Agent') const SizedBox(width: 4),
+                                    Text(
+                                      badge,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: badge == 'For sale' 
+                                            ? const Color(0xFF2E7D32)
+                                            : const Color(0xFF426DC2),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
                           
                           const SizedBox(height: 20),
@@ -195,10 +247,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Expanded(
+                              Expanded(
                                 child: Text(
-                                  '3-Bedroom Apartment',
-                                  style: TextStyle(
+                                  property['title'] as String,
+                                  style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.black,
@@ -208,9 +260,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                               const SizedBox(width: 16),
                               Row(
                                 children: [
-                                  const Text(
-                                    '(5.0)',
-                                    style: TextStyle(
+                                  Text(
+                                    property['rating'] as String,
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.black,
@@ -238,9 +290,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                 color: Color(0xFF868686),
                               ),
                               const SizedBox(width: 6),
-                              const Text(
-                                'Lekki Phase 1, Lagos Nigeria',
-                                style: TextStyle(
+                              Text(
+                                property['location'] as String,
+                                style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF868686),
                                 ),
@@ -251,8 +303,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           const SizedBox(height: 24),
                           
                           // Description
-                          const Text(
-                            'Step into luxury with this fully furnished 3-bedroom apartment located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+                          Text(
+                            property['description'] as String,
                             style: TextStyle(
                               fontSize: 14,
                               height: 1.6,
@@ -352,90 +404,221 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           // Contact info
                           Column(
                             children: [
-                              _buildContactRow(Icons.phone, '09011111111'),
+                              _buildContactRow('assets/icons/fluent_call-24-filled.svg', '09011111111'),
                               const SizedBox(height: 16),
-                              _buildContactRow(Icons.email, 'jamesmark@gmail.com'),
+                              _buildContactRow('assets/icons/majesticons_mail.svg', 'jamesmark@gmail.com'),
                               const SizedBox(height: 16),
-                              _buildContactRow(Icons.phone_android, '08111111111'),
+                              _buildContactRow('assets/icons/logos_whatsapp-icon.svg', '08111111111'),
                             ],
                           ),
                           
                           const SizedBox(height: 32),
                           
-                          // Action buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                      stops: [0.0, 1.0, 1.0],
-                                      colors: [
-                                        Color(0xFF426DC2),
-                                        Color(0xFF63ADDC),
-                                        Color(0xFF75CFEA),
-                                      ],
+                          // Action buttons based on property type
+                          if (category == 'Hotels') ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        stops: [0.0, 1.0, 1.0],
+                                        colors: [
+                                          Color(0xFF426DC2),
+                                          Color(0xFF63ADDC),
+                                          Color(0xFF75CFEA),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(25),
                                     ),
+                                    child: ElevatedButton(
+                                      onPressed: () {},
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(25),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Make a reservation',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (category == 'Shortlets') ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        stops: [0.0, 1.0, 1.0],
+                                        colors: [
+                                          Color(0xFF426DC2),
+                                          Color(0xFF63ADDC),
+                                          Color(0xFF75CFEA),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: () {},
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(25),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Book shortlet',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            Container(
+                              width: double.infinity,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: const Color(0xFF426DC2)),
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const RentNowPayLaterView(),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  shadowColor: Colors.transparent,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(25),
                                   ),
-                                  child: ElevatedButton(
-                                    onPressed: () {},
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(25),
+                                ),
+                                child: const Text(
+                                  'Rent now-pay later',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF426DC2),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else if (!isForSale) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        stops: [0.0, 1.0, 1.0],
+                                        colors: [
+                                          Color(0xFF426DC2),
+                                          Color(0xFF63ADDC),
+                                          Color(0xFF75CFEA),
+                                        ],
                                       ),
+                                      borderRadius: BorderRadius.circular(25),
                                     ),
-                                    child: const Text(
-                                      'Rent now-pay later',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => const RentNowPayLaterView(),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(25),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Rent now-pay later',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          Container(
-                            width: double.infinity,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0xFF426DC2)),
-                              borderRadius: BorderRadius.circular(25),
+                              ],
                             ),
-                            child: ElevatedButton(
-                              onPressed: () {},
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                shadowColor: Colors.transparent,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(25),
+                            
+                            const SizedBox(height: 16),
+                            
+                            Container(
+                              width: double.infinity,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: const Color(0xFF426DC2)),
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: ElevatedButton(
+                                onPressed: () {},
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  shadowColor: Colors.transparent,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Mark as rented',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF426DC2),
+                                  ),
                                 ),
                               ),
-                              child: const Text(
-                                'Mark as rented',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF426DC2),
-                                ),
-                              ),
                             ),
-                          ),
+                          ],
                           
                           const SizedBox(height: 40),
                           
@@ -453,60 +636,54 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           
                           // Features list
                           Column(
-                            children: [
-                              _buildFeatureRow(Icons.bed, '3-bedroom'),
-                              const SizedBox(height: 16),
-                              _buildFeatureRow(Icons.bathtub, '3 Bathrooms'),
-                              const SizedBox(height: 16),
-                              _buildFeatureRow(Icons.local_parking, 'Dedicated Parking'),
-                              const SizedBox(height: 16),
-                              _buildFeatureRow(Icons.security, 'Gated & Secured Estate'),
-                            ],
+                            children: _buildFeaturesList(property, isHotel),
                           ),
                           
                           const SizedBox(height: 40),
                           
-                          // Virtual Tour
-                          const Text(
-                            'Virtual Tour',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                            ),
-                          ),
-                          
-                          const SizedBox(height: 20),
-                          
-                          // Virtual tour image with play button
-                          Container(
-                            height: 200,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              image: const DecorationImage(
-                                image: NetworkImage('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
-                                fit: BoxFit.cover,
+                          // Virtual Tour - only show for non-hotel properties
+                          if (category != 'Hotels') ...[
+                            const Text(
+                              'Virtual Tour',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
                               ),
                             ),
-                            child: Center(
-                              child: Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.9),
-                                  shape: BoxShape.circle,
+                            
+                            const SizedBox(height: 20),
+                            
+                            // Virtual tour image with play button
+                            Container(
+                              height: 200,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                image: const DecorationImage(
+                                  image: NetworkImage('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
+                                  fit: BoxFit.cover,
                                 ),
-                                child: const Icon(
-                                  Icons.play_arrow,
-                                  size: 30,
-                                  color: Color(0xFF426DC2),
+                              ),
+                              child: Center(
+                                child: Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow,
+                                    size: 30,
+                                    color: Color(0xFF426DC2),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          
-                          const SizedBox(height: 40),
+                            
+                            const SizedBox(height: 40),
+                          ],
                           
                           // Google Map
                           const Text(
@@ -579,25 +756,33 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               ),
               child: Row(
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Total Price',
-                        style: TextStyle(
+                        _getPriceLabel(category, isForSale),
+                        style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF868686),
                         ),
                       ),
                       Text(
-                        '#2,500,000',
-                        style: TextStyle(
+                        property['price'] as String,
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF426DC2),
                         ),
                       ),
+                      if ((category == 'Hotels' || category == 'Shortlets') && property.containsKey('period'))
+                        Text(
+                          property['period'] as String,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF426DC2),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(width: 24),
@@ -628,14 +813,14 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                             borderRadius: BorderRadius.circular(25),
                           ),
                         ),
-                        child: const Text(
-                          'Contact agent',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                                child: Text(
+          _getBottomButtonText(category, isForSale),
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
                       ),
                     ),
                   ),
@@ -648,15 +833,28 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     );
   }
 
-  Widget _buildContactRow(IconData icon, String text) {
+  Widget _buildContactRow(String icon, String text) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: icon == Icons.phone ? const Color(0xFF426DC2) : 
-                icon == Icons.email ? const Color(0xFF426DC2) : 
-                const Color(0xFF25D366), // WhatsApp green
+        Container(
+          height: 24,
+          width: 24,
+          decoration: BoxDecoration(
+            color: AppColors.primary100,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: SizedBox(
+            width: 12,
+            height: 12,
+            child: Transform.scale(
+              scale: 0.8,
+              child: SvgPicture.asset(
+                icon,
+                width: 12,
+                height: 12,
+              ),
+            ),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -668,30 +866,72 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             ),
           ),
         ),
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            Icons.copy,
-            size: 16,
-            color: Color(0xFF868686),
-          ),
+        SvgPicture.asset(
+          'assets/icons/si_copy-line.svg',
+          width: 16,
+          height: 16,
         ),
       ],
     );
   }
 
-  Widget _buildFeatureRow(IconData icon, String label) {
+    List<Widget> _buildFeaturesList(Map<String, dynamic> property, bool isHotel) {
+    final category = property['category'] as String? ?? 'Real Estate';
+    
+    if (isHotel || category == 'Hotels') {
+      // Hotel features
+      return [
+        _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', 'Queen-size Bed'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/mdi_bathroom.svg', 'En-suite Bathroom'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/fluent_food-16-regular.svg', 'Complimentary Breakfast'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/material-symbols_wifi-rounded.svg', 'Free High-Speed Wi-Fi'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/mage_television.svg', 'Smart TV with Streaming'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/uil_padlock.svg', '24/7 Security & Keycard Access'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/healthicons_cleaning-outline.svg', 'Daily Housekeeping'),
+      ];
+    } else if (category == 'Shortlets') {
+      // Shortlet features  
+      return [
+        _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', '3-bedroom'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/mdi_bathroom.svg', '3 Bathrooms'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/tabler_car.svg', 'Dedicated Parking'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/game-icons_gate.svg', 'Gated & Secured Estate'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/mdi_wifi.svg', 'Free Wi-Fi'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/mdi_television.svg', 'Smart TV'),
+      ];
+    } else {
+      // Real Estate (Apartment for sale) features
+      return [
+        _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', '3-bedroom'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/mdi_bathroom.svg', '3 Bathrooms'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/tabler_car.svg', 'Dedicated Parking'),
+        const SizedBox(height: 16),
+        _buildFeatureRow('assets/icons/game-icons_gate.svg', 'Gated & Secured Estate'),
+      ];
+    }
+  }
+
+  Widget _buildFeatureRow(String icon, String label) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: const Color(0xFF426DC2),
+        SvgPicture.asset(
+        icon,
+         width: 20,
+         height: 20,
+
         ),
         const SizedBox(width: 12),
         Text(
@@ -703,5 +943,29 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         ),
       ],
     );
+  }
+
+  String _getPriceLabel(String category, bool isForSale) {
+    if (category == 'Hotels') {
+      return 'Total Price';
+    } else if (category == 'Shortlets') {
+      return 'Total Price';
+    } else if (isForSale) {
+      return 'Selling Price';
+    } else {
+      return 'Total Price';
+    }
+  }
+
+  String _getBottomButtonText(String category, bool isForSale) {
+    if (category == 'Hotels') {
+      return 'Book Now';
+    } else if (category == 'Shortlets') {
+      return 'Book Now';
+    } else if (isForSale) {
+      return 'Contact agent';
+    } else {
+      return 'Contact agent';
+    }
   }
 } 

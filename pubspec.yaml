@@ -49,6 +49,12 @@ dependencies:
   
   # Video player for splash screen
   video_player: ^2.8.1
+  
+  # Dotted border for upload areas
+  dotted_border: ^2.1.0
+  
+  # File picker for document uploads
+  file_picker: ^8.0.0+1
 
 dev_dependencies:
   flutter_test:

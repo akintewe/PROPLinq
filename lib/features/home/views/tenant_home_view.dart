@@ -788,7 +788,23 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'badges': [properties['badge']!],
+            'title': properties['title']!,
+            'location': properties['location']!,
+            'rating': properties['rating']!,
+            'price': properties['price']!,
+            'type': 'Apartment',
+            'category': 'Real Estate',
+            'description': 'Step into luxury with this fully furnished 3-bedroom apartment located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+            'agent': {
+              'name': 'James Mark',
+              'title': 'Agent',
+              'phone': '09011111111',
+              'email': 'jamesmark@gmail.com',
+              'whatsapp': '08111111111',
+            },
+          })),
         );
       },
       child: SizedBox(
@@ -1048,6 +1064,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         'rating': '(5.0)',
         'price': '#2,500,000',
         'type': 'Apartment',
+        'category': 'Real Estate',
         'image': 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'
       },
       {
@@ -1057,6 +1074,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         'rating': '(5.0)',
         'price': '#90,000',
         'type': 'Hotel',
+        'category': 'Hotels',
         'period': 'per night',
         'image': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=600&h=400&fit=crop&crop=center'
       },
@@ -1067,6 +1085,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         'rating': '(5.0)',
         'price': '#2,500,000',
         'type': 'Apartment',
+        'category': 'Real Estate',
         'image': 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop&crop=center'
       },
     ][index];
@@ -1074,7 +1093,26 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'badges': properties['badges'],
+            'title': properties['title'],
+            'location': properties['location'],
+            'rating': properties['rating'],
+            'price': properties['price'],
+            'type': properties['type'],
+            'category': properties['category'],
+            'period': properties['period'],
+            'description': properties['type'] == 'Hotel' 
+                ? 'Step into luxury with this fully furnished hotel room located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
+                : 'Step into luxury with this fully furnished 3-bedroom apartment located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+            'agent': {
+              'name': 'James Mark',
+              'title': 'Agent',
+              'phone': '09011111111',
+              'email': 'jamesmark@gmail.com',
+              'whatsapp': '08111111111',
+            },
+          })),
         );
       },
       child: Container(
@@ -1296,7 +1334,26 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'badges': property['badges'],
+            'title': property['title'],
+            'location': property['location'],
+            'rating': property['rating'],
+            'price': property['price'],
+            'type': property['type'],
+            'category': property['category'],
+            'period': property['period'],
+            'description': property['type'] == 'Hotel' 
+                ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
+                : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+            'agent': {
+              'name': 'James Mark',
+              'title': 'Agent',
+              'phone': '09011111111',
+              'email': 'jamesmark@gmail.com',
+              'whatsapp': '08111111111',
+            },
+          })),
         );
       },
       child: Container(
