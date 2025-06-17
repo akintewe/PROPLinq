@@ -289,8 +289,28 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () {
+                  final property = _getFilteredSearchResults()[index];
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+                    MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+                      'badges': property['badges'],
+                      'title': property['title'],
+                      'location': property['location'],
+                      'rating': property['rating'],
+                      'price': property['price'],
+                      'type': property['type'],
+                      'category': property['category'],
+                      'period': property['period'],
+                      'description': property['type'] == 'Hotel' 
+                          ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
+                          : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+                      'agent': {
+                        'name': 'James Mark',
+                        'title': 'Agent',
+                        'phone': '09011111111',
+                        'email': 'jamesmark@gmail.com',
+                        'whatsapp': '08111111111',
+                      },
+                    })),
                   );
                 },
                 child: _buildSearchPropertyCard(_getFilteredSearchResults()[index]),
@@ -877,8 +897,51 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () {
+                  final properties = <Map<String, String>>[
+                    {
+                      'badge': 'Verified Agent',
+                      'title': '3-Bedroom Apartment',
+                      'location': 'Lekki Phase 1, Lagos Nigeria',
+                      'rating': '(5.0)',
+                      'price': '#1,500,000',
+                      'image': 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=200&fit=crop'
+                    },
+                    {
+                      'badge': 'Verified Agent',
+                      'title': '3-Bedroom Duplex',
+                      'location': 'Lekki Phase 1, Lagos Nigeria',
+                      'rating': '(5.0)',
+                      'price': '#2,500,000',
+                      'image': 'https://images.unsplash.com/photo-1560184897-ae75f418493e?w=400&h=200&fit=crop'
+                    },
+                    {
+                      'badge': 'Verified Agent',
+                      'title': '2-Bedroom Flat',
+                      'location': 'Ikeja, Lagos Nigeria',
+                      'rating': '(4.8)',
+                      'price': '#1,200,000',
+                      'image': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=200&fit=crop'
+                    },
+                  ];
+                  final property = properties[index];
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+                    MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+                      'badges': [property['badge']!],
+                      'title': property['title']!,
+                      'location': property['location']!,
+                      'rating': property['rating']!,
+                      'price': property['price']!,
+                      'type': 'Apartment',
+                      'category': 'Real Estate',
+                      'description': 'Step into luxury with this fully furnished ${property['title']!.toLowerCase()} located in the heart of ${property['location']!}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+                      'agent': {
+                        'name': 'James Mark',
+                        'title': 'Agent',
+                        'phone': '09011111111',
+                        'email': 'jamesmark@gmail.com',
+                        'whatsapp': '08111111111',
+                      },
+                    })),
                   );
                 },
                 child: _buildFeaturedPropertyCard(index),
@@ -934,8 +997,61 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () {
+                  final List<Map<String, dynamic>> properties = [
+                    {
+                      'badges': ['For sale', 'Verified Agent'],
+                      'title': 'Luxury 4-Bedroom Apartment',
+                      'location': 'Victoria Island, Lagos Nigeria',
+                      'rating': '(4.8)',
+                      'price': '#3,500,000',
+                      'type': 'Apartment',
+                      'category': 'Real Estate',
+                      'image': 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'
+                    },
+                    {
+                      'badges': ['Verified Agent'],
+                      'title': 'Executive Hotel Suite',
+                      'location': 'Ikoyi, Lagos Nigeria',
+                      'rating': '(4.9)',
+                      'price': '#120,000',
+                      'type': 'Hotel',
+                      'category': 'Hotels',
+                      'period': 'per night',
+                      'image': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=600&h=400&fit=crop&crop=center'
+                    },
+                    {
+                      'badges': ['Verified Agent'],
+                      'title': 'Modern 2-Bedroom Flat',
+                      'location': 'Banana Island, Lagos Nigeria',
+                      'rating': '(4.7)',
+                      'price': '#1,800,000',
+                      'type': 'Apartment',
+                      'category': 'Real Estate',
+                      'image': 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop&crop=center'
+                    },
+                  ];
+                  final property = properties[index];
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+                    MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+                      'badges': property['badges'],
+                      'title': property['title'],
+                      'location': property['location'],
+                      'rating': property['rating'],
+                      'price': property['price'],
+                      'type': property['type'],
+                      'category': property['category'],
+                      'period': property['period'],
+                      'description': property['type'] == 'Hotel' 
+                          ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
+                          : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+                      'agent': {
+                        'name': 'James Mark',
+                        'title': 'Agent',
+                        'phone': '09011111111',
+                        'email': 'jamesmark@gmail.com',
+                        'whatsapp': '08111111111',
+                      },
+                    })),
                   );
                 },
                 child: _buildPropertyListItem(index),
@@ -978,7 +1094,23 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'badges': [properties['badge']!],
+            'title': properties['title']!,
+            'location': properties['location']!,
+            'rating': properties['rating']!,
+            'price': properties['price']!,
+            'type': 'Apartment',
+            'category': 'Real Estate',
+            'description': 'Step into luxury with this fully furnished ${properties['title']!.toLowerCase()} located in the heart of ${properties['location']!}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+            'agent': {
+              'name': 'James Mark',
+              'title': 'Agent',
+              'phone': '09011111111',
+              'email': 'jamesmark@gmail.com',
+              'whatsapp': '08111111111',
+            },
+          })),
         );
       },
       child: Container(
@@ -1262,7 +1394,26 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PropertyDetailsView()),
+          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'badges': properties['badges'],
+            'title': properties['title'],
+            'location': properties['location'],
+            'rating': properties['rating'],
+            'price': properties['price'],
+            'type': properties['type'],
+            'category': properties['type'] == 'Hotel' ? 'Hotels' : 'Real Estate',
+            'period': properties['period'],
+            'description': properties['type'] == 'Hotel' 
+                ? 'Step into luxury with this fully furnished hotel room located in the heart of ${properties['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
+                : 'Step into luxury with this fully furnished ${properties['type'].toLowerCase()} located in the heart of ${properties['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+            'agent': {
+              'name': 'James Mark',
+              'title': 'Agent',
+              'phone': '09011111111',
+              'email': 'jamesmark@gmail.com',
+              'whatsapp': '08111111111',
+            },
+          })),
         );
       },
       child: Container(

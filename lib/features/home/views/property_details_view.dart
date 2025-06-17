@@ -349,17 +349,17 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'James Mark',
-                                      style: TextStyle(
+                                    Text(
+                                      property['agent']['name'] as String,
+                                      style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.black,
                                       ),
                                     ),
-                                    const Text(
-                                      'Agent',
-                                      style: TextStyle(
+                                    Text(
+                                      property['agent']['title'] as String,
+                                      style: const TextStyle(
                                         fontSize: 14,
                                         color: Color(0xFF868686),
                                       ),
@@ -404,11 +404,11 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           // Contact info
                           Column(
                             children: [
-                              _buildContactRow('assets/icons/fluent_call-24-filled.svg', '09011111111'),
+                              _buildContactRow('assets/icons/fluent_call-24-filled.svg', property['agent']['phone'] as String),
                               const SizedBox(height: 16),
-                              _buildContactRow('assets/icons/majesticons_mail.svg', 'jamesmark@gmail.com'),
+                              _buildContactRow('assets/icons/majesticons_mail.svg', property['agent']['email'] as String),
                               const SizedBox(height: 16),
-                              _buildContactRow('assets/icons/logos_whatsapp-icon.svg', '08111111111'),
+                              _buildContactRow('assets/icons/logos_whatsapp-icon.svg', property['agent']['whatsapp'] as String),
                             ],
                           ),
                           

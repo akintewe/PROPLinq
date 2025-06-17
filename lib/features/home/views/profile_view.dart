@@ -13,20 +13,20 @@ class ProfileView extends StatelessWidget {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                const Text(
-                  'Profile',
-                  style: TextStyle(
-                    fontSize: 24,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              const Text(
+                'Profile',
+                style: TextStyle(
+                  fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
+                  color: Colors.black,
                 ),
+              ),
                 
                 const SizedBox(height: 40),
                 
@@ -54,7 +54,7 @@ class ProfileView extends StatelessWidget {
           _buildCurrentListingSection(),
           const SizedBox(height: 32),
           _buildSubscriptionSection(),
-          const SizedBox(height: 32),
+              const SizedBox(height: 32),
           _buildReviewSection(),
         ],
         
@@ -82,15 +82,15 @@ class ProfileView extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: [
+                child: Column(
+                  children: [
               // Profile Picture with camera icon
               Stack(
                 children: [
-                  Container(
+                    Container(
                     width: 120,
                     height: 120,
-                    decoration: BoxDecoration(
+                      decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       image: const DecorationImage(
                         image: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'),
@@ -105,7 +105,7 @@ class ProfileView extends StatelessWidget {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                            color: Colors.white,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -126,25 +126,25 @@ class ProfileView extends StatelessWidget {
               ),
               
               const SizedBox(height: 20),
-              
-              // Name
-              const Text(
-                'John Doe',
-                style: TextStyle(
+                    
+                    // Name
+                    const Text(
+                      'John Doe',
+                      style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
+                        color: Colors.black,
+                      ),
+                    ),
               
               
-              
-              // Email
-              const Text(
+                    
+                    // Email
+                    const Text(
                 'johndoe@gmail.com',
-                style: TextStyle(
+                      style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w400,
                   color: Color(0xFF999999),
                 ),
               ),
@@ -228,7 +228,7 @@ class ProfileView extends StatelessWidget {
   }) {
     return Container(
       height: 51,
-      decoration: BoxDecoration(
+        decoration: BoxDecoration(
         color: Color.fromRGBO(250, 250, 250, 1),
         borderRadius: BorderRadius.circular(10),
        
@@ -362,7 +362,7 @@ class ProfileView extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Expanded(
+            Expanded(
           child: Container(
             height: 52,
             decoration: BoxDecoration(
@@ -618,7 +618,7 @@ class ProfileView extends StatelessWidget {
                         ),
                         child: const Icon(
                           Icons.more_vert,
-                          size: 16,
+              size: 16,
                           color: Colors.black,
                         ),
                       ),
