@@ -590,34 +590,34 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                             
                             const SizedBox(height: 16),
                             
-                            Container(
-                              width: double.infinity,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFF426DC2)),
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: ElevatedButton(
-                                onPressed: () {},
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  shadowColor: Colors.transparent,
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
+                              Container(
+                                width: double.infinity,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFF426DC2)),
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () {},
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Mark as rented',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF426DC2),
+                                    ),
                                   ),
                                 ),
-                                child: const Text(
-                                  'Mark as rented',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF426DC2),
-                                  ),
-                                ),
                               ),
-                            ),
                           ],
                           
                           const SizedBox(height: 40),
@@ -643,46 +643,46 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           
                           // Virtual Tour - only show for non-hotel properties
                           if (category != 'Hotels') ...[
-                            const Text(
-                              'Virtual Tour',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
+                          const Text(
+                            'Virtual Tour',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 20),
+                          
+                          // Virtual tour image with play button
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              image: const DecorationImage(
+                                image: NetworkImage('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
+                                fit: BoxFit.cover,
                               ),
                             ),
-                            
-                            const SizedBox(height: 20),
-                            
-                            // Virtual tour image with play button
-                            Container(
-                              height: 200,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                image: const DecorationImage(
-                                  image: NetworkImage('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
-                                  fit: BoxFit.cover,
+                            child: Center(
+                              child: Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  shape: BoxShape.circle,
                                 ),
-                              ),
-                              child: Center(
-                                child: Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.play_arrow,
-                                    size: 30,
-                                    color: Color(0xFF426DC2),
-                                  ),
+                                child: const Icon(
+                                  Icons.play_arrow,
+                                  size: 30,
+                                  color: Color(0xFF426DC2),
                                 ),
                               ),
                             ),
-                            
-                            const SizedBox(height: 40),
+                          ),
+                          
+                          const SizedBox(height: 40),
                           ],
                           
                           // Google Map
@@ -813,14 +813,14 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                             borderRadius: BorderRadius.circular(25),
                           ),
                         ),
-                                child: Text(
+                        child: Text(
           _getBottomButtonText(category, isForSale),
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),

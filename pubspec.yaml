@@ -49,7 +49,7 @@ dependencies:
   
   # Video player for splash screen
   video_player: ^2.8.1
-  
+
   # Dotted border for upload areas
   dotted_border: ^2.1.0
   

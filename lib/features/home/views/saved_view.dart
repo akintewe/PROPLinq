@@ -78,15 +78,15 @@ class SavedView extends StatelessWidget {
                                       bottom: 60,
                                       child: Container(
                                         width: 120,
-                                        height: 80,
-                                        decoration: BoxDecoration(
+                        height: 80,
+                        decoration: BoxDecoration(
                                           color: const Color(0xFF8B4513),
                                           borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(
+                        ),
+                        child: const Icon(
                                           Icons.home,
                                           color: Colors.white,
-                                          size: 40,
+                          size: 40,
                                         ),
                                       ),
                                     ),
@@ -103,12 +103,12 @@ class SavedView extends StatelessWidget {
                         offset: const Offset(0, -30),
                         child: const Text(
                           'No Saved Property',
-                          style: TextStyle(
+                        style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
+                          color: Colors.black,
                         ),
+                      ),
                       ),
                       
                       Transform.translate(
@@ -122,12 +122,12 @@ class SavedView extends StatelessWidget {
                         child: const Text(
                           'Start exploring listings and tap the heart icon to save your favorites. Head back to the homepage to begin.',
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
                             color: Color(0xFF666666),
                             height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
+                        ),
+                        textAlign: TextAlign.center,
                         ),
                       ),
                       
