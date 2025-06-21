@@ -115,7 +115,14 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             child: _isShowingSearchResults ? _buildSearchResults() : _buildHomeContent(),
           ),
           // Saved Tab
-          const SavedView(isAgent: false),
+          SavedView(
+            isAgent: false,
+            onExploreHome: () {
+              setState(() {
+                _currentIndex = 0; // Switch to home tab
+              });
+            },
+          ),
           // Profile Tab
           const ProfileView(isAgent: false),
           // Settings Tab
@@ -232,11 +239,16 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(
-                        Icons.tune,
-                        color: Colors.white,
-                        size: 16,
-                      ),
+                                             child: SvgPicture.asset(
+                         'assets/icons/sort.svg',
+                         width: 12,
+                         height: 12,
+                         fit: BoxFit.scaleDown,
+                         colorFilter: const ColorFilter.mode(
+                           Colors.white,
+                           BlendMode.srcIn,
+                         ),
+                       ),
                     ),
                   ),
                 ],
@@ -324,49 +336,55 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           mainAxisSize: MainAxisSize.min,
           children: [
             if (title == 'Real Estate')
-              Container(
-                width: 20,
-                height: 20,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : const Color(0xFF426DC2),
-                  borderRadius: BorderRadius.circular(4),
+              SvgPicture.asset(
+                'assets/icons/emojione-monotone_houses.svg',
+                width: 16,
+                height: 16,
+                colorFilter: ColorFilter.mode(
+                  isSelected ? Colors.white : const Color(0xFF666666),
+                  BlendMode.srcIn,
                 ),
-                child: Icon(
-                  Icons.business,
-                  size: 14,
-                  color: isSelected ? const Color(0xFF426DC2) : Colors.white,
-                ),
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.business,
+                    size: 16,
+                    color: isSelected ? Colors.white : const Color(0xFF666666),
+                  );
+                },
               ),
             if (title == 'Hotels')
-              Container(
-                width: 20,
-                height: 20,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : const Color(0xFFE91E63),
-                  borderRadius: BorderRadius.circular(4),
+              SvgPicture.asset(
+                'assets/icons/emojione_houses.svg',
+                width: 16,
+                height: 16,
+                colorFilter: ColorFilter.mode(
+                  isSelected ? Colors.white : const Color(0xFF666666),
+                  BlendMode.srcIn,
                 ),
-                child: Icon(
-                  Icons.hotel,
-                  size: 14,
-                  color: isSelected ? const Color(0xFFE91E63) : Colors.white,
-                ),
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.hotel,
+                    size: 16,
+                    color: isSelected ? Colors.white : const Color(0xFF666666),
+                  );
+                },
               ),
             if (title == 'Shortlets')
-              Container(
-                width: 20,
-                height: 20,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : const Color(0xFF4CAF50),
-                  borderRadius: BorderRadius.circular(4),
+              SvgPicture.asset(
+                'assets/icons/emojione_houses.svg',
+                width: 16,
+                height: 16,
+                colorFilter: ColorFilter.mode(
+                  isSelected ? Colors.white : const Color(0xFF666666),
+                  BlendMode.srcIn,
                 ),
-                child: Icon(
-                  Icons.apartment,
-                  size: 14,
-                  color: isSelected ? const Color(0xFF4CAF50) : Colors.white,
-                ),
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.apartment,
+                    size: 16,
+                    color: isSelected ? Colors.white : const Color(0xFF666666),
+                  );
+                },
               ),
             if (title == 'Real Estate' || title == 'Hotels' || title == 'Shortlets') const SizedBox(width: 8),
             Text(
@@ -580,10 +598,15 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                               ),
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Icon(
-                              Icons.tune,
-                              color: Colors.white,
-                              size: 16,
+                            child: SvgPicture.asset(
+                              'assets/icons/sort.svg',
+                              width: 12,
+                              height: 12,
+                              fit: BoxFit.scaleDown,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.white,
+                                BlendMode.srcIn,
+                              ),
                             ),
                           ),
                         ),
@@ -997,49 +1020,55 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         mainAxisSize: MainAxisSize.min,
         children: [
           if (title == 'Real Estate')
-            Container(
-              width: 20,
-              height: 20,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.white : const Color(0xFF426DC2),
-                borderRadius: BorderRadius.circular(4),
+            SvgPicture.asset(
+              'assets/icons/emojione-monotone_houses.svg',
+              width: 16,
+              height: 16,
+              colorFilter: ColorFilter.mode(
+                isSelected ? Colors.white : const Color(0xFF666666),
+                BlendMode.srcIn,
               ),
-              child: Icon(
-                Icons.business,
-                size: 14,
-                color: isSelected ? const Color(0xFF426DC2) : Colors.white,
-              ),
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(
+                  Icons.business,
+                  size: 16,
+                  color: isSelected ? Colors.white : const Color(0xFF666666),
+                );
+              },
             ),
           if (title == 'Hotels')
-            Container(
-              width: 20,
-              height: 20,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.white : const Color(0xFFE91E63),
-                borderRadius: BorderRadius.circular(4),
+            SvgPicture.asset(
+              'assets/icons/emojione_houses.svg',
+              width: 16,
+              height: 16,
+              colorFilter: ColorFilter.mode(
+                isSelected ? Colors.white : const Color(0xFF666666),
+                BlendMode.srcIn,
               ),
-              child: Icon(
-                Icons.hotel,
-                size: 14,
-                color: isSelected ? const Color(0xFFE91E63) : Colors.white,
-              ),
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(
+                  Icons.hotel,
+                  size: 16,
+                  color: isSelected ? Colors.white : const Color(0xFF666666),
+                );
+              },
             ),
           if (title == 'Shortlets')
-            Container(
-              width: 20,
-              height: 20,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.white : const Color(0xFF4CAF50),
-                borderRadius: BorderRadius.circular(4),
+            SvgPicture.asset(
+              'assets/icons/emojione_houses.svg',
+              width: 16,
+              height: 16,
+              colorFilter: ColorFilter.mode(
+                isSelected ? Colors.white : const Color(0xFF666666),
+                BlendMode.srcIn,
               ),
-              child: Icon(
-                Icons.apartment,
-                size: 14,
-                color: isSelected ? const Color(0xFF4CAF50) : Colors.white,
-              ),
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(
+                  Icons.apartment,
+                  size: 16,
+                  color: isSelected ? Colors.white : const Color(0xFF666666),
+                );
+              },
             ),
           if (title == 'Real Estate' || title == 'Hotels' || title == 'Shortlets') const SizedBox(width: 8),
           Text(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
+import 'property_listing_view.dart';
+import '../../finance/views/agent_kyc_view.dart';
 
 class ProfileView extends StatelessWidget {
   final bool isAgent;
@@ -36,7 +38,7 @@ class ProfileView extends StatelessWidget {
                 const SizedBox(height: 48),
                 
                 // Agent Action Buttons (only for agents)
-                if (isAgent) _buildAgentActionButtons(),
+                if (isAgent) _buildAgentActionButtons(context),
                 
                 // KYC Info Message (only for agents)
                 if (isAgent) _buildKycInfoMessage(),
@@ -69,14 +71,12 @@ class ProfileView extends StatelessWidget {
 
   Widget _buildProfileSection() {
     return Card(
-      elevation: 0.2,
-      
+      elevation: 0.3, // Increased elevation for box shadow
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
           color: Colors.white,
-      
         ),
       ),
       child: Center(
@@ -321,7 +321,7 @@ class ProfileView extends StatelessWidget {
     // For now, we'll just show a simple dialog
   }
 
-  Widget _buildAgentActionButtons() {
+  Widget _buildAgentActionButtons(BuildContext context) {
     return Row(
       children: [
         Expanded(
@@ -341,7 +341,13 @@ class ProfileView extends StatelessWidget {
               borderRadius: BorderRadius.circular(24),
             ),
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const PropertyListingView(),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
@@ -370,7 +376,13 @@ class ProfileView extends StatelessWidget {
               borderRadius: BorderRadius.circular(24),
             ),
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AgentKycView(),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
@@ -754,12 +766,14 @@ class ProfileView extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
           colors: [
             Color(0xFF426DC2),
-            Color(0xFF5B8FD7),
+            Color(0xFF63ADDC),
+            Color(0xFF75CFEA),
           ],
+          stops: [0.0, 1.0, 1.0],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -821,7 +835,7 @@ class ProfileView extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE0E0E0)),
+           
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

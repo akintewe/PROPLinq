@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class CustomTextField extends StatefulWidget {
@@ -17,6 +18,7 @@ class CustomTextField extends StatefulWidget {
   final VoidCallback? onTap;
   final bool readOnly;
   final int maxLines;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
     super.key,
@@ -35,6 +37,7 @@ class CustomTextField extends StatefulWidget {
     this.onTap,
     this.readOnly = false,
     this.maxLines = 1,
+    this.inputFormatters,
   });
 
   @override
@@ -72,6 +75,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           onTap: widget.onTap,
           readOnly: widget.readOnly,
           maxLines: widget.maxLines,
+          inputFormatters: widget.inputFormatters,
           decoration: InputDecoration(
             hintText: widget.hintText,
             hintStyle: const TextStyle(

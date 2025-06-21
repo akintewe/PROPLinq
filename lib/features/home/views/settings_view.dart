@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:proplinq/core/constants/app_colors.dart';
 
-class SettingsView extends StatefulWidget {
+class SettingsView extends StatelessWidget {
   final bool isAgent;
   
   const SettingsView({super.key, this.isAgent = false});
-
-  @override
-  State<SettingsView> createState() => _SettingsViewState();
-}
-
-class _SettingsViewState extends State<SettingsView> {
-  bool _pushNotifications = true;
-  bool _emailNotifications = false;
-  bool _smsNotifications = true;
-  bool _locationAccess = true;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +21,7 @@ class _SettingsViewState extends State<SettingsView> {
               const Text(
                 'Settings',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.w600,
                   color: Colors.black,
                 ),
@@ -39,108 +31,59 @@ class _SettingsViewState extends State<SettingsView> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Notifications Section
-                      _buildSectionHeader('Notifications'),
-                      _buildSwitchItem(
-                        title: 'Push Notifications',
-                        subtitle: 'Receive alerts about new properties and messages',
-                        value: _pushNotifications,
-                        onChanged: (value) {
-                          setState(() {
-                            _pushNotifications = value;
-                          });
+                      _buildSettingItem(
+                        iconPath: 'assets/icons/profile.svg',
+                        iconColor: const Color(0xFF426DC2),
+                        title: 'Account settings',
+                        onTap: () {},
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      _buildSettingItem(
+                        iconPath: 'assets/icons/notification (3).svg',
+                        iconColor: const Color(0xFF426DC2),
+                        title: 'Notification settings',
+                        onTap: () {},
+                      ),
+                      
+                        const SizedBox(height: 20),
+                      
+                      _buildSettingItem(
+                        iconPath: 'assets/icons/message-question.svg',
+                        iconColor: const Color(0xFF426DC2),
+                        title: 'Help & support',
+                        onTap: () {},
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      _buildSettingItem(
+                        iconPath: 'assets/icons/book.svg',
+                        iconColor: const Color(0xFF426DC2),
+                        title: 'Terms & condition',
+                        onTap: () {},
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      _buildSettingItem(
+                        iconPath: 'assets/icons/lock (1).svg',
+                        iconColor: const Color(0xFF426DC2),
+                        title: 'Privacy policy',
+                        onTap: () {},
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      _buildSettingItem(
+                        iconPath: 'assets/icons/login.svg',
+                        iconColor: const Color(0xFF426DC2),
+                        title: 'Log out',
+                        onTap: () {
+                          _showLogoutDialog(context);
                         },
-                      ),
-                      _buildSwitchItem(
-                        title: 'Email Notifications',
-                        subtitle: 'Get updates via email',
-                        value: _emailNotifications,
-                        onChanged: (value) {
-                          setState(() {
-                            _emailNotifications = value;
-                          });
-                        },
-                      ),
-                      _buildSwitchItem(
-                        title: 'SMS Notifications',
-                        subtitle: 'Receive important updates via SMS',
-                        value: _smsNotifications,
-                        onChanged: (value) {
-                          setState(() {
-                            _smsNotifications = value;
-                          });
-                        },
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Privacy Section
-                      _buildSectionHeader('Privacy'),
-                      _buildSwitchItem(
-                        title: 'Location Access',
-                        subtitle: 'Allow app to access your location for better property recommendations',
-                        value: _locationAccess,
-                        onChanged: (value) {
-                          setState(() {
-                            _locationAccess = value;
-                          });
-                        },
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // App Settings Section
-                      _buildSectionHeader('App Settings'),
-                      _buildMenuItem(
-                        icon: Icons.language_outlined,
-                        title: 'Language',
-                        subtitle: 'English',
-                        onTap: () {},
-                      ),
-                      _buildMenuItem(
-                        icon: Icons.color_lens_outlined,
-                        title: 'Theme',
-                        subtitle: 'Light',
-                        onTap: () {},
-                      ),
-                      _buildMenuItem(
-                        icon: Icons.storage_outlined,
-                        title: 'Clear Cache',
-                        subtitle: 'Free up storage space',
-                        onTap: () {},
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Support Section
-                      _buildSectionHeader('Support'),
-                      _buildMenuItem(
-                        icon: Icons.help_outline,
-                        title: 'Help Center',
-                        onTap: () {},
-                      ),
-                      _buildMenuItem(
-                        icon: Icons.feedback_outlined,
-                        title: 'Send Feedback',
-                        onTap: () {},
-                      ),
-                      _buildMenuItem(
-                        icon: Icons.info_outline,
-                        title: 'About PropLinq',
-                        onTap: () {},
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Account Section
-                      _buildSectionHeader('Account'),
-                      _buildMenuItem(
-                        icon: Icons.delete_outline,
-                        title: 'Delete Account',
-                        onTap: () {},
-                        isDestructive: true,
                       ),
                     ],
                   ),
@@ -153,137 +96,88 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.black,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchItem({
+  Widget _buildSettingItem({
+    required String iconPath,
+    required Color iconColor,
     required String title,
-    String? subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFECF0F9),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF868686),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: const Color(0xFF426DC2),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    String? subtitle,
     required VoidCallback onTap,
-    bool isDestructive = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFFECF0F9),
-            width: 1,
-          ),
+          color: AppColors.grey50,
+          borderRadius: BorderRadius.circular(60),
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 24,
-              color: isDestructive ? Colors.red : const Color(0xFF426DC2),
+            SvgPicture.asset(
+              iconPath,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                iconColor,
+                BlendMode.srcIn,
+              ),
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(
+                  Icons.error_outline,
+                  size: 24,
+                  color: iconColor,
+                );
+              },
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: isDestructive ? Colors.red : Colors.black,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Color(0xFF868686),
-                      ),
-                    ),
-                  ],
-                ],
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),
               ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: isDestructive ? Colors.red : const Color(0xFF868686),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Log out'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF868686)),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Handle logout logic here
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Logged out successfully')),
+                );
+              },
+              child: const Text(
+                'Log out',
+                style: TextStyle(color: Color(0xFF426DC2)),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 } 
