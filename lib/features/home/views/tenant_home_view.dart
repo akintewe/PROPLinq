@@ -340,10 +340,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                 'assets/icons/emojione-monotone_houses.svg',
                 width: 16,
                 height: 16,
-                colorFilter: ColorFilter.mode(
-                  isSelected ? Colors.white : const Color(0xFF666666),
-                  BlendMode.srcIn,
-                ),
+             
                 errorBuilder: (context, error, stackTrace) {
                   return Icon(
                     Icons.business,
@@ -357,10 +354,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                 'assets/icons/emojione_houses.svg',
                 width: 16,
                 height: 16,
-                colorFilter: ColorFilter.mode(
-                  isSelected ? Colors.white : const Color(0xFF666666),
-                  BlendMode.srcIn,
-                ),
+              
                 errorBuilder: (context, error, stackTrace) {
                   return Icon(
                     Icons.hotel,
@@ -374,10 +368,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                 'assets/icons/emojione_houses.svg',
                 width: 16,
                 height: 16,
-                colorFilter: ColorFilter.mode(
-                  isSelected ? Colors.white : const Color(0xFF666666),
-                  BlendMode.srcIn,
-                ),
+              
                 errorBuilder: (context, error, stackTrace) {
                   return Icon(
                     Icons.apartment,
@@ -1024,10 +1015,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
               'assets/icons/emojione-monotone_houses.svg',
               width: 16,
               height: 16,
-              colorFilter: ColorFilter.mode(
-                isSelected ? Colors.white : const Color(0xFF666666),
-                BlendMode.srcIn,
-              ),
+            
               errorBuilder: (context, error, stackTrace) {
                 return Icon(
                   Icons.business,
@@ -1041,10 +1029,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
               'assets/icons/emojione_houses.svg',
               width: 16,
               height: 16,
-              colorFilter: ColorFilter.mode(
-                isSelected ? Colors.white : const Color(0xFF666666),
-                BlendMode.srcIn,
-              ),
+            
               errorBuilder: (context, error, stackTrace) {
                 return Icon(
                   Icons.hotel,
@@ -1058,10 +1043,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
               'assets/icons/emojione_houses.svg',
               width: 16,
               height: 16,
-              colorFilter: ColorFilter.mode(
-                isSelected ? Colors.white : const Color(0xFF666666),
-                BlendMode.srcIn,
-              ),
+          
               errorBuilder: (context, error, stackTrace) {
                 return Icon(
                   Icons.apartment,
