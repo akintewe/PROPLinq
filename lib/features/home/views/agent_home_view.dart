@@ -8,6 +8,8 @@ import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
 import 'package:proplinq/features/home/views/property_details_view.dart';
+import '../../auth/services/auth_service.dart';
+import '../../auth/models/user_model.dart';
 
 class AgentHomeView extends StatefulWidget {
   const AgentHomeView({super.key});
@@ -23,6 +25,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
   String _selectedCategory = 'All';
+  
+  final AuthService _authService = AuthService();
+  UserModel? _currentUser;
+  bool _isLoadingProfile = true;
 
   @override
   void initState() {
@@ -32,10 +38,58 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       vsync: this,
     )..repeat();
     
-    // Show KYC dialog after the widget is built
+    // Fetch user profile and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchUserProfile();
       _showKycDialogIfNeeded();
     });
+  }
+
+  Future<void> _fetchUserProfile() async {
+    try {
+      print('🔄 Fetching user profile...');
+      
+      final response = await _authService.getProfile();
+      
+      print('📋 Profile Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      
+      if (response.success && response.data != null) {
+        setState(() {
+          _currentUser = response.data;
+          _isLoadingProfile = false;
+        });
+        
+        print('👤 User Profile Data:');
+        print('  - ID: ${_currentUser!.id}');
+        print('  - Name: ${_currentUser!.fullName}');
+        print('  - Email: ${_currentUser!.email}');
+        print('  - User Type: "${_currentUser!.userType}"');
+        print('  - Location: ${_currentUser!.location}');
+        print('  - Phone: ${_currentUser!.phoneNumber}');
+        if (_currentUser!.agencyName != null) {
+          print('  - Agency: ${_currentUser!.agencyName}');
+        }
+        if (_currentUser!.agentType != null) {
+          print('  - Agent Type: ${_currentUser!.agentType}');
+        }
+      } else {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+        print('❌ Failed to fetch profile: ${response.message}');
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          print('❌ Errors: ${response.errors}');
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingProfile = false;
+      });
+      print('❌ Profile fetch error: $e');
+    }
   }
 
   void _showKycDialogIfNeeded() {
@@ -724,9 +778,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'Welcome John ',
-                            style: TextStyle(
+                          Text(
+                            _isLoadingProfile 
+                                ? 'Welcome User '
+                                : 'Welcome ${_currentUser?.fullName?.split(' ').first ?? 'User'} ',
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                               color: Colors.black,
@@ -738,9 +794,12 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                           ),
                         ],
                       ),
-                      const Text(
-                        'Agent',
-                        style: TextStyle(
+                      Text(
+                        _isLoadingProfile 
+                            ? 'Loading...'
+                            : _currentUser?.agentType?.replaceAll('_', ' ') ?? 
+                              (_currentUser?.userType == 'agent' ? 'Agent' : 'User'),
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: Color(0xFF868686),

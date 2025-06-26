@@ -7,6 +7,8 @@ import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
 import 'package:proplinq/features/home/views/property_details_view.dart';
+import '../../auth/services/auth_service.dart';
+import '../../auth/models/user_model.dart';
 
 class TenantHomeView extends StatefulWidget {
   const TenantHomeView({super.key});
@@ -22,6 +24,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
   String _selectedCategory = 'All';
+  
+  final AuthService _authService = AuthService();
+  UserModel? _currentUser;
+  bool _isLoadingProfile = true;
 
   @override
   void initState() {
@@ -31,10 +37,52 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       vsync: this,
     )..repeat();
     
-    // Show KYC dialog after the widget is built
+    // Fetch user profile and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchUserProfile();
       _showKycDialogIfNeeded();
     });
+  }
+
+  Future<void> _fetchUserProfile() async {
+    try {
+      print('🔄 Fetching user profile...');
+      
+      final response = await _authService.getProfile();
+      
+      print('📋 Profile Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      
+      if (response.success && response.data != null) {
+        setState(() {
+          _currentUser = response.data;
+          _isLoadingProfile = false;
+        });
+        
+        print('👤 User Profile Data:');
+        print('  - ID: ${_currentUser!.id}');
+        print('  - Name: ${_currentUser!.fullName}');
+        print('  - Email: ${_currentUser!.email}');
+        print('  - User Type: "${_currentUser!.userType}"');
+        print('  - Location: ${_currentUser!.location}');
+        print('  - Phone: ${_currentUser!.phoneNumber}');
+      } else {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+        print('❌ Failed to fetch profile: ${response.message}');
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          print('❌ Errors: ${response.errors}');
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingProfile = false;
+      });
+      print('❌ Profile fetch error: $e');
+    }
   }
 
   void _showKycDialogIfNeeded() {
@@ -482,9 +530,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'Welcome John ',
-                            style: TextStyle(
+                          Text(
+                            _isLoadingProfile 
+                                ? 'Welcome User '
+                                : 'Welcome ${_currentUser?.fullName?.split(' ').first ?? 'User'} ',
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                               color: Colors.black,
@@ -496,9 +546,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                           ),
                         ],
                       ),
-                      const Text(
-                        'Home seeker',
-                        style: TextStyle(
+                      Text(
+                        _isLoadingProfile 
+                            ? 'Loading...'
+                            : _currentUser?.userType == 'home_seeker' 
+                                ? 'Home seeker' 
+                                : _currentUser?.userType?.replaceAll('_', ' ').toLowerCase() ?? 'User',
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: Color(0xFF868686),

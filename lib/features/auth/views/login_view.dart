@@ -4,6 +4,7 @@ import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/constants/app_typography.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../services/auth_service.dart';
 import 'forgot_password_view.dart';
 import 'sign_up_view.dart';
 import '../../home/views/tenant_home_view.dart';
@@ -25,6 +26,9 @@ class _LoginViewState extends State<LoginView> {
   bool _isPasswordVisible = false;
   bool _hasError = false;
   String _errorMessage = '';
+  bool _isLoading = false;
+  
+  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
@@ -35,55 +39,142 @@ class _LoginViewState extends State<LoginView> {
     super.dispose();
   }
 
-  void _signIn() {
-    // Simulate login validation
-    if (_emailController.text == 'JohnDoe22@gmail.com' && 
-        _passwordController.text == 'JohnDoe11111') {
+  void _signIn() async {
+    // Validate form
+    if (!_validateForm()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = '';
+    });
+
+    try {
+      print('🔄 Making login request...');
+      print('📧 Email: ${_emailController.text.trim()}');
+      print('🔑 Password: [HIDDEN]');
+      
+      // Make API call
+      final response = await _authService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      print('📋 Login Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      print('🔍 Raw Response Data: ${response.data?.toJson()}');
+      
+      if (response.data != null) {
+        print('👤 User Data:');
+        print('  - ID: ${response.data!.user.id}');
+        print('  - Name: ${response.data!.user.fullName}');
+        print('  - Email: ${response.data!.user.email}');
+        print('  - User Type: ${response.data!.user.userType}');
+        print('  - Location: ${response.data!.user.location}');
+        print('🔑 Token: ${response.data!.token}');
+        print('🕒 Token Type: ${response.data!.tokenType}');
+      }
+      
+      if (response.errors != null && response.errors!.isNotEmpty) {
+        print('❌ Errors: ${response.errors}');
+      }
+
+      if (response.success && response.data != null) {
+        // Login successful
+        _showSuccessMessage('Login successful! Welcome back, ${response.data!.user.fullName}!');
+        _navigateToHome(response.data!.user.userType);
+      } else {
+        // Login failed
+        setState(() {
+          _hasError = true;
+          _errorMessage = response.message ?? 'Login failed. Please try again.';
+        });
+        
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          _showErrorMessage(response.errors!.join('\n'));
+        } else {
+          _showErrorMessage(response.message ?? 'Login failed. Please try again.');
+        }
+      }
+    } catch (e) {
+      print('💥 Login Exception: $e');
       setState(() {
         _hasError = true;
-        _errorMessage = 'Incorrect password';
+        _errorMessage = 'An unexpected error occurred. Please try again.';
       });
-    } else {
+      _showErrorMessage('An unexpected error occurred. Please try again.');
+    } finally {
       setState(() {
-        _hasError = false;
-        _errorMessage = '';
+        _isLoading = false;
       });
-      
-      // Navigate based on email content (temporary logic)
-      _navigateToHome();
     }
   }
 
-  void _navigateToHome() {
-    final email = _emailController.text.toLowerCase();
+  bool _validateForm() {
+    if (_emailController.text.trim().isEmpty) {
+      _showErrorMessage('Please enter your email address');
+      return false;
+    }
+
+    if (!_isValidEmail(_emailController.text.trim())) {
+      _showErrorMessage('Please enter a valid email address');
+      return false;
+    }
+
+    if (_passwordController.text.isEmpty) {
+      _showErrorMessage('Please enter your password');
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _navigateToHome([String? userType]) {
+    print('🏠 Navigating to home for user type: $userType');
     
-    // Temporary routing logic based on email content
-    if (email.contains('agent')) {
-      // Navigate to agent home
+    // Navigate based on user type from API response
+    if (userType == 'agent') {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const AgentHomeView(),
         ),
       );
-    } else if (email.contains('tenant')) {
-      // Navigate to tenant home
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const TenantHomeView(),
-        ),
-      );
     } else {
-      // Default to tenant home
+      // Default to tenant home for 'home_seeker' or any other type
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const TenantHomeView(),
         ),
       );
     }
-    
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login successful!')),
-      );
   }
 
   void _continueWithGoogle() {
@@ -239,8 +330,8 @@ class _LoginViewState extends State<LoginView> {
               
               // Sign In button
               GradientButton(
-                text: 'Sign In',
-                onPressed: _signIn,
+                text: _isLoading ? 'Signing In...' : 'Sign In',
+                onPressed: _isLoading ? null : _signIn,
               ),
               
               const SizedBox(height: 24),

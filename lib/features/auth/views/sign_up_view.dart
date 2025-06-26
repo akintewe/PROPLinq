@@ -4,6 +4,10 @@ import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/constants/app_typography.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../../../core/widgets/phone_number_field.dart';
+import '../../../core/widgets/location_autocomplete_field.dart';
+import '../models/register_request.dart';
+import '../services/auth_service.dart';
 import 'login_view.dart';
 import 'email_verification_view.dart';
 import '../../home/views/tenant_home_view.dart';
@@ -19,6 +23,12 @@ class SignUpView extends StatefulWidget {
 class _SignUpViewState extends State<SignUpView> {
   bool _isHomeSeeker = true; // Toggle between Home Seeker and Agents
   bool _agreeToTerms = false;
+  bool _isLoading = false;
+  
+  final AuthService _authService = AuthService();
+  
+  // Google Places API Key
+  final String _googleApiKey = 'AIzaSyA5U_6NbBxgiO3P4zNRmDK9SwbEnEPZgJM';
   
   // Controllers for Home Seeker
   final TextEditingController _fullNameController = TextEditingController();
@@ -66,17 +76,183 @@ class _SignUpViewState extends State<SignUpView> {
     super.dispose();
   }
 
-  void _signUp() {
-    // Handle sign up logic
-    if (!_agreeToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please agree to Terms and Conditions')),
-      );
+  void _signUp() async {
+    // Validate form
+    if (!_validateForm()) {
       return;
     }
     
-    // For demo purposes, navigate directly to appropriate home based on user type
-    _navigateToHome();
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Create registration request
+      final registerRequest = RegisterRequest(
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        passwordConfirmation: _confirmPasswordController.text,
+        userType: _isHomeSeeker ? 'home_seeker' : 'agent',
+        phoneNumber: _phoneNumberController.text.trim(),
+        location: _locationController.text.trim(),
+        termsAccepted: _agreeToTerms,
+        agencyName: !_isHomeSeeker ? _agencyNameController.text.trim() : null,
+        agentType: !_isHomeSeeker && _selectedAgentType != 'Select' 
+            ? _selectedAgentType.toLowerCase().replaceAll(' ', '_') 
+            : null,
+        whatsappNumber: !_isHomeSeeker ? _whatsappNumberController.text.trim() : null,
+      );
+
+      print('🔄 Making registration request...');
+      print('📝 Registration Data:');
+      print('  - Full Name: ${registerRequest.fullName}');
+      print('  - Email: ${registerRequest.email}');
+      print('  - User Type: ${registerRequest.userType}');
+      print('  - Phone: ${registerRequest.phoneNumber}');
+      print('  - Location: ${registerRequest.location}');
+      print('  - Terms Accepted: ${registerRequest.termsAccepted}');
+      if (!_isHomeSeeker) {
+        print('  - Agency Name: ${registerRequest.agencyName}');
+        print('  - Agent Type: ${registerRequest.agentType}');
+        print('  - WhatsApp: ${registerRequest.whatsappNumber}');
+      }
+
+      // Make API call
+      final response = await _authService.register(registerRequest);
+
+      print('📋 Registration Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      print('🔍 Raw Response Data: ${response.data?.toJson()}');
+      
+      if (response.data != null) {
+        print('👤 User Data:');
+        print('  - ID: ${response.data!.user.id}');
+        print('  - Name: ${response.data!.user.fullName}');
+        print('  - Email: ${response.data!.user.email}');
+        print('  - User Type: "${response.data!.user.userType}"');
+        print('  - Location: ${response.data!.user.location}');
+        print('  - Agency Name: ${response.data!.user.agencyName}');
+        print('  - Agent Type: ${response.data!.user.agentType}');
+        print('🔑 Token: ${response.data!.token}');
+        print('🕒 Token Type: ${response.data!.tokenType}');
+      }
+      
+      if (response.errors != null && response.errors!.isNotEmpty) {
+        print('❌ Errors: ${response.errors}');
+      }
+
+      if (response.success && response.data != null) {
+        // Registration successful - navigate to login
+        _showSuccessMessage('Registration successful! Please log in with your credentials.');
+        _navigateToLogin();
+      } else {
+        // Registration failed
+        _showErrorMessage(response.message ?? 'Registration failed. Please try again.');
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          _showErrorMessage(response.errors!.join('\n'));
+        }
+      }
+    } catch (e) {
+      _showErrorMessage('An unexpected error occurred. Please try again.');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  bool _validateForm() {
+    if (_fullNameController.text.trim().isEmpty) {
+      _showErrorMessage('Please enter your full name');
+      return false;
+    }
+
+    if (_emailController.text.trim().isEmpty) {
+      _showErrorMessage('Please enter your email address');
+      return false;
+    }
+
+    if (!_isValidEmail(_emailController.text.trim())) {
+      _showErrorMessage('Please enter a valid email address');
+      return false;
+    }
+
+    if (_phoneNumberController.text.trim().isEmpty) {
+      _showErrorMessage('Please enter your phone number');
+      return false;
+    }
+
+    if (_locationController.text.trim().isEmpty) {
+      _showErrorMessage('Please enter your location');
+      return false;
+    }
+
+    if (_passwordController.text.isEmpty) {
+      _showErrorMessage('Please enter a password');
+      return false;
+    }
+
+    if (_passwordController.text.length < 8) {
+      _showErrorMessage('Password must be at least 8 characters long');
+      return false;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showErrorMessage('Passwords do not match');
+      return false;
+    }
+
+    // Agent-specific validations
+    if (!_isHomeSeeker) {
+      if (_agencyNameController.text.trim().isEmpty) {
+        _showErrorMessage('Please enter your agency name');
+        return false;
+      }
+
+      if (_selectedAgentType == 'Select') {
+        _showErrorMessage('Please select your agent type');
+        return false;
+      }
+
+      if (_whatsappNumberController.text.trim().isEmpty) {
+        _showErrorMessage('Please enter your WhatsApp number');
+        return false;
+      }
+    }
+
+    if (!_agreeToTerms) {
+      _showErrorMessage('Please agree to Terms and Conditions');
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   void _navigateToHome() {
@@ -407,24 +583,22 @@ class _SignUpViewState extends State<SignUpView> {
                       const SizedBox(height: 20),
                     ],
                     
-                    CustomTextField(
+                    PhoneNumberField(
                       label: 'Phone Number',
-                      hintText: 'Enter your phone number',
+                      hintText: '8012345678',
                       controller: _phoneNumberController,
                       focusNode: _focusNodePhoneNumber,
-                      keyboardType: TextInputType.phone,
                     ),
                     
                     const SizedBox(height: 20),
                     
                     // WhatsApp number for agents only
                     if (!_isHomeSeeker) ...[
-                      CustomTextField(
+                      PhoneNumberField(
                         label: 'Whatsapp Number',
-                        hintText: 'Enter your whatsapp number',
+                        hintText: '8012345678',
                         controller: _whatsappNumberController,
                         focusNode: _focusNodeWhatsappNumber,
-                        keyboardType: TextInputType.phone,
                       ),
                       
                       const SizedBox(height: 20),
@@ -440,23 +614,12 @@ class _SignUpViewState extends State<SignUpView> {
                     
                     const SizedBox(height: 20),
                     
-                    CustomTextField(
+                    LocationAutocompleteField(
                       label: 'Location',
                       hintText: 'Enter your location',
                       controller: _locationController,
                       focusNode: _focusNodeLocation,
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: SvgPicture.asset(
-                          'assets/icons/location.svg',
-                          width: 20,
-                          height: 20,
-                          colorFilter: const ColorFilter.mode(
-                            Color(0xFF868686),
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      ),
+                      apiKey: _googleApiKey,
                     ),
                     
                     const SizedBox(height: 20),
@@ -553,8 +716,8 @@ class _SignUpViewState extends State<SignUpView> {
                     
                     // Sign up button
                     GradientButton(
-                      text: 'Sign up',
-                      onPressed: _signUp,
+                      text: _isLoading ? 'Signing up...' : 'Sign up',
+                      onPressed: _isLoading ? null : _signUp,
                     ),
                     
                     const SizedBox(height: 24),

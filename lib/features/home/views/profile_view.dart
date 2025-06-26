@@ -3,11 +3,98 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'property_listing_view.dart';
 import '../../finance/views/agent_kyc_view.dart';
+import '../../auth/services/auth_service.dart';
+import '../../auth/models/user_model.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   final bool isAgent;
   
   const ProfileView({super.key, this.isAgent = false});
+  
+  @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
+  final AuthService _authService = AuthService();
+  UserModel? _currentUser;
+  bool _isLoadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile();
+  }
+
+  Future<void> _fetchUserProfile() async {
+    try {
+      print('🔄 Fetching user profile for profile screen...');
+      
+      final response = await _authService.getProfile();
+      
+      print('📋 Profile Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      
+      if (response.success && response.data != null) {
+        setState(() {
+          _currentUser = response.data;
+          _isLoadingProfile = false;
+        });
+        
+        print('👤 User Profile Data for Profile Screen:');
+        print('  - ID: ${_currentUser!.id}');
+        print('  - Name: ${_currentUser!.fullName}');
+        print('  - Email: ${_currentUser!.email}');
+        print('  - User Type: "${_currentUser!.userType}"');
+        print('  - Location: ${_currentUser!.location}');
+        print('  - Phone: ${_currentUser!.phoneNumber}');
+        if (_currentUser!.agencyName != null) {
+          print('  - Agency: ${_currentUser!.agencyName}');
+        }
+        if (_currentUser!.agentType != null) {
+          print('  - Agent Type: ${_currentUser!.agentType}');
+        }
+        if (_currentUser!.whatsappNumber != null) {
+          print('  - WhatsApp: ${_currentUser!.whatsappNumber}');
+        }
+      } else {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+        print('❌ Failed to fetch profile: ${response.message}');
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          print('❌ Errors: ${response.errors}');
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingProfile = false;
+      });
+      print('❌ Profile fetch error: $e');
+    }
+  }
+
+  String _getUserTypeDisplay() {
+    if (_currentUser == null) return 'User';
+    
+    if (_currentUser!.userType == 'agent') {
+      // For agents, show their specific agent type if available
+      if (_currentUser!.agentType != null) {
+        return _currentUser!.agentType!
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map((word) => word[0].toUpperCase() + word.substring(1))
+            .join(' ');
+      }
+      return 'Agent';
+    } else if (_currentUser!.userType == 'home_seeker') {
+      return 'Home Seeker';
+    } else {
+      return _currentUser!.userType?.replaceAll('_', ' ') ?? 'User';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,21 +125,21 @@ class ProfileView extends StatelessWidget {
                 const SizedBox(height: 48),
                 
                 // Agent Action Buttons (only for agents)
-                if (isAgent) _buildAgentActionButtons(context),
+                if (widget.isAgent) _buildAgentActionButtons(context),
                 
                 // KYC Info Message (only for agents)
-                if (isAgent) _buildKycInfoMessage(),
+                if (widget.isAgent) _buildKycInfoMessage(),
                 
                         // Contact Details Section
-        isAgent ? _buildAgentContactDetailsSection() : _buildContactDetailsSection(),
+        widget.isAgent ? _buildAgentContactDetailsSection() : _buildContactDetailsSection(),
         
         const SizedBox(height: 40),
         
         // Apply for Agent Button (only for tenants)
-        if (!isAgent) _buildApplyForAgentButton(),
+        if (!widget.isAgent) _buildApplyForAgentButton(),
         
         // Agent-specific sections
-        if (isAgent) ...[
+        if (widget.isAgent) ...[
           _buildCurrentListingSection(),
           const SizedBox(height: 32),
           _buildSubscriptionSection(),
@@ -87,16 +174,30 @@ class ProfileView extends StatelessWidget {
               // Profile Picture with camera icon
               Stack(
                 children: [
-                    Container(
+                  Container(
                     width: 120,
                     height: 120,
-                      decoration: BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       image: const DecorationImage(
                         image: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'),
                         fit: BoxFit.cover,
                       ),
                     ),
+                    child: _isLoadingProfile 
+                        ? Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black.withOpacity(0.3),
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            ),
+                          )
+                        : null,
                   ),
                   Positioned(
                     bottom: 8,
@@ -128,26 +229,28 @@ class ProfileView extends StatelessWidget {
               const SizedBox(height: 20),
                     
                     // Name
-                    const Text(
-                      'John Doe',
-                      style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
+                    Text(
+                      _isLoadingProfile 
+                          ? 'Loading...' 
+                          : _currentUser?.fullName ?? 'User Name',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
                         color: Colors.black,
                       ),
                     ),
-              
-              
                     
                     // Email
-                    const Text(
-                'johndoe@gmail.com',
-                      style: TextStyle(
-                  fontSize: 16,
+                    Text(
+                      _isLoadingProfile 
+                          ? 'Loading...' 
+                          : _currentUser?.email ?? 'user@email.com',
+                      style: const TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.w400,
-                  color: Color(0xFF999999),
-                ),
-              ),
+                        color: Color(0xFF999999),
+                      ),
+                    ),
               
               const SizedBox(height: 12),
               
@@ -155,15 +258,17 @@ class ProfileView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
-                  color:isAgent ? Color.fromRGBO(229, 253, 244, 1)  : Color.fromRGBO(241, 250, 253, 1),
+                  color: widget.isAgent ? Color.fromRGBO(229, 253, 244, 1) : Color.fromRGBO(241, 250, 253, 1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  isAgent ? 'Agent' : 'Home seeker',
-                  style:  TextStyle(
+                  _isLoadingProfile 
+                      ? 'Loading...'
+                      : _getUserTypeDisplay(),
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color:isAgent? AppColors.black : AppColors.primary600,
+                    color: widget.isAgent ? AppColors.black : AppColors.primary600,
                   ),
                 ),
               ),
@@ -194,7 +299,9 @@ class ProfileView extends StatelessWidget {
           icon: Icons.person,
           iconColor: const Color(0xFF426DC2),
           label: 'Full Name',
-          value: 'John Doe',
+          value: _isLoadingProfile 
+              ? 'Loading...' 
+              : _currentUser?.fullName ?? 'Not provided',
         ),
         
         const SizedBox(height: 24),
@@ -204,7 +311,9 @@ class ProfileView extends StatelessWidget {
           icon: Icons.email,
           iconColor: const Color(0xFF426DC2),
           label: 'Email',
-          value: 'johndoe@gmail.com',
+          value: _isLoadingProfile 
+              ? 'Loading...' 
+              : _currentUser?.email ?? 'Not provided',
         ),
         
         const SizedBox(height: 24),
@@ -214,7 +323,9 @@ class ProfileView extends StatelessWidget {
           icon: Icons.phone,
           iconColor: const Color(0xFF426DC2),
           label: 'Phone number',
-          value: '+234 8111111111',
+          value: _isLoadingProfile 
+              ? 'Loading...' 
+              : _currentUser?.phoneNumber ?? 'Not provided',
         ),
       ],
     );
@@ -465,17 +576,35 @@ class ProfileView extends StatelessWidget {
           icon: Icons.person,
           iconColor: const Color(0xFF426DC2),
           label: 'Full Name',
-          value: 'John Doe',
+          value: _isLoadingProfile 
+              ? 'Loading...' 
+              : _currentUser?.fullName ?? 'Not provided',
         ),
         
         const SizedBox(height: 24),
+        
+        // Agency Name (only for agents)
+        if (_currentUser?.agencyName != null || _isLoadingProfile) ...[
+          _buildContactDetailItem(
+            icon: Icons.business,
+            iconColor: const Color(0xFF426DC2),
+            label: 'Agency Name',
+            value: _isLoadingProfile 
+                ? 'Loading...' 
+                : _currentUser?.agencyName ?? 'Not provided',
+          ),
+          
+          const SizedBox(height: 24),
+        ],
         
         // Email
         _buildContactDetailItem(
           icon: Icons.email,
           iconColor: const Color(0xFF426DC2),
           label: 'Email',
-          value: 'johndoe@gmail.com',
+          value: _isLoadingProfile 
+              ? 'Loading...' 
+              : _currentUser?.email ?? 'Not provided',
         ),
         
         const SizedBox(height: 24),
@@ -485,7 +614,9 @@ class ProfileView extends StatelessWidget {
           icon: Icons.phone,
           iconColor: const Color(0xFF426DC2),
           label: 'Phone number',
-          value: '+234 8111111111',
+          value: _isLoadingProfile 
+              ? 'Loading...' 
+              : _currentUser?.phoneNumber ?? 'Not provided',
         ),
         
         const SizedBox(height: 24),
@@ -495,7 +626,21 @@ class ProfileView extends StatelessWidget {
           icon: Icons.chat,
           iconColor: const Color(0xFF426DC2),
           label: 'Whatsapp number',
-          value: '+234 8111111111',
+          value: _isLoadingProfile 
+              ? 'Loading...' 
+              : _currentUser?.whatsappNumber ?? _currentUser?.phoneNumber ?? 'Not provided',
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Location
+        _buildContactDetailItem(
+          icon: Icons.location_on,
+          iconColor: const Color(0xFF426DC2),
+          label: 'Location',
+          value: _isLoadingProfile 
+              ? 'Loading...' 
+              : _currentUser?.location ?? 'Not provided',
         ),
       ],
     );

@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
+import '../../auth/services/auth_service.dart';
+import '../../auth/views/login_view.dart';
 
-class SettingsView extends StatelessWidget {
+class SettingsView extends StatefulWidget {
   final bool isAgent;
   
   const SettingsView({super.key, this.isAgent = false});
+  
+  @override
+  State<SettingsView> createState() => _SettingsViewState();
+}
+
+class _SettingsViewState extends State<SettingsView> {
+  final AuthService _authService = AuthService();
+  bool _isLoggingOut = false;
 
   @override
   Widget build(BuildContext context) {
@@ -149,35 +159,114 @@ class SettingsView extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Log out'),
-          content: const Text('Are you sure you want to log out?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Color(0xFF868686)),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Handle logout logic here
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logged out successfully')),
-                );
-              },
-              child: const Text(
-                'Log out',
-                style: TextStyle(color: Color(0xFF426DC2)),
-              ),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Log out'),
+              content: _isLoggingOut 
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(strokeWidth: 2),
+                        SizedBox(width: 16),
+                        Text('Logging out...'),
+                      ],
+                    )
+                  : const Text('Are you sure you want to log out?'),
+              actions: _isLoggingOut 
+                  ? [] 
+                  : [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(color: Color(0xFF868686)),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          await _handleLogout(context, setDialogState);
+                        },
+                        child: const Text(
+                          'Log out',
+                          style: TextStyle(color: Color(0xFF426DC2)),
+                        ),
+                      ),
+                    ],
+            );
+          },
         );
       },
     );
+  }
+
+  Future<void> _handleLogout(BuildContext context, StateSetter setDialogState) async {
+    setDialogState(() {
+      _isLoggingOut = true;
+    });
+
+    setState(() {
+      _isLoggingOut = true;
+    });
+
+    try {
+      print('🔄 Logging out user...');
+      
+      final response = await _authService.logout();
+      
+      print('📋 Logout Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      
+      if (response.errors != null && response.errors!.isNotEmpty) {
+        print('❌ Errors: ${response.errors}');
+      }
+
+      // Close dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Navigate to login screen regardless of API response
+      // because AuthService.logout() clears local storage anyway
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginView()),
+          (route) => false, // Remove all previous routes
+        );
+      }
+
+      print('✅ User logged out and navigated to login screen');
+
+    } catch (e) {
+      print('❌ Logout error: $e');
+      
+      // Close dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+      
+      // Even if API fails, clear local data and navigate to login
+      await _authService.clearUserData();
+      
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginView()),
+          (route) => false,
+        );
+      }
+      
+      print('✅ User logged out locally and navigated to login screen');
+      
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoggingOut = false;
+        });
+      }
+    }
   }
 } 
