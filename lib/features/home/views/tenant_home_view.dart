@@ -9,6 +9,8 @@ import '../../../core/widgets/filter_bottom_sheet.dart';
 import 'package:proplinq/features/home/views/property_details_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/models/user_model.dart';
+import '../../auth/models/kyc_status_response.dart';
+import '../../finance/views/complete_kyc_view.dart';
 
 class TenantHomeView extends StatefulWidget {
   const TenantHomeView({super.key});
@@ -38,9 +40,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     )..repeat();
     
     // Fetch user profile and show KYC dialog after the widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchUserProfile();
-      _showKycDialogIfNeeded();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _fetchUserProfile();
+      await _showKycDialogIfNeeded();
     });
   }
 
@@ -85,24 +87,90 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
   }
 
-  void _showKycDialogIfNeeded() {
-    if (!_hasShownKycDialog) {
-      _hasShownKycDialog = true;
-      KycDialog.show(
-        context,
-        onGetStarted: () {
-          // Handle KYC start action
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('KYC process started!')),
+  Future<void> _showKycDialogIfNeeded() async {
+    if (_hasShownKycDialog) {
+      return; // Already shown in this session
+    }
+
+    try {
+      print('🔄 Checking KYC status...');
+      final response = await _authService.getKycStatus();
+      
+      print('📋 KYC Status Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      
+      if (response.success) {
+        // If data is null, it means KYC is not started/incomplete - show dialog
+        if (response.data == null) {
+          print('🎯 KYC Status: No data returned - KYC not started or incomplete');
+          print('✅ Showing KYC dialog because data is null (KYC incomplete)');
+          
+          _hasShownKycDialog = true;
+          KycDialog.show(
+            context,
+            onGetStarted: () {
+              // Navigate to KYC completion screen for home seekers
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const CompleteKycView(),
+                ),
+              );
+            },
+            onRemindLater: () {
+              // Handle remind later action
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('KYC reminder set for later')),
+              );
+            },
           );
-        },
-        onRemindLater: () {
-          // Handle remind later action
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('KYC reminder set for later')),
-          );
-        },
-      );
+        } else {
+          // We have actual KYC status data - check if dialog should be shown
+          final kycStatus = response.data!;
+          
+          print('🎯 KYC Status Data:');
+          print('  - Status: ${kycStatus.status}');
+          print('  - Is Required: ${kycStatus.isRequired}');
+          print('  - Should Show Dialog: ${kycStatus.shouldShowKycDialog()}');
+          print('  - Message: ${kycStatus.message}');
+          
+          if (kycStatus.shouldShowKycDialog()) {
+            _hasShownKycDialog = true;
+            KycDialog.show(
+              context,
+              onGetStarted: () {
+                // Navigate to KYC completion screen for home seekers
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const CompleteKycView(),
+                  ),
+                );
+              },
+              onRemindLater: () {
+                // Handle remind later action
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('KYC reminder set for later')),
+                );
+              },
+            );
+          } else {
+            print('✅ KYC is verified or not required - dialog not shown');
+          }
+        }
+      } else {
+        print('❌ API call failed - Status Code: ${response.statusCode}');
+        print('❌ Failed to get KYC status: ${response.message}');
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          print('❌ Errors: ${response.errors}');
+        }
+        
+        // If API call fails, don't show dialog to avoid spam
+        print('⚠️ KYC status check failed - dialog not shown');
+      }
+    } catch (e) {
+      print('❌ KYC status check error: $e');
+      // If there's an error, don't show dialog
     }
   }
 

@@ -4,6 +4,7 @@ import '../../../core/services/storage_service.dart';
 import '../models/auth_response.dart';
 import '../models/register_request.dart';
 import '../models/user_model.dart';
+import '../models/kyc_status_response.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -192,6 +193,15 @@ class AuthService {
   // Get user type from storage
   Future<String?> getUserType() async {
     return await _storageService.getUserType();
+  }
+
+  // Get KYC status
+  Future<ApiResponse<KycStatusResponse>> getKycStatus() async {
+    return await _apiService.get<KycStatusResponse>(
+      ApiConstants.kycStatus,
+      requiresAuth: true,
+      fromJson: (json) => KycStatusResponse.fromJson(json),
+    );
   }
 
   // Clear all user data (local logout)
