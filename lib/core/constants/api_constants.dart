@@ -32,7 +32,14 @@ class ApiConstants {
   
   // KYC Endpoints
   static const String kycSubmission = '/kyc/submit';
-  static const String kycStatus = '/kyc/status';
+  static const String kycAgentStatus = '/kyc/agent/status';   // For agents
+  static const String kycUserStatus = '/kyc/user/status';     // For home seekers (assuming similar pattern)
+  
+  // Verification Endpoints
+  static const String phoneVerifyRequest = '/phone/verify/request';
+  static const String phoneVerify = '/phone/verify';
+  static const String emailVerifyRequest = '/email/verify/request';
+  static const String emailVerify = '/email/verify';
   
   // Headers
   static Map<String, String> get defaultHeaders => {

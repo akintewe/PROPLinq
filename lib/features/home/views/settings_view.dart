@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/views/login_view.dart';
+import 'account_settings_view.dart';
 
 class SettingsView extends StatefulWidget {
   final bool isAgent;
@@ -46,7 +47,14 @@ class _SettingsViewState extends State<SettingsView> {
                         iconPath: 'assets/icons/profile.svg',
                         iconColor: const Color(0xFF426DC2),
                         title: 'Account settings',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AccountSettingsView(),
+                            ),
+                          );
+                        },
                       ),
                       
                       const SizedBox(height: 20),

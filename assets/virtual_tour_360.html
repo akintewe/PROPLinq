@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>360° Virtual Tour</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #000;
+            overflow: hidden;
+        }
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            transition: opacity 0.3s ease;
+        }
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .control-btn.active {
+            background: #426DC2;
+        }
+        #info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(66, 109, 194, 0.9);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+        #instructions {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            max-width: 300px;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+        .fade-out {
+            opacity: 0;
+        }
+        a-scene {
+            height: 100vh;
+            width: 100vw;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">360°</div>
+    
+    <div id="instructions">
+        <div style="font-weight: 600; margin-bottom: 10px;">Virtual Tour Controls:</div>
+        <div>• Drag to look around</div>
+        <div>• Pinch to zoom in/out</div>
+        <div>• Use controls below for auto-rotation</div>
+    </div>
+
+    <div id="controls">
+        <button class="control-btn" onclick="toggleAutoRotate()">
+            <span id="autoRotateText">Auto Rotate</span>
+        </button>
+        <button class="control-btn" onclick="toggleDirection()">
+            <span id="directionText">Clockwise</span>
+        </button>
+        <button class="control-btn" onclick="resetView()">Reset View</button>
+        <button class="control-btn" onclick="toggleControls()">Hide UI</button>
+    </div>
+
+    <a-scene 
+        embedded 
+        style="height: 100vh; width: 100vw;"
+        cursor="rayOrigin: mouse"
+        raycaster="objects: .clickable">
+        
+        <a-sky 
+            id="panorama"
+            src="PANORAMA_IMAGE_URL"
+            rotation="0 0 0"
+            animation__rotate="property: rotation; 
+                             to: 0 360 0; 
+                             loop: true; 
+                             dur: 20000;
+                             pauseEvents: pause;
+                             resumeEvents: resume;
+                             autoplay: false">
+        </a-sky>
+        
+        <a-camera 
+            id="camera"
+            look-controls="enabled: true; pointerLockEnabled: false"
+            wasd-controls="enabled: false"
+            cursor="rayOrigin: mouse">
+        </a-camera>
+    </a-scene>
+
+    <script>
+        let autoRotating = false;
+        let clockwise = true;
+        let controlsVisible = true;
+        let camera, sky;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            camera = document.querySelector('#camera');
+            sky = document.querySelector('#panorama');
+            
+            // Hide instructions after 5 seconds
+            setTimeout(() => {
+                document.getElementById('instructions').classList.add('fade-out');
+            }, 5000);
+            
+            // Set up message listener for Flutter communication
+            window.addEventListener('message', function(event) {
+                if (event.data.type === 'setImage') {
+                    setPanoramaImage(event.data.imageUrl);
+                }
+            });
+        });
+
+        function setPanoramaImage(imageUrl) {
+            sky.setAttribute('src', imageUrl);
+        }
+
+        function toggleAutoRotate() {
+            autoRotating = !autoRotating;
+            const btn = document.getElementById('autoRotateText');
+            
+            if (autoRotating) {
+                sky.emit('resume');
+                btn.textContent = 'Stop Auto';
+                btn.parentElement.classList.add('active');
+            } else {
+                sky.emit('pause');
+                btn.textContent = 'Auto Rotate';
+                btn.parentElement.classList.remove('active');
+            }
+        }
+
+        function toggleDirection() {
+            clockwise = !clockwise;
+            const btn = document.getElementById('directionText');
+            
+            const currentRotation = sky.getAttribute('rotation');
+            sky.removeAttribute('animation__rotate');
+            
+            const duration = clockwise ? 20000 : 20000;
+            const toRotation = clockwise ? '0 360 0' : '0 -360 0';
+            
+            sky.setAttribute('animation__rotate', {
+                property: 'rotation',
+                to: toRotation,
+                loop: true,
+                dur: duration,
+                pauseEvents: 'pause',
+                resumeEvents: 'resume',
+                autoplay: autoRotating
+            });
+            
+            btn.textContent = clockwise ? 'Clockwise' : 'Counter-CW';
+        }
+
+        function resetView() {
+            camera.setAttribute('rotation', '0 0 0');
+            sky.setAttribute('rotation', '0 0 0');
+            if (autoRotating) {
+                sky.emit('pause');
+                setTimeout(() => sky.emit('resume'), 100);
+            }
+        }
+
+        function toggleControls() {
+            controlsVisible = !controlsVisible;
+            const controls = document.getElementById('controls');
+            const info = document.getElementById('info');
+            const instructions = document.getElementById('instructions');
+            
+            if (controlsVisible) {
+                controls.style.opacity = '1';
+                info.style.opacity = '1';
+                instructions.style.opacity = '1';
+            } else {
+                controls.style.opacity = '0';
+                info.style.opacity = '0';
+                instructions.style.opacity = '0';
+            }
+        }
+
+        // Hide controls after initial period
+        setTimeout(() => {
+            if (controlsVisible) {
+                toggleControls();
+            }
+        }, 8000);
+
+        // Show controls on interaction
+        document.addEventListener('click', () => {
+            if (!controlsVisible) {
+                toggleControls();
+                // Auto-hide again after 5 seconds
+                setTimeout(() => {
+                    if (controlsVisible) {
+                        toggleControls();
+                    }
+                }, 5000);
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -10,6 +10,10 @@ class UserModel {
   final String? whatsappNumber;
   final bool? emailVerified;
   final String? profilePicture;
+  final DateTime? emailVerifiedAt;
+  final DateTime? phoneVerifiedAt;
+  final bool? kycStatus;
+  final Map<String, dynamic>? kycData;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -25,6 +29,10 @@ class UserModel {
     this.whatsappNumber,
     this.emailVerified,
     this.profilePicture,
+    this.emailVerifiedAt,
+    this.phoneVerifiedAt,
+    this.kycStatus,
+    this.kycData,
     this.createdAt,
     this.updatedAt,
   });
@@ -42,6 +50,14 @@ class UserModel {
       whatsappNumber: json['whatsapp_number'],
       emailVerified: json['email_verified'],
       profilePicture: json['profile_picture'],
+      emailVerifiedAt: json['email_verified_at'] != null 
+          ? DateTime.tryParse(json['email_verified_at']) 
+          : null,
+      phoneVerifiedAt: json['phone_verified_at'] != null 
+          ? DateTime.tryParse(json['phone_verified_at']) 
+          : null,
+      kycStatus: json['kyc_status'] ?? (json['kyc'] != null),
+      kycData: json['kyc'] is Map<String, dynamic> ? json['kyc'] : null,
       createdAt: json['created_at'] != null 
           ? DateTime.tryParse(json['created_at']) 
           : null,
@@ -64,6 +80,10 @@ class UserModel {
       'whatsapp_number': whatsappNumber,
       'email_verified': emailVerified,
       'profile_picture': profilePicture,
+      'email_verified_at': emailVerifiedAt?.toIso8601String(),
+      'phone_verified_at': phoneVerifiedAt?.toIso8601String(),
+      'kyc_status': kycStatus,
+      'kyc': kycData,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

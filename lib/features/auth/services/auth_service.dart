@@ -195,17 +195,109 @@ class AuthService {
     return await _storageService.getUserType();
   }
 
-  // Get KYC status
+  // Get KYC status - uses appropriate endpoint based on user type
   Future<ApiResponse<KycStatusResponse>> getKycStatus() async {
-    return await _apiService.get<KycStatusResponse>(
-      ApiConstants.kycStatus,
+    // Get current user to determine their type
+    final userType = await getUserType();
+    
+    print('👤 User type detected: $userType');
+    
+    if (userType == 'agent') {
+      print('🏢 Using agent KYC endpoint: ${ApiConstants.kycAgentStatus}');
+      final response = await _apiService.get<KycStatusResponse>(
+        ApiConstants.kycAgentStatus,
+        requiresAuth: true,
+        fromJson: (json) => KycStatusResponse.fromJson(json),
+      );
+      
+      // If agent endpoint returns 404, try user endpoint as fallback
+      if (response.statusCode == 404) {
+        print('⚠️ Agent endpoint not found, trying user endpoint as fallback');
+        return await _getUserKycStatus();
+      }
+      return response;
+    } else {
+      print('🏠 Using user KYC endpoint: ${ApiConstants.kycUserStatus}');
+      return await _getUserKycStatus();
+    }
+  }
+
+  // Get user KYC status with fallback handling
+  Future<ApiResponse<KycStatusResponse>> _getUserKycStatus() async {
+    final response = await _apiService.get<KycStatusResponse>(
+      ApiConstants.kycUserStatus,
       requiresAuth: true,
       fromJson: (json) => KycStatusResponse.fromJson(json),
     );
+    
+    // If user endpoint also returns 404, treat as KYC incomplete (show dialog)
+    if (response.statusCode == 404) {
+      print('⚠️ User endpoint not found - treating as KYC incomplete');
+      return ApiResponse.success(
+        data: null, // null data means KYC incomplete
+        message: 'KYC not started - endpoint not available yet',
+        statusCode: 200,
+      );
+    }
+    return response;
   }
 
   // Clear all user data (local logout)
   Future<void> clearUserData() async {
     await _storageService.clearAll();
+  }
+
+  // Request phone verification code
+  Future<ApiResponse<void>> requestPhoneVerification() async {
+    print('📞 Requesting phone verification code...');
+    
+    return await _apiService.post<void>(
+      ApiConstants.phoneVerifyRequest,
+      requiresAuth: true,
+      fromJson: (json) => null, // No response body expected
+    );
+  }
+
+  // Verify phone with code
+  Future<ApiResponse<void>> verifyPhone(String code) async {
+    print('📞 Verifying phone with code: $code');
+    
+    final requestData = {
+      'code': code,
+    };
+    
+    return await _apiService.post<void>(
+      ApiConstants.phoneVerify,
+      body: requestData,
+      requiresAuth: true,
+      fromJson: (json) => null, // No response body expected
+    );
+  }
+
+  // Request email verification code (for the new verification flow)
+  Future<ApiResponse<void>> requestNewEmailVerification() async {
+    print('📧 Requesting email verification code...');
+    
+    return await _apiService.post<void>(
+      ApiConstants.emailVerifyRequest,
+      requiresAuth: true,
+      fromJson: (json) => null, // No response body expected
+    );
+  }
+
+  // Verify email with code (for the new verification flow)
+  Future<ApiResponse<void>> verifyNewEmail(String code) async {
+    print('📧 Verifying email with code: $code');
+    
+    final requestData = {
+      'code': code,
+    };
+    
+    return await _apiService.post<void>(
+      ApiConstants.emailVerify,
+      body: requestData,
+      requiresAuth: true,
+      fromJson: (json) => null, // No response body expected
+    );
   }
 } 

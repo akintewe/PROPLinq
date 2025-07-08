@@ -10,8 +10,8 @@ import '../../../core/widgets/filter_bottom_sheet.dart';
 import 'package:proplinq/features/home/views/property_details_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/models/user_model.dart';
-import '../../auth/models/kyc_status_response.dart';
 import '../../finance/views/agent_kyc_view.dart';
+import '../../finance/views/complete_kyc_view.dart';
 
 class AgentHomeView extends StatefulWidget {
   const AgentHomeView({super.key});
@@ -100,7 +100,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     }
 
     try {
-      print('🔄 Checking KYC status...');
+      print('🔄 Checking KYC status for agent...');
       final response = await _authService.getKycStatus();
       
       print('📋 KYC Status Response:');
@@ -118,12 +118,20 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           KycDialog.show(
             context,
             onGetStarted: () {
-              // Navigate to KYC completion screen for agents
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const AgentKycView(),
-                ),
-              );
+              // Navigate to appropriate KYC screen based on user role
+              if (_currentUser?.userType == 'agent') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AgentKycView(),
+                  ),
+                );
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const CompleteKycView(),
+                  ),
+                );
+              }
             },
             onRemindLater: () {
               // Handle remind later action
@@ -147,12 +155,20 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             KycDialog.show(
               context,
               onGetStarted: () {
-                // Navigate to KYC completion screen for agents
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AgentKycView(),
-                  ),
-                );
+                // Navigate to appropriate KYC screen based on user role
+                if (_currentUser?.userType == 'agent') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AgentKycView(),
+                    ),
+                  );
+                } else {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const CompleteKycView(),
+                    ),
+                  );
+                }
               },
               onRemindLater: () {
                 // Handle remind later action
