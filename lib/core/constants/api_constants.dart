@@ -34,6 +34,7 @@ class ApiConstants {
   static const String kycSubmission = '/kyc/submit';
   static const String kycAgentStatus = '/kyc/agent/status';   // For agents
   static const String kycUserStatus = '/kyc/user/status';     // For home seekers (assuming similar pattern)
+  static const String kycAgentSubmit = '/kyc/agent';          // For agent KYC submission
   
   // Verification Endpoints
   static const String phoneVerifyRequest = '/phone/verify/request';

@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/storage_service.dart';
@@ -5,6 +6,8 @@ import '../models/auth_response.dart';
 import '../models/register_request.dart';
 import '../models/user_model.dart';
 import '../models/kyc_status_response.dart';
+import '../models/login_request.dart';
+import '../models/agent_kyc_request.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -299,5 +302,33 @@ class AuthService {
       requiresAuth: true,
       fromJson: (json) => null, // No response body expected
     );
+  }
+
+  // Submit agent KYC
+  Future<ApiResponse<void>> submitAgentKyc(AgentKycRequest request) async {
+    print('🏢 Submitting agent KYC...');
+    
+    try {
+      final response = await _apiService.postFormData<void>(
+        ApiConstants.kycAgentSubmit,
+        fields: request.toFormFields(),
+        files: request.toFormFiles(),
+        requiresAuth: true,
+        fromJson: (json) => null, // No response body expected
+      );
+      
+      print('📋 Agent KYC Submission Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      
+      return response;
+    } catch (e) {
+      print('❌ Error submitting agent KYC: $e');
+      return ApiResponse.error(
+        message: 'Failed to submit KYC: $e',
+        statusCode: 0,
+      );
+    }
   }
 } 

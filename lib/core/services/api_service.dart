@@ -265,6 +265,71 @@ class ApiService {
     }
   }
 
+  // Form data POST request for file uploads
+  Future<ApiResponse<T>> postFormData<T>(
+    String endpoint, {
+    required Map<String, String> fields,
+    required Map<String, File> files,
+    bool requiresAuth = false,
+    T Function(Map<String, dynamic>)? fromJson,
+  }) async {
+    try {
+      final url = Uri.parse(_buildUrl(endpoint));
+      final headers = await _buildHeaders(requiresAuth: requiresAuth);
+      
+      // Remove Content-Type header for multipart request
+      headers.remove('Content-Type');
+      
+      // Create multipart request
+      final request = http.MultipartRequest('POST', url);
+      
+      // Add headers
+      request.headers.addAll(headers);
+      
+      // Add text fields
+      request.fields.addAll(fields);
+      
+      // Add files
+      for (final entry in files.entries) {
+        final file = entry.value;
+        final fieldName = entry.key;
+        
+        if (await file.exists()) {
+          final stream = http.ByteStream(file.openRead());
+          final length = await file.length();
+          
+          final multipartFile = http.MultipartFile(
+            fieldName,
+            stream,
+            length,
+            filename: file.path.split('/').last,
+          );
+          
+          request.files.add(multipartFile);
+        }
+      }
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      if (fromJson != null) {
+        return _handleResponse(response, fromJson);
+      } else {
+        return _handleResponse<T>(response, (json) => json as T);
+      }
+    } on SocketException {
+      return ApiResponse.error(
+        message: 'No internet connection',
+        statusCode: 0,
+      );
+    } catch (e) {
+      return ApiResponse.error(
+        message: 'Request failed: $e',
+        statusCode: 0,
+      );
+    }
+  }
+
   // Dispose method
   void dispose() {
     _client.close();

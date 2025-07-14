@@ -358,25 +358,33 @@ class _ProfileViewState extends State<ProfileView> {
             const SizedBox(width: 16),
             
             // Label
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
+            Expanded(
+              flex: 1,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             
-            // Spacer to push value to the right
-            const Spacer(),
+            const SizedBox(width: 8),
             
             // Value
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF999999),
+            Expanded(
+              flex: 2,
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF999999),
+                ),
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
