@@ -31,8 +31,9 @@ class KycStatusResponse {
 
   // Helper method to determine if KYC dialog should be shown
   bool shouldShowKycDialog() {
-    // Show dialog if KYC is required and status is not 'verified'
-    return isRequired && status != 'verified';
+    // Show dialog only if KYC is required and status is 'not_started' or 'rejected'
+    // Don't show dialog for 'pending' or 'verified' statuses
+    return isRequired && (status == 'not_started' || status == 'rejected');
   }
 
   // Helper method to check if KYC is completed and verified

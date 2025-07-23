@@ -1,61 +1,65 @@
 /// Property model representing a real estate property
 class PropertyModel {
-  final String id;
+  final int id;
+  final int userId;
+  final String type;
   final String title;
-  final String address;
-  final double price;
-  final String imageUrl;
-  final int bedrooms;
-  final int bathrooms;
-  final double area;
-  final String propertyType;
+  final String description;
+  final String price;
+  final String category;
+  final String location;
+  final String? imageUrl;
+  final int? bedrooms;
+  final int? bathrooms;
+  final double? area;
   final bool isFavorite;
-  final String agentName;
-  final String agentPhone;
 
   const PropertyModel({
     required this.id,
+    required this.userId,
+    required this.type,
     required this.title,
-    required this.address,
+    required this.description,
     required this.price,
-    required this.imageUrl,
-    required this.bedrooms,
-    required this.bathrooms,
-    required this.area,
-    required this.propertyType,
+    required this.category,
+    required this.location,
+    this.imageUrl,
+    this.bedrooms,
+    this.bathrooms,
+    this.area,
     this.isFavorite = false,
-    required this.agentName,
-    required this.agentPhone,
   });
 
   /// Create a copy of this model with updated fields
   PropertyModel copyWith({
-    String? id,
+    int? id,
+    int? userId,
+    String? type,
     String? title,
-    String? address,
-    double? price,
+    String? description,
+    String? price,
+    String? category,
+    String? location,
     String? imageUrl,
     int? bedrooms,
     int? bathrooms,
     double? area,
-    String? propertyType,
     bool? isFavorite,
-    String? agentName,
-    String? agentPhone,
   }) {
     return PropertyModel(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
       title: title ?? this.title,
-      address: address ?? this.address,
+      description: description ?? this.description,
       price: price ?? this.price,
+      category: category ?? this.category,
+      location: location ?? this.location,
       imageUrl: imageUrl ?? this.imageUrl,
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       area: area ?? this.area,
-      propertyType: propertyType ?? this.propertyType,
       isFavorite: isFavorite ?? this.isFavorite,
-      agentName: agentName ?? this.agentName,
-      agentPhone: agentPhone ?? this.agentPhone,
     );
   }
 
@@ -63,52 +67,56 @@ class PropertyModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'user_id': userId,
+      'type': type,
       'title': title,
-      'address': address,
+      'description': description,
       'price': price,
-      'imageUrl': imageUrl,
+      'category': category,
+      'location': location,
+      'image_url': imageUrl,
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
       'area': area,
-      'propertyType': propertyType,
-      'isFavorite': isFavorite,
-      'agentName': agentName,
-      'agentPhone': agentPhone,
+      'is_favorite': isFavorite,
     };
   }
 
   /// Create from JSON
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
     return PropertyModel(
-      id: json['id'] as String,
+      id: json['id'] as int,
+      userId: json['user_id'] as int,
+      type: json['type'] as String,
       title: json['title'] as String,
-      address: json['address'] as String,
-      price: (json['price'] as num).toDouble(),
-      imageUrl: json['imageUrl'] as String,
-      bedrooms: json['bedrooms'] as int,
-      bathrooms: json['bathrooms'] as int,
-      area: (json['area'] as num).toDouble(),
-      propertyType: json['propertyType'] as String,
-      isFavorite: json['isFavorite'] as bool? ?? false,
-      agentName: json['agentName'] as String,
-      agentPhone: json['agentPhone'] as String,
+      description: json['description'] as String,
+      price: json['price'] as String,
+      category: json['category'] as String,
+      location: json['location'] as String,
+      imageUrl: json['image_url'] as String?,
+      bedrooms: json['bedrooms'] as int?,
+      bathrooms: json['bathrooms'] as int?,
+      area: json['area'] != null ? (json['area'] as num).toDouble() : null,
+      isFavorite: json['is_favorite'] as bool? ?? false,
     );
   }
 
   /// Formatted price string
   String get formattedPrice {
-    if (price >= 1000000) {
-      return '\$${(price / 1000000).toStringAsFixed(1)}M';
-    } else if (price >= 1000) {
-      return '\$${(price / 1000).toStringAsFixed(0)}K';
+    final priceValue = double.tryParse(price) ?? 0.0;
+    if (priceValue >= 1000000) {
+      return '\$${(priceValue / 1000000).toStringAsFixed(1)}M';
+    } else if (priceValue >= 1000) {
+      return '\$${(priceValue / 1000).toStringAsFixed(0)}K';
     } else {
-      return '\$${price.toStringAsFixed(0)}';
+      return '\$${priceValue.toStringAsFixed(0)}';
     }
   }
 
   /// Formatted area string
   String get formattedArea {
-    return '${area.toStringAsFixed(0)} sq ft';
+    if (area == null) return 'N/A';
+    return '${area!.toStringAsFixed(0)} sq ft';
   }
 
   @override

@@ -165,7 +165,7 @@ class HomeView extends BaseView<HomeViewModel> {
                         property.isFavorite ? Icons.favorite : Icons.favorite_border,
                         color: property.isFavorite ? AppColors.error600 : AppColors.grey600,
                       ),
-                      onPressed: () => viewModel.toggleFavorite(property.id),
+                      onPressed: () => viewModel.toggleFavorite(property.id.toString()),
                     ),
                   ),
                 ),
@@ -186,7 +186,7 @@ class HomeView extends BaseView<HomeViewModel> {
                 ),
                 const SizedBox(height: AppDimensions.spacing4),
                 Text(
-                  property.address,
+                  property.location,
                   style: AppTypography.bodySmall.copyWith(
                     color: AppColors.grey600,
                   ),
@@ -299,7 +299,7 @@ class HomeView extends BaseView<HomeViewModel> {
           children: [
             const SizedBox(height: AppDimensions.spacing4),
             Text(
-              property.address,
+              property.location,
               style: AppTypography.bodySmall.copyWith(
                 color: AppColors.grey600,
               ),
@@ -323,7 +323,7 @@ class HomeView extends BaseView<HomeViewModel> {
                 property.isFavorite ? Icons.favorite : Icons.favorite_border,
                 color: property.isFavorite ? AppColors.error600 : AppColors.grey600,
               ),
-              onPressed: () => viewModel.toggleFavorite(property.id),
+              onPressed: () => viewModel.toggleFavorite(property.id.toString()),
             ),
             Text(
               property.formattedPrice,

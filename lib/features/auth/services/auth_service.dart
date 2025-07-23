@@ -8,6 +8,7 @@ import '../models/user_model.dart';
 import '../models/kyc_status_response.dart';
 import '../models/login_request.dart';
 import '../models/agent_kyc_request.dart';
+import '../models/user_kyc_request.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -325,6 +326,34 @@ class AuthService {
       return response;
     } catch (e) {
       print('❌ Error submitting agent KYC: $e');
+      return ApiResponse.error(
+        message: 'Failed to submit KYC: $e',
+        statusCode: 0,
+      );
+    }
+  }
+
+  // Submit user KYC
+  Future<ApiResponse<void>> submitUserKyc(UserKycRequest request) async {
+    print('🏠 Submitting user KYC...');
+    
+    try {
+      final response = await _apiService.postFormData<void>(
+        ApiConstants.kycUserSubmit,
+        fields: request.toFormFields(),
+        files: request.toFormFiles(),
+        requiresAuth: true,
+        fromJson: (json) => null, // No response body expected
+      );
+      
+      print('📋 User KYC Submission Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      
+      return response;
+    } catch (e) {
+      print('❌ Error submitting user KYC: $e');
       return ApiResponse.error(
         message: 'Failed to submit KYC: $e',
         statusCode: 0,

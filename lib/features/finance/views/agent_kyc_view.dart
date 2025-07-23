@@ -7,7 +7,7 @@ import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../features/auth/services/auth_service.dart';
 import '../../../features/auth/models/agent_kyc_request.dart';
-import 'kyc_success_view.dart';
+import 'agent_kyc_success_view.dart';
 
 class AgentKycView extends StatefulWidget {
   const AgentKycView({super.key});
@@ -18,7 +18,7 @@ class AgentKycView extends StatefulWidget {
 
 class _AgentKycViewState extends State<AgentKycView> {
   int _currentStep = 0;
-  final int _totalSteps = 5; // Back to 5 steps
+  final int _totalSteps = 4; // 4 steps: Business Info, Identity, Employment, Review & Submit
 
   // Controllers for Step 1
   final TextEditingController _businessNameController = TextEditingController();
@@ -149,7 +149,12 @@ class _AgentKycViewState extends State<AgentKycView> {
       final response = await _authService.submitAgentKyc(request);
 
       if (response.success) {
-        _nextStep(); // Move to success step
+        // Navigate to agent KYC success view
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const AgentKycSuccessView(),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -390,8 +395,6 @@ class _AgentKycViewState extends State<AgentKycView> {
         return _buildStep3();
       case 3:
         return _buildStep4();
-      case 4:
-        return _buildStep5();
       default:
         return _buildStep1();
     }
@@ -458,25 +461,8 @@ class _AgentKycViewState extends State<AgentKycView> {
           onChanged: (_) => setState(() {}),
         ),
         
-        const SizedBox(height: 40),
+        const SizedBox(height: 24),
         
-        GradientButton(
-          text: 'Next',
-          onPressed: _bvnController.text.length == 11 && 
-                    _ninController.text.length == 11 ? _nextStep : null,
-          isEnabled: _bvnController.text.length == 11 && 
-                     _ninController.text.length == 11,
-        ),
-        
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildStep3() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
         // Occupation
         CustomTextField(
           label: 'Occupation',
@@ -558,10 +544,14 @@ class _AgentKycViewState extends State<AgentKycView> {
         
         GradientButton(
           text: 'Next',
-          onPressed: _occupationController.text.isNotEmpty && 
+          onPressed: _bvnController.text.length == 11 && 
+                    _ninController.text.length == 11 &&
+                    _occupationController.text.isNotEmpty && 
                     _companyNameController.text.isNotEmpty && 
                     _employmentStatus.isNotEmpty ? _nextStep : null,
-          isEnabled: _occupationController.text.isNotEmpty && 
+          isEnabled: _bvnController.text.length == 11 && 
+                     _ninController.text.length == 11 &&
+                     _occupationController.text.isNotEmpty && 
                      _companyNameController.text.isNotEmpty && 
                      _employmentStatus.isNotEmpty,
         ),
@@ -571,7 +561,7 @@ class _AgentKycViewState extends State<AgentKycView> {
     );
   }
 
-  Widget _buildStep4() {
+  Widget _buildStep3() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -650,11 +640,10 @@ class _AgentKycViewState extends State<AgentKycView> {
     );
   }
 
-  Widget _buildStep5() {
+  Widget _buildStep4() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 40),
-        
         // Review section
         const Text(
           'Review Your Information',
@@ -702,6 +691,8 @@ class _AgentKycViewState extends State<AgentKycView> {
       ],
     );
   }
+
+
 
   Widget _buildReviewItem(String label, String value) {
     return Padding(

@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../services/property_service.dart';
 import 'property_listing_success_view.dart';
 
 class CurrencyInputFormatter extends TextInputFormatter {
@@ -82,6 +84,10 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   // Hotel amenities state
   List<String> _selectedAmenities = [];
   
+  // File upload state
+  List<File> _selectedImages = [];
+  File? _selectedVideo;
+  
   final List<Map<String, dynamic>> _hotelAmenities = [
     {'name': 'Queen-size Bed', 'svg': 'assets/icons/material-symbols_bed-outline-rounded.svg'},
     {'name': 'En-suite Bathroom', 'svg': 'assets/icons/mdi_bathroom (1).svg'},
@@ -100,6 +106,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     _propertyTitleController.addListener(() => setState(() {}));
     _priceController.addListener(() => setState(() {}));
     _locationController.addListener(() => setState(() {}));
+    _roomsController.addListener(() => setState(() {}));
+    _bathroomsController.addListener(() => setState(() {}));
   }
 
   void dispose() {
@@ -138,7 +146,13 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       _descriptionController.clear();
       _priceController.clear();
       _locationController.clear();
+      _roomsController.clear();
+      _bathroomsController.clear();
       _selectedAmenities.clear();
+      _selectedImages.clear();
+      _selectedVideo = null;
+      _gatedStatus = '';
+      _parkingStatus = '';
       
       if (_isHotelType) {
         _listingType = 'For rent'; // Hotels are always for rent
@@ -161,6 +175,17 @@ class _PropertyListingViewState extends State<PropertyListingView> {
            _propertyTitleController.text.isNotEmpty &&
            _priceController.text.isNotEmpty &&
            _locationController.text.isNotEmpty;
+  }
+
+  bool _isStep2Valid() {
+    if (_isHotelType) {
+      return _selectedAmenities.isNotEmpty;
+    } else {
+      return _roomsController.text.isNotEmpty &&
+             _bathroomsController.text.isNotEmpty &&
+             _gatedStatus.isNotEmpty &&
+             _parkingStatus.isNotEmpty;
+    }
   }
 
   @override
@@ -649,7 +674,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         
         GradientButton(
           text: 'Next',
-          onPressed: _nextStep,
+          onPressed: _isStep2Valid() ? _nextStep : null,
+          isEnabled: _isStep2Valid(),
         ),
         
         const SizedBox(height: 40),
@@ -893,7 +919,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         
         GradientButton(
           text: 'Next',
-          onPressed: _nextStep,
+          onPressed: _isStep2Valid() ? _nextStep : null,
+          isEnabled: _isStep2Valid(),
         ),
         
         const SizedBox(height: 40),
@@ -913,9 +940,9 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Upload hotel images',
-          style: TextStyle(
+        Text(
+          'Upload hotel images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''}',
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
             color: Colors.black,
@@ -940,9 +967,9 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Upload images',
-          style: TextStyle(
+        Text(
+          'Upload images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''}',
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
             color: Colors.black,
@@ -977,87 +1004,202 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   }
 
   Widget _buildFileUploadArea(String type) {
-    return GestureDetector(
-      onTap: () => _pickFile(type),
-      child: DottedBorder(
-        color: const Color(0xFFD0D0D0),
-        strokeWidth: 1.5,
-        dashPattern: const [6, 3],
-        borderType: BorderType.RRect,
-        radius: const Radius.circular(12),
-        child: Container(
-          width: double.infinity,
-          height: 140,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                'assets/icons/cloud-add.svg',
-                width: 20,
-                height: 20,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.cloud_upload_outlined,
-                    size: 32,
-                    color: Color(0xFF868686),
-                  );
-                },
+    final hasFiles = type == 'images' || type == 'hotel_images' 
+        ? _selectedImages.isNotEmpty 
+        : _selectedVideo != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasFiles) ...[
+          // Show selected files
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFE0E0E0),
+                width: 1,
               ),
-              
-              const SizedBox(height: 12),
-              
-              const Text(
-                'Choose a file or drag & drop it here',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-              ),
-              
-              const SizedBox(height: 4),
-              
-              Text(
-                type == 'hotel_images'
-                    ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
-                    : type == 'images' 
-                        ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
-                        : 'JPEG, PNG, PDF, and MP4 formats, up to 50MB',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF666666),
-                ),
-              ),
-              
-              const SizedBox(height: 12),
-              
-              GestureDetector(
-                onTap: () => _pickFile(type),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: const Color.fromRGBO(176, 181, 187, 1),
-                      width: 1,
-                    ),
-                    borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  type == 'images' || type == 'hotel_images'
+                      ? 'Selected Images (${_selectedImages.length})'
+                      : 'Selected Video',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
                   ),
-                  child: const Text(
-                    'Browse File',
+                ),
+                const SizedBox(height: 8),
+                if (type == 'images' || type == 'hotel_images') ...[
+                  ..._selectedImages.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final file = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.image,
+                            size: 16,
+                            color: Color(0xFF426DC2),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              file.path.split('/').last,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedImages.removeAt(index);
+                              });
+                            },
+                            child: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ] else if (_selectedVideo != null) ...[
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.video_file,
+                        size: 16,
+                        color: Color(0xFF426DC2),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedVideo!.path.split('/').last,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedVideo = null;
+                          });
+                        },
+                        child: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        
+        // Upload area
+        GestureDetector(
+          onTap: () => _pickFile(type),
+          child: DottedBorder(
+            color: const Color(0xFFD0D0D0),
+            strokeWidth: 1.5,
+            dashPattern: const [6, 3],
+            borderType: BorderType.RRect,
+            radius: const Radius.circular(12),
+            child: Container(
+              width: double.infinity,
+              height: 140,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/icons/cloud-add.svg',
+                    width: 20,
+                    height: 20,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.cloud_upload_outlined,
+                        size: 32,
+                        color: Color(0xFF868686),
+                      );
+                    },
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  const Text(
+                    'Choose a file or drag & drop it here',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Color.fromRGBO(84, 87, 92, 1),
+                      color: Colors.black,
                     ),
                   ),
-                ),
+                  
+                  const SizedBox(height: 4),
+                  
+                  Text(
+                    type == 'hotel_images'
+                        ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
+                        : type == 'images' 
+                            ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
+                            : 'JPEG, PNG, PDF, and MP4 formats, up to 50MB',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  GestureDetector(
+                    onTap: () => _pickFile(type),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: const Color.fromRGBO(176, 181, 187, 1),
+                          width: 1,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Browse File',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color.fromRGBO(84, 87, 92, 1),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -1072,6 +1214,22 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       );
 
       if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          if (fileType == 'images' || fileType == 'hotel_images') {
+            // Add images to the list
+            for (var file in result.files) {
+              if (file.path != null) {
+                _selectedImages.add(File(file.path!));
+              }
+            }
+          } else if (fileType == 'video') {
+            // Set video file
+            if (result.files.first.path != null) {
+              _selectedVideo = File(result.files.first.path!);
+            }
+          }
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${result.files.length} file(s) selected successfully!'),
@@ -1089,12 +1247,141 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     }
   }
 
-  void _submitListing() {
-    // Navigate to success screen
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const PropertyListingSuccessView(),
-      ),
+  void _submitListing() async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
+          ),
+        );
+      },
+    );
+
+    try {
+      // Validate required fields
+      if (_selectedPropertyType.isEmpty ||
+          _propertyTitleController.text.isEmpty ||
+          _descriptionController.text.isEmpty ||
+          _priceController.text.isEmpty ||
+          _locationController.text.isEmpty) {
+        Navigator.of(context).pop(); // Close loading dialog
+        _showErrorDialog('Please fill in all required fields');
+        return;
+      }
+
+      // Validate step 2 fields based on property type
+      if (!_isHotelType) {
+        if (_roomsController.text.isEmpty ||
+            _bathroomsController.text.isEmpty ||
+            _gatedStatus.isEmpty ||
+            _parkingStatus.isEmpty) {
+          Navigator.of(context).pop(); // Close loading dialog
+          _showErrorDialog('Please fill in all required fields');
+          return;
+        }
+      }
+
+      // Validate images
+      if (_selectedImages.isEmpty) {
+        Navigator.of(context).pop(); // Close loading dialog
+        _showErrorDialog('Please upload at least one image');
+        return;
+      }
+
+      // Validate image formats
+      for (final image in _selectedImages) {
+        final extension = image.path.split('.').last.toLowerCase();
+        if (!['jpg', 'jpeg', 'png'].contains(extension)) {
+          Navigator.of(context).pop(); // Close loading dialog
+          _showErrorDialog('Please upload only JPG, JPEG, or PNG images');
+          return;
+        }
+      }
+
+      // Show processing message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Processing images... This may take a moment.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Prepare features list
+      List<String> features = [];
+      if (_isHotelType) {
+        features = _selectedAmenities;
+      } else {
+        // For regular properties, add basic features based on form data
+        if (_gatedStatus.toLowerCase() == 'yes') {
+          features.add('Gated & Secured Estate');
+        }
+        if (_parkingStatus.toLowerCase() == 'yes') {
+          features.add('Dedicated Parking');
+        }
+        features.add('${_roomsController.text}-bedroom');
+        features.add('${_bathroomsController.text} Bathrooms');
+      }
+
+      // Clean price (remove currency symbols and commas)
+      String cleanPrice = _priceController.text.replaceAll(RegExp(r'[^\d]'), '');
+
+      // Create property using the service
+      final propertyService = PropertyService();
+      final result = await propertyService.createProperty(
+        type: _selectedPropertyType,
+        title: _propertyTitleController.text,
+        description: _descriptionController.text,
+        price: cleanPrice,
+        category: _listingType,
+        location: _locationController.text,
+        bedrooms: _roomsController.text,
+        bathrooms: _bathroomsController.text,
+        gated: _gatedStatus,
+        parking: _parkingStatus,
+        features: features,
+        images: _selectedImages,
+      );
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (result != null) {
+        // Success - navigate to success screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const PropertyListingSuccessView(),
+          ),
+        );
+      } else {
+        // Error - show more specific error message
+        _showErrorDialog('Failed to create property. Please ensure:\n\n• Images are in JPG, JPEG, or PNG format\n• Images have reasonable dimensions (300px minimum)\n• All required fields are filled\n• Images are not corrupted or invalid\n\nPlease try with a different image.');
+      }
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      _showErrorDialog('An error occurred: $e');
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
     );
   }
 } 

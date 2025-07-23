@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'saved_view.dart';
-import 'profile_view.dart';
-import 'settings_view.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
-import 'package:proplinq/features/home/views/property_details_view.dart';
+import 'saved_view.dart';
+import 'profile_view.dart';
+import 'settings_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/models/user_model.dart';
 import '../../finance/views/complete_kyc_view.dart';
 import '../../finance/views/agent_kyc_view.dart';
+import '../services/property_service.dart';
+import '../models/property_model.dart';
+import 'property_details_view.dart';
+import 'search_results_view.dart';
 
 class TenantHomeView extends StatefulWidget {
   const TenantHomeView({super.key});
@@ -28,8 +32,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   String _selectedCategory = 'All';
   
   final AuthService _authService = AuthService();
+  final PropertyService _propertyService = PropertyService();
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
+  List<PropertyModel> _properties = [];
+  bool _isLoadingProperties = true;
 
   @override
   void initState() {
@@ -39,9 +46,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       vsync: this,
     )..repeat();
     
-    // Fetch user profile and show KYC dialog after the widget is built
+    // Fetch user profile, properties, and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserProfile();
+      await _fetchProperties();
       await _showKycDialogIfNeeded();
     });
   }
@@ -87,6 +95,40 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
   }
 
+  Future<void> _fetchProperties() async {
+    try {
+      print('🔄 Fetching properties...');
+      setState(() {
+        _isLoadingProperties = true;
+      });
+
+      final properties = await _propertyService.fetchAllProperties();
+      
+      print('✅ Properties fetched successfully: ${properties.length} properties');
+      
+      setState(() {
+        _properties = properties;
+        _isLoadingProperties = false;
+      });
+    } catch (e) {
+      print('❌ Error fetching properties: $e');
+      setState(() {
+        _isLoadingProperties = false;
+      });
+      
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load properties: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _showKycDialogIfNeeded() async {
     if (_hasShownKycDialog) {
       return; // Already shown in this session
@@ -110,21 +152,23 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           _hasShownKycDialog = true;
           KycDialog.show(
             context,
-            onGetStarted: () {
+            onGetStarted: () async {
               // Navigate to appropriate KYC screen based on user role
               if (_currentUser?.userType == 'agent') {
-                Navigator.of(context).push(
+                await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const AgentKycView(),
                   ),
                 );
               } else {
-                Navigator.of(context).push(
+                await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const CompleteKycView(),
                   ),
                 );
               }
+              // Refresh KYC status after returning from KYC flow
+              await _refreshKycStatus();
             },
             onRemindLater: () {
               // Handle remind later action
@@ -147,21 +191,23 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             _hasShownKycDialog = true;
             KycDialog.show(
               context,
-              onGetStarted: () {
+              onGetStarted: () async {
                 // Navigate to appropriate KYC screen based on user role
                 if (_currentUser?.userType == 'agent') {
-                  Navigator.of(context).push(
+                  await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const AgentKycView(),
                     ),
                   );
                 } else {
-                  Navigator.of(context).push(
+                  await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const CompleteKycView(),
                     ),
                   );
                 }
+                // Refresh KYC status after returning from KYC flow
+                await _refreshKycStatus();
               },
               onRemindLater: () {
                 // Handle remind later action
@@ -187,6 +233,63 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     } catch (e) {
       print('❌ KYC status check error: $e');
       // If there's an error, don't show dialog
+    }
+  }
+
+  // Refresh KYC status after returning from KYC submission
+  Future<void> _refreshKycStatus() async {
+    try {
+      print('🔄 Refreshing KYC status after submission...');
+      final response = await _authService.getKycStatus();
+      
+      print('📋 KYC Status Refresh Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      
+      if (response.success && response.data != null) {
+        final kycStatus = response.data!;
+        print('🎯 Updated KYC Status:');
+        print('  - Status: ${kycStatus.status}');
+        print('  - Message: ${kycStatus.message}');
+        
+        // Show success message if KYC was submitted
+        if (kycStatus.status == 'pending') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('KYC submitted successfully! Your verification is under review.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error refreshing KYC status: $e');
+    }
+  }
+
+  // Test method to fetch property details
+  Future<void> _testPropertyDetails(int propertyId) async {
+    try {
+      print('🧪 Testing property details for ID: $propertyId');
+      final propertyDetails = await _propertyService.fetchPropertyDetails(propertyId);
+      
+      if (propertyDetails != null) {
+        print('✅ Property details fetched successfully:');
+        print('Title: ${propertyDetails.title}');
+        print('Location: ${propertyDetails.location}');
+        print('Price: ${propertyDetails.price}');
+        print('Type: ${propertyDetails.type}');
+        print('Category: ${propertyDetails.category}');
+        print('Description: ${propertyDetails.description}');
+        print('Bedrooms: ${propertyDetails.bedrooms}');
+        print('Bathrooms: ${propertyDetails.bathrooms}');
+        print('Image URL: ${propertyDetails.imageUrl}');
+      } else {
+        print('❌ Failed to fetch property details');
+      }
+    } catch (e) {
+      print('❌ Error testing property details: $e');
     }
   }
 
@@ -239,27 +342,33 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          // Home Tab
-          SafeArea(
-            child: _isShowingSearchResults ? _buildSearchResults() : _buildHomeContent(),
-          ),
-          // Saved Tab
-          SavedView(
-            isAgent: false,
-            onExploreHome: () {
-              setState(() {
-                _currentIndex = 0; // Switch to home tab
-              });
-            },
-          ),
-          // Profile Tab
-          const ProfileView(isAgent: false),
-          // Settings Tab
-          const SettingsView(isAgent: false),
-        ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Refresh properties data
+          await _fetchProperties();
+        },
+        child: IndexedStack(
+          index: _currentIndex,
+          children: [
+            // Home Tab
+            SafeArea(
+              child: _isShowingSearchResults ? _buildSearchResults() : _buildHomeContent(),
+            ),
+            // Saved Tab
+            SavedView(
+              isAgent: false,
+              onExploreHome: () {
+                setState(() {
+                  _currentIndex = 0; // Switch to home tab
+                });
+              },
+            ),
+            // Profile Tab
+            const ProfileView(isAgent: false),
+            // Settings Tab
+            const SettingsView(isAgent: false),
+          ],
+        ),
       ),
       bottomNavigationBar: _buildCustomBottomNavBar(),
     );
@@ -525,50 +634,17 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   List<Map<String, dynamic>> _getFilteredSearchResults() {
-    final allProperties = [
-      {
-        'badges': ['For sale', 'Verified Agent'],
-        'title': '3-Bedroom Apartment',
-        'location': _selectedLocation,
-        'rating': '(5.0)',
-        'price': '#2,500,000',
-        'type': 'Apartment',
-        'category': 'Real Estate',
-        'image': 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'
-      },
-      {
-        'badges': ['Verified Agent'],
-        'title': 'Luxury Hotel Suite',
-        'location': _selectedLocation,
-        'rating': '(4.8)',
-        'price': '#85,000',
-        'type': 'Hotel',
-        'category': 'Hotels',
-        'period': 'per night',
-        'image': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=600&h=400&fit=crop&crop=center'
-      },
-      {
-        'badges': ['Verified Agent'],
-        'title': 'Modern Shortlet',
-        'location': _selectedLocation,
-        'rating': '(4.9)',
-        'price': '#45,000',
-        'type': 'Shortlet',
-        'category': 'Shortlets',
-        'period': 'per night',
-        'image': 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop&crop=center'
-      },
-      {
-        'badges': ['For sale', 'Verified Agent'],
-        'title': '4-Bedroom Duplex',
-        'location': _selectedLocation,
-        'rating': '(4.7)',
-        'price': '#4,200,000',
-        'type': 'Apartment',
-        'category': 'Real Estate',
-        'image': 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop&crop=center'
-      },
-    ];
+    // Convert PropertyModel to Map format for compatibility with existing UI
+    final allProperties = _properties.map((property) => {
+      'badges': ['Verified Agent'], // Default badge
+      'title': property.title,
+      'location': property.location,
+      'rating': '(5.0)', // Default rating
+      'price': property.price,
+      'type': property.type,
+      'category': property.category,
+      'image': property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'
+    }).toList();
 
     if (_selectedCategory == 'All') {
       return allProperties;
@@ -848,9 +924,12 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(left: 24.0, right: 0),
-            itemCount: 3,
+            itemCount: _isLoadingProperties ? 3 : _properties.length,
             separatorBuilder: (context, index) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
+              if (_isLoadingProperties) {
+                return _buildShimmerFeaturedProperty();
+              }
               return _buildFeaturedPropertyCard(index);
             },
           ),
@@ -898,9 +977,12 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: 3,
+            itemCount: _isLoadingProperties ? 3 : _properties.length,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
+              if (_isLoadingProperties) {
+                return _buildShimmerPropertyItem();
+              }
               return _buildPropertyListItem(index);
             },
           ),
@@ -910,45 +992,60 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   Widget _buildFeaturedPropertyCard(int index) {
-    final properties = <Map<String, String>>[
-      {
-        'badge': 'Verified Agent',
-        'title': '3-Bedroom Apartment',
-        'location': 'Lekki Phase 1, Lagos Nigeria',
-        'rating': '(5.0)',
-        'price': '#1,500,000',
-        'image': 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop&crop=center'
-      },
-      {
-        'badge': 'Verified Agent',
-        'title': '3-Bedroom Duplex',
-        'location': 'Lekki Phase 1, Lagos Nigeria',
-        'rating': '(5.0)',
-        'price': '#2,500,000',
-        'image': 'https://images.unsplash.com/photo-1560184897-ae75f418493e?w=600&h=400&fit=crop&crop=center'
-      },
-      {
-        'badge': 'Verified Agent',
-        'title': '2-Bedroom Flat',
-        'location': 'Ikeja, Lagos Nigeria',
-        'rating': '(4.8)',
-        'price': '#1,200,000',
-        'image': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&h=400&fit=crop&crop=center'
-      },
-    ][index];
+    // Show loading if properties are still loading
+    if (_isLoadingProperties) {
+      return SizedBox(
+        width: 284,
+        height: 176,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    // Use real properties data if available, otherwise show placeholder
+    if (_properties.isEmpty) {
+      return SizedBox(
+        width: 284,
+        height: 176,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: const Center(
+            child: Text('No properties available'),
+          ),
+        ),
+      );
+    }
+
+    // Get property at index, or use first property if index is out of bounds
+    final propertyIndex = index < _properties.length ? index : 0;
+    final property = _properties[propertyIndex];
     
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
+        // Test property details endpoint first
+        await _testPropertyDetails(property.id);
+        
+        // Then navigate to property details
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-            'badges': [properties['badge']!],
-            'title': properties['title']!,
-            'location': properties['location']!,
-            'rating': properties['rating']!,
-            'price': properties['price']!,
-            'type': 'Apartment',
-            'category': 'Real Estate',
-            'description': 'Step into luxury with this fully furnished 3-bedroom apartment located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+            'badges': ['Verified Agent'],
+            'title': property.title,
+            'location': property.location,
+            'rating': '(5.0)',
+            'price': property.price,
+            'type': property.type,
+            'category': property.category,
+            'description': property.description,
             'agent': {
               'name': 'James Mark',
               'title': 'Agent',
@@ -981,7 +1078,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
               height: double.infinity,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: NetworkImage(properties['image']!),
+                  image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -1007,7 +1104,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            properties['title']!,
+                            property.title,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
@@ -1025,7 +1122,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  properties['location']!,
+                                  property.location,
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: Colors.white,
@@ -1038,13 +1135,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                           Row(
                             children: [
                              
-                              Text(
-                                properties['rating']!,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white,
-                                ),
-                              ),
+                                                        Text(
+                            '(5.0)',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.white,
+                            ),
+                          ),
                                  const SizedBox(width: 4),
                                const Icon(
                                 Icons.star,
@@ -1054,7 +1151,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                              
                               const Spacer(),
                               Text(
-                                properties['price']!,
+                                property.price,
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -1085,9 +1182,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                               color: Colors.green,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              properties['badge']!,
-                              style: const TextStyle(
+                            const Text(
+                              'Verified Agent',
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w400,
                                 color: Colors.black,
@@ -1481,13 +1578,17 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Widget _buildSearchPropertyCard(Map<String, dynamic> property) {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
+        // Test property details endpoint first
+        await _testPropertyDetails(property['id']);
+        
+        // Then navigate to property details
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-            'badges': property['badges'],
+            'badges': ['Verified Agent'],
             'title': property['title'],
             'location': property['location'],
-            'rating': property['rating'],
+            'rating': '(5.0)',
             'price': property['price'],
             'type': property['type'],
             'category': property['category'],
@@ -1713,6 +1814,219 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Shimmer loading widgets
+  Widget _buildShimmerFeaturedProperty() {
+    return Container(
+      width: 280,
+      height: 180, // Further reduced height
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Shimmer for image
+          Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Container(
+              height: 100, // Further reduced height
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(10), // Further reduced padding
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Shimmer for title
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 12, // Further reduced height
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  // Shimmer for location
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 8, // Further reduced height
+                      width: 100, // Further reduced width
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  // Shimmer for features
+                  Row(
+                    children: List.generate(3, (index) => 
+                      Expanded(
+                        child: Shimmer.fromColors(
+                          baseColor: Colors.grey[300]!,
+                          highlightColor: Colors.grey[100]!,
+                          child: Container(
+                            height: 6, // Further reduced height
+                            margin: EdgeInsets.only(right: index < 2 ? 3 : 0), // Further reduced margin
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Shimmer for price
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 12, // Further reduced height
+                      width: 70, // Further reduced width
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerPropertyItem() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10), // Further reduced padding
+        child: Row(
+          children: [
+            // Shimmer for property image
+            Shimmer.fromColors(
+              baseColor: Colors.grey[300]!,
+              highlightColor: Colors.grey[100]!,
+              child: Container(
+                width: 65, // Further reduced width
+                height: 65, // Further reduced height
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10), // Further reduced spacing
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Shimmer for title
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 12, // Further reduced height
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4), // Further reduced spacing
+                  // Shimmer for location
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 8, // Further reduced height
+                      width: 80, // Further reduced width
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4), // Further reduced spacing
+                  // Shimmer for features
+                  Row(
+                    children: List.generate(2, (index) => 
+                      Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        child: Container(
+                          height: 6, // Further reduced height
+                          width: 40, // Further reduced width
+                          margin: EdgeInsets.only(right: index < 1 ? 8 : 0), // Further reduced margin
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Shimmer for price
+            Shimmer.fromColors(
+              baseColor: Colors.grey[300]!,
+              highlightColor: Colors.grey[100]!,
+              child: Container(
+                height: 12, // Further reduced height
+                width: 60, // Further reduced width
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -138,11 +138,23 @@ class ApiService {
   // Generic GET request
   Future<ApiResponse<T>> get<T>(
     String endpoint, {
+    Map<String, String>? queryParams,
     bool requiresAuth = false,
     T Function(Map<String, dynamic>)? fromJson,
   }) async {
     try {
-      final url = Uri.parse(_buildUrl(endpoint));
+      String urlString = _buildUrl(endpoint);
+      
+      // Add query parameters if provided
+      if (queryParams != null && queryParams.isNotEmpty) {
+        final uri = Uri.parse(urlString);
+        final queryParameters = Map<String, String>.from(uri.queryParameters);
+        queryParameters.addAll(queryParams);
+        
+        urlString = uri.replace(queryParameters: queryParameters).toString();
+      }
+      
+      final url = Uri.parse(urlString);
       final headers = await _buildHeaders(requiresAuth: requiresAuth);
       
       final response = await _client.get(url, headers: headers);

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../auth/services/auth_service.dart';
+import '../../auth/models/user_kyc_request.dart';
 import 'kyc_success_view.dart';
 
 class CompleteKycView extends StatefulWidget {
@@ -16,6 +19,7 @@ class CompleteKycView extends StatefulWidget {
 class _CompleteKycViewState extends State<CompleteKycView> {
   int _currentStep = 0;
   final int _totalSteps = 3;
+  final AuthService _authService = AuthService();
 
   // Controllers for Step 1
   final TextEditingController _fullNameController = TextEditingController();
@@ -287,19 +291,41 @@ class _CompleteKycViewState extends State<CompleteKycView> {
                 color: Color(0xFF868686),
               ),
               isExpanded: true,
-              items: ['Employed', 'Self-employed'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(
-                    value,
-                    style: const TextStyle(
+              items: [
+                DropdownMenuItem<String>(
+                  value: 'employed',
+                  child: const Text(
+                    'Employed',
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                       color: Colors.black,
                     ),
                   ),
-                );
-              }).toList(),
+                ),
+                DropdownMenuItem<String>(
+                  value: 'self-employed',
+                  child: const Text(
+                    'Self-employed',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                DropdownMenuItem<String>(
+                  value: 'unemployed',
+                  child: const Text(
+                    'Unemployed',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ],
               onChanged: (String? newValue) {
                 setState(() {
                   _employmentStatus = newValue ?? '';
@@ -539,12 +565,80 @@ class _CompleteKycViewState extends State<CompleteKycView> {
     }
   }
 
-  void _completeKyc() {
-    // Navigate to success screen
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const KycSuccessView(),
-      ),
+  Future<void> _completeKyc() async {
+    // Validate required fields
+    if (_fullNameController.text.isEmpty ||
+        _phoneController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _occupationController.text.isEmpty ||
+        _companyController.text.isEmpty ||
+        _employmentStatus.isEmpty ||
+        _bankStatementFile == null ||
+        _utilityBillFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields and upload all required documents'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
     );
+
+    try {
+      // Create UserKycRequest
+      final request = UserKycRequest(
+        bvn: '12345678901', // This should come from a BVN input field
+        nin: '12345678901', // This should come from a NIN input field
+        utilityBill: File(_utilityBillFile!.path!),
+        bankStatement: File(_bankStatementFile!.path!),
+        employmentStatus: _employmentStatus, // This now contains the correct API value
+        occupation: _occupationController.text,
+        companyName: _companyController.text,
+        tin: '1234567890', // This should come from a TIN input field
+      );
+
+      // Submit KYC
+      final response = await _authService.submitUserKyc(request);
+
+      // Hide loading indicator
+      Navigator.of(context).pop();
+
+      if (response.success) {
+        // Navigate to success screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const KycSuccessView(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message ?? 'Failed to submit KYC'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Hide loading indicator
+      Navigator.of(context).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error submitting KYC: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 } 

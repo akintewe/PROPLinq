@@ -29,12 +29,14 @@ class ApiConstants {
   static const String deleteProperty = '/properties';
   static const String searchProperties = '/properties/search';
   static const String favoriteProperties = '/properties/favorites';
+  static const String listProperties = '/properties';
   
   // KYC Endpoints
   static const String kycSubmission = '/kyc/submit';
   static const String kycAgentStatus = '/kyc/agent/status';   // For agents
-  static const String kycUserStatus = '/kyc/user/status';     // For home seekers (assuming similar pattern)
+  static const String kycUserStatus = '/kyc/user/status';     // For home seekers
   static const String kycAgentSubmit = '/kyc/agent';          // For agent KYC submission
+  static const String kycUserSubmit = '/kyc/user';            // For user KYC submission
   
   // Verification Endpoints
   static const String phoneVerifyRequest = '/phone/verify/request';
