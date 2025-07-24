@@ -15,8 +15,8 @@ class PropLinqApp extends StatelessWidget {
     return MaterialApp(
       title: AppStrings.appName,
       theme: AppTheme.lightTheme,
-      home: const SplashView(),
       debugShowCheckedModeBanner: false,
+      home: const SplashView(),
     );
   }
 }

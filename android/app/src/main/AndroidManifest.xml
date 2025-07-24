@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Google Maps API Key -->
+    <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="AIzaSyAvX6t08iCB6TB09kjCieP3jrCmLpJp38Y" />
+    
     <application
         android:label="proplinq"
         android:name="${applicationName}"

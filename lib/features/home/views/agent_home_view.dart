@@ -523,6 +523,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'type': property['type'],
                       'category': property['category'],
                       'period': property['period'],
+                      'features': property['features'], // Pass features from API
                       'description': property['type'] == 'Hotel' 
                           ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                           : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
@@ -1105,6 +1106,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'type': property.type,
                       'category': property.category,
                       'description': property.description,
+                      'features': property.features, // Pass actual features from API
                       'agent': {
                         'name': 'James Mark',
                         'title': 'Agent',
@@ -1186,6 +1188,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'type': property.type,
                       'category': property.category,
                       'description': property.description,
+                      'features': property.features, // Pass actual features from API
                       'agent': {
                         'name': 'James Mark',
                         'title': 'Agent',
@@ -1256,6 +1259,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             'type': property.type,
             'category': property.category,
             'description': property.description,
+            'features': property.features, // Pass actual features from API
             'agent': {
               'name': 'James Mark',
               'title': 'Agent',

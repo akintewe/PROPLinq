@@ -8,6 +8,7 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../view_models/home_view_model.dart';
 import '../models/property_model.dart';
+import 'property_details_view.dart';
 
 class HomeView extends BaseView<HomeViewModel> {
   const HomeView({super.key});
@@ -259,14 +260,14 @@ class HomeView extends BaseView<HomeViewModel> {
                 const SizedBox(height: AppDimensions.spacing16),
             itemBuilder: (context, index) {
               final property = properties[index];
-              return _buildPropertyListItem(property, viewModel);
+              return _buildPropertyListItem(property, viewModel, context);
             },
           ),
       ],
     );
   }
 
-  Widget _buildPropertyListItem(PropertyModel property, HomeViewModel viewModel) {
+  Widget _buildPropertyListItem(PropertyModel property, HomeViewModel viewModel, BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -335,7 +336,27 @@ class HomeView extends BaseView<HomeViewModel> {
           ],
         ),
         onTap: () {
-          // Navigate to property details
+          // Navigate to property details with features
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => PropertyDetailsView(propertyData: {
+              'badges': ['Verified Agent'],
+              'title': property.title,
+              'location': property.location,
+              'rating': '(5.0)',
+              'price': property.price,
+              'type': property.type,
+              'category': property.category,
+              'description': property.description,
+              'features': property.features, // Pass actual features from API
+              'agent': {
+                'name': 'James Mark',
+                'title': 'Agent',
+                'phone': '09011111111',
+                'email': 'jamesmark@gmail.com',
+                'whatsapp': '08111111111',
+              },
+            })),
+          );
         },
       ),
     );

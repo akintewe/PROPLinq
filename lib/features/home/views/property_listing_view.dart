@@ -1118,86 +1118,86 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         
         // Upload area
         GestureDetector(
-          onTap: () => _pickFile(type),
-          child: DottedBorder(
-            color: const Color(0xFFD0D0D0),
-            strokeWidth: 1.5,
-            dashPattern: const [6, 3],
-            borderType: BorderType.RRect,
-            radius: const Radius.circular(12),
-            child: Container(
-              width: double.infinity,
-              height: 140,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/icons/cloud-add.svg',
-                    width: 20,
-                    height: 20,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.cloud_upload_outlined,
-                        size: 32,
-                        color: Color(0xFF868686),
-                      );
-                    },
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  const Text(
-                    'Choose a file or drag & drop it here',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 4),
-                  
-                  Text(
-                    type == 'hotel_images'
-                        ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
-                        : type == 'images' 
-                            ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
-                            : 'JPEG, PNG, PDF, and MP4 formats, up to 50MB',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF666666),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  GestureDetector(
-                    onTap: () => _pickFile(type),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: const Color.fromRGBO(176, 181, 187, 1),
-                          width: 1,
-                        ),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        'Browse File',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color.fromRGBO(84, 87, 92, 1),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+      onTap: () => _pickFile(type),
+      child: DottedBorder(
+        color: const Color(0xFFD0D0D0),
+        strokeWidth: 1.5,
+        dashPattern: const [6, 3],
+        borderType: BorderType.RRect,
+        radius: const Radius.circular(12),
+        child: Container(
+          width: double.infinity,
+          height: 140,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                'assets/icons/cloud-add.svg',
+                width: 20,
+                height: 20,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 32,
+                    color: Color(0xFF868686),
+                  );
+                },
               ),
-            ),
+              
+              const SizedBox(height: 12),
+              
+              const Text(
+                'Choose a file or drag & drop it here',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+              
+              const SizedBox(height: 4),
+              
+              Text(
+                type == 'hotel_images'
+                    ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
+                    : type == 'images' 
+                        ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
+                        : 'JPEG, PNG, PDF, and MP4 formats, up to 50MB',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF666666),
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              GestureDetector(
+                onTap: () => _pickFile(type),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color.fromRGBO(176, 181, 187, 1),
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Browse File',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color.fromRGBO(84, 87, 92, 1),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
+        ),
+      ),
         ),
       ],
     );
@@ -1351,11 +1351,11 @@ class _PropertyListingViewState extends State<PropertyListingView> {
 
       if (result != null) {
         // Success - navigate to success screen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const PropertyListingSuccessView(),
-          ),
-        );
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const PropertyListingSuccessView(),
+      ),
+    );
       } else {
         // Error - show more specific error message
         _showErrorDialog('Failed to create property. Please ensure:\n\n• Images are in JPG, JPEG, or PNG format\n• Images have reasonable dimensions (300px minimum)\n• All required fields are filled\n• Images are not corrupted or invalid\n\nPlease try with a different image.');

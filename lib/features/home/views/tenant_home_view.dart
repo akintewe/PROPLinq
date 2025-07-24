@@ -1035,7 +1035,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // Test property details endpoint first
         await _testPropertyDetails(property.id);
         
-        // Then navigate to property details
+        // Then navigate to property details with actual API data
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
             'badges': ['Verified Agent'],
@@ -1046,6 +1046,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'type': property.type,
             'category': property.category,
             'description': property.description,
+            'features': property.features, // Pass actual features from API
             'agent': {
               'name': 'James Mark',
               'title': 'Agent',
@@ -1348,6 +1349,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'type': properties['type'],
             'category': properties['category'],
             'period': properties['period'],
+            'features': properties['features'], // Pass features from API
             'description': properties['type'] == 'Hotel' 
                 ? 'Step into luxury with this fully furnished hotel room located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                 : 'Step into luxury with this fully furnished 3-bedroom apartment located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
@@ -1593,6 +1595,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'type': property['type'],
             'category': property['category'],
             'period': property['period'],
+            'features': property['features'], // Pass features from API
             'description': property['type'] == 'Hotel' 
                 ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                 : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',

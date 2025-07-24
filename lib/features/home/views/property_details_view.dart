@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
+import 'package:proplinq/core/widgets/google_map_widget.dart';
 import 'package:proplinq/features/finance/views/rent_now_pay_later_view.dart';
 import 'virtual_tour_360_view.dart';
+import 'hotel_reservation_view.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   final Map<String, dynamic>? propertyData;
@@ -38,7 +40,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       'rating': '(5.0)',
       'price': '#2,500,000',
       'type': 'Apartment',
-      'category': 'Real Estate',
       'description': 'Step into luxury with this fully furnished 3-bedroom apartment located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
       'agent': {
         'name': 'James Mark',
@@ -55,8 +56,29 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   Widget build(BuildContext context) {
     // Get property data or use defaults
     final property = widget.propertyData ?? _getDefaultProperty();
-    final isHotel = property['type'] == 'Hotel';
-    final category = property['category'] as String? ?? 'Real Estate';
+    final propertyType = property['type'] as String? ?? 'Apartment';
+    final normalizedType = propertyType.toLowerCase();
+    final isHotel = normalizedType == 'hotel';
+    final isShortlet = normalizedType == 'shortlet';
+    
+    // Debug logging
+    print('🏠 Property Details Debug:');
+    print('Property Type: $propertyType');
+    print('Normalized Type: $normalizedType');
+    print('Is Hotel: $isHotel');
+    print('Is Shortlet: $isShortlet');
+    print('Property Data: ${property.toString()}');
+    
+    // Determine category based on property type
+    String category;
+    if (isHotel) {
+      category = 'Hotels';
+    } else if (isShortlet) {
+      category = 'Shortlets';
+    } else {
+      category = 'Real Estate';
+    }
+    
     final isForSale = (property['badges'] as List<String>?)?.contains('For sale') ?? false;
     
     return Scaffold(
@@ -204,42 +226,55 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Property badges
+                          // Property type badge (Hotel/Apartment) at top corner
                           Row(
-                            children: (property['badges'] as List<String>).map((badge) {
-                              return Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: badge == 'For sale' 
-                                      ? const Color(0xFFE8F5E8)
-                                      : const Color(0xFFECF0F9),
-                                  borderRadius: BorderRadius.circular(20),
+                                  color: const Color(0xFFECF0F9),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (badge == 'Verified Agent')
-                                      const Icon(
+                                child: Text(
+                                  propertyType,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF426DC2),
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              // Only show "Verified Agent" badge for non-hotel properties
+                              if (!isHotel) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECF0F9),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
                                         Icons.verified,
                                         size: 14,
                                         color: Colors.green,
                                       ),
-                                    if (badge == 'Verified Agent') const SizedBox(width: 4),
-                                    Text(
-                                      badge,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: badge == 'For sale' 
-                                            ? const Color(0xFF2E7D32)
-                                            : const Color(0xFF426DC2),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Verified Agent',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF426DC2),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              );
-                            }).toList(),
+                              ],
+                            ],
                           ),
                           
                           const SizedBox(height: 20),
@@ -301,6 +336,28 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                             ],
                           ),
                           
+                          const SizedBox(height: 8),
+                          
+                          // Verified tag under location
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.verified,
+                                size: 14,
+                                color: Colors.green,
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Verified',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ],
+                          ),
+                          
                           const SizedBox(height: 24),
                           
                           // Description
@@ -315,282 +372,244 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           
                           const SizedBox(height: 32),
                           
-                          // Agent Details
-                          const Text(
-                            'Agent Details',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
+                          // Agent Details - only show for non-hotel properties
+                          if (!isHotel) ...[
+                            const Text(
+                              'Agent Details',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // Agent info
-                          Row(
-                            children: [
-                              // Agent avatar
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  image: const DecorationImage(
-                                    image: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'),
-                                    fit: BoxFit.cover,
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Agent info
+                            Row(
+                              children: [
+                                // Agent avatar
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    image: const DecorationImage(
+                                      image: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'),
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              
-                              const SizedBox(width: 12),
-                              
-                              // Agent name and title
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      property['agent']['name'] as String,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black,
+                                
+                                const SizedBox(width: 12),
+                                
+                                // Agent name and title
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        property['agent']['name'] as String,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      property['agent']['title'] as String,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color(0xFF868686),
+                                      Text(
+                                        property['agent']['title'] as String,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF868686),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              
-                              // Verified badge positioned to the right
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F5E8), // Light green background
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                        Icons.verified,
-                                        size: 15,
-                                        color: Colors.green,
+                                
+                                // Verified badge positioned to the right
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE8F5E8), // Light green background
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                          Icons.verified,
+                                          size: 15,
+                                          color: Colors.green,
+                                        ),
+                                      
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        'Verified',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF2E7D32), // Dark green text
+                                        ),
                                       ),
-                                    
-                                    const SizedBox(width: 6),
-                                    const Text(
-                                      'Verified',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF2E7D32), // Dark green text
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 20),
-                          
-                          // Contact info
-                          Column(
-                            children: [
-                              _buildContactRow('assets/icons/fluent_call-24-filled.svg', property['agent']['phone'] as String),
-                              const SizedBox(height: 16),
-                              _buildContactRow('assets/icons/majesticons_mail.svg', property['agent']['email'] as String),
-                              const SizedBox(height: 16),
-                              _buildContactRow('assets/icons/logos_whatsapp-icon.svg', property['agent']['whatsapp'] as String),
-                            ],
-                          ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 20),
+                            
+                            // Contact info
+                            Column(
+                              children: [
+                                _buildContactRow('assets/icons/fluent_call-24-filled.svg', property['agent']['phone'] as String),
+                                const SizedBox(height: 16),
+                                _buildContactRow('assets/icons/majesticons_mail.svg', property['agent']['email'] as String),
+                                const SizedBox(height: 16),
+                                _buildContactRow('assets/icons/logos_whatsapp-icon.svg', property['agent']['whatsapp'] as String),
+                              ],
+                            ),
+                          ],
                           
                           const SizedBox(height: 32),
                           
-                          // Action buttons based on property type
-                          if (category == 'Hotels') ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                        stops: [0.0, 1.0, 1.0],
-                                        colors: [
-                                          Color(0xFF426DC2),
-                                          Color(0xFF63ADDC),
-                                          Color(0xFF75CFEA),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: () {},
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(25),
+                          // Action buttons for non-hotel properties
+                          if (!isHotel) ...[
+                            if (isShortlet) ...[
+                              // Shortlet buttons
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.centerLeft,
+                                          end: Alignment.centerRight,
+                                          stops: [0.0, 1.0, 1.0],
+                                          colors: [
+                                            Color(0xFF426DC2),
+                                            Color(0xFF63ADDC),
+                                            Color(0xFF75CFEA),
+                                          ],
                                         ),
+                                        borderRadius: BorderRadius.circular(25),
                                       ),
-                                      child: const Text(
-                                        'Make a reservation',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else if (category == 'Shortlets') ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                        stops: [0.0, 1.0, 1.0],
-                                        colors: [
-                                          Color(0xFF426DC2),
-                                          Color(0xFF63ADDC),
-                                          Color(0xFF75CFEA),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: () {},
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(25),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Book shortlet',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            
-                            const SizedBox(height: 16),
-                            
-                            Container(
-                              width: double.infinity,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFF426DC2)),
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const RentNowPayLaterView(),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  shadowColor: Colors.transparent,
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Rent now-pay later',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF426DC2),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ] else if (!isForSale) ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                        stops: [0.0, 1.0, 1.0],
-                                        colors: [
-                                          Color(0xFF426DC2),
-                                          Color(0xFF63ADDC),
-                                          Color(0xFF75CFEA),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) => const RentNowPayLaterView(),
+                                      child: ElevatedButton(
+                                        onPressed: () {},
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(25),
                                           ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(25),
                                         ),
-                                      ),
-                                      child: const Text(
-                                        'Rent now-pay later',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
+                                        child: const Text(
+                                          'Book shortlet',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
+                                ],
+                              ),
+                              
+                              const SizedBox(height: 16),
+                              
+                              Container(
+                                width: double.infinity,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFF426DC2)),
+                                  borderRadius: BorderRadius.circular(25),
                                 ),
-                              ],
-                            ),
-                            
-                            const SizedBox(height: 16),
-                            
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const RentNowPayLaterView(),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Rent now-pay later',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF426DC2),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ] else ...[
+                              // Apartment buttons (for rent or sale)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.centerLeft,
+                                          end: Alignment.centerRight,
+                                          stops: [0.0, 1.0, 1.0],
+                                          colors: [
+                                            Color(0xFF426DC2),
+                                            Color(0xFF63ADDC),
+                                            Color(0xFF75CFEA),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => const RentNowPayLaterView(),
+                                            ),
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(25),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Rent now-pay later',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              const SizedBox(height: 16),
+                              
                               Container(
                                 width: double.infinity,
                                 height: 50,
@@ -619,6 +638,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                   ),
                                 ),
                               ),
+                            ],
                           ],
                           
                           const SizedBox(height: 40),
@@ -642,8 +662,64 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           
                           const SizedBox(height: 40),
                           
+                          // Hotel action button - only show for hotels
+                          if (isHotel) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        stops: [0.0, 1.0, 1.0],
+                                        colors: [
+                                          Color(0xFF426DC2),
+                                          Color(0xFF63ADDC),
+                                          Color(0xFF75CFEA),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => HotelReservationView(
+                                              propertyData: property,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(25),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Make a reservation',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 40),
+                          ],
+                          
                           // Virtual Tour - only show for non-hotel properties
-                          if (category != 'Hotels') ...[
+                          if (!isHotel) ...[
                           const Text(
                             'Virtual Tour',
                             style: TextStyle(
@@ -797,34 +873,50 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           
                           const SizedBox(height: 20),
                           
-                          // Map placeholder
-                          Container(
-                            height: 200,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              color: const Color(0xFFE8F4FD),
-                            ),
-                            child: const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.map,
-                                    size: 40,
-                                    color: Color(0xFF426DC2),
+                          // Google Maps Widget
+                          Builder(
+                            builder: (context) {
+                              try {
+                                return GoogleMapWidget(
+                                  latitude: _getPropertyCoordinates(property)['latitude'],
+                                  longitude: _getPropertyCoordinates(property)['longitude'],
+                                  propertyTitle: property['title'] as String?,
+                                  height: 200,
+                                  showMarker: true,
+                                );
+                              } catch (e) {
+                                print('Error loading Google Maps: $e');
+                                // Fallback to placeholder if map fails
+                                return Container(
+                                  height: 200,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    color: const Color(0xFFE8F4FD),
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Map Preview',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF426DC2),
+                                  child: const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.map,
+                                          size: 40,
+                                          color: Color(0xFF426DC2),
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'Map Preview',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Color(0xFF426DC2),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
+                                );
+                              }
+                            },
                           ),
                           
                           const SizedBox(height: 100), // Space for bottom bar
@@ -861,26 +953,26 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _getPriceLabel(category, isForSale),
+                        isHotel ? 'Total Price' : _getPriceLabel(propertyType, isForSale),
                         style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF868686),
                         ),
                       ),
                       Text(
-                        property['price'] as String,
+                        _formatPrice(property['price'] as String),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF426DC2),
                         ),
                       ),
-                      if ((category == 'Hotels' || category == 'Shortlets') && property.containsKey('period'))
-                        Text(
-                          property['period'] as String,
-                          style: const TextStyle(
+                      if (isHotel)
+                        const Text(
+                          'per night',
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF426DC2),
+                            color: Color(0xFF868686),
                           ),
                         ),
                     ],
@@ -914,7 +1006,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           ),
                         ),
                         child: Text(
-          _getBottomButtonText(category, isForSale),
+                          _getBottomButtonText(propertyType, isForSale),
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -976,51 +1068,95 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   }
 
     List<Widget> _buildFeaturesList(Map<String, dynamic> property, bool isHotel) {
-    final category = property['category'] as String? ?? 'Real Estate';
+    final propertyType = property['type'] as String? ?? 'Apartment';
+    final type = propertyType.toLowerCase();
     
-    if (isHotel || category == 'Hotels') {
-      // Hotel features
-      return [
-        _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', 'Queen-size Bed'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/mdi_bathroom.svg', 'En-suite Bathroom'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/fluent_food-16-regular.svg', 'Complimentary Breakfast'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/material-symbols_wifi-rounded.svg', 'Free High-Speed Wi-Fi'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/mage_television.svg', 'Smart TV with Streaming'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/uil_padlock.svg', '24/7 Security & Keycard Access'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/healthicons_cleaning-outline.svg', 'Daily Housekeeping'),
-      ];
-    } else if (category == 'Shortlets') {
-      // Shortlet features  
-      return [
-        _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', '3-bedroom'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/mdi_bathroom.svg', '3 Bathrooms'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/tabler_car.svg', 'Dedicated Parking'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/game-icons_gate.svg', 'Gated & Secured Estate'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/mdi_wifi.svg', 'Free Wi-Fi'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/mdi_television.svg', 'Smart TV'),
-      ];
+    // Get features from API data
+    final List<dynamic> apiFeatures = property['features'] as List<dynamic>? ?? [];
+    print('🏠 Features from API: $apiFeatures');
+    print('🏠 Property data keys: ${property.keys.toList()}');
+    print('🏠 Features type: ${property['features']?.runtimeType}');
+    
+    if (isHotel || type == 'hotel') {
+      // Hotel features - use API data if available, otherwise fallback to defaults
+      if (apiFeatures.isNotEmpty) {
+        // Use features from API
+        List<Widget> featureWidgets = [];
+        for (int i = 0; i < apiFeatures.length; i++) {
+          featureWidgets.add(_buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', apiFeatures[i].toString()));
+          if (i < apiFeatures.length - 1) {
+            featureWidgets.add(const SizedBox(height: 16));
+          }
+        }
+        return featureWidgets;
+      } else {
+        // Fallback to default hotel features
+        return [
+          _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', 'Queen-size Bed'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/mdi_bathroom.svg', 'En-suite Bathroom'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/fluent_food-16-regular.svg', 'Complimentary Breakfast'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/material-symbols_wifi-rounded.svg', 'Free High-Speed Wi-Fi'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/mage_television.svg', 'Smart TV with Streaming'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/uil_padlock.svg', '24/7 Security & Keycard Access'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/healthicons_cleaning-outline.svg', 'Daily Housekeeping'),
+        ];
+      }
+    } else if (type == 'shortlet') {
+      // Shortlet features - use API data if available, otherwise fallback to defaults
+      if (apiFeatures.isNotEmpty) {
+        List<Widget> featureWidgets = [];
+        for (int i = 0; i < apiFeatures.length; i++) {
+          featureWidgets.add(_buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', apiFeatures[i].toString()));
+          if (i < apiFeatures.length - 1) {
+            featureWidgets.add(const SizedBox(height: 16));
+          }
+        }
+        return featureWidgets;
+      } else {
+        // Fallback to default shortlet features
+        return [
+          _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', '3-bedroom'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/mdi_bathroom.svg', '3 Bathrooms'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/tabler_car.svg', 'Dedicated Parking'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/game-icons_gate.svg', 'Gated & Secured Estate'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/mdi_wifi.svg', 'Free Wi-Fi'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/mdi_television.svg', 'Smart TV'),
+        ];
+      }
     } else {
-      // Real Estate (Apartment for sale) features
-      return [
-        _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', '3-bedroom'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/mdi_bathroom.svg', '3 Bathrooms'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/tabler_car.svg', 'Dedicated Parking'),
-        const SizedBox(height: 16),
-        _buildFeatureRow('assets/icons/game-icons_gate.svg', 'Gated & Secured Estate'),
-      ];
+      // Real Estate (Apartment for sale) features - use API data if available, otherwise fallback to defaults
+      if (apiFeatures.isNotEmpty) {
+        List<Widget> featureWidgets = [];
+        for (int i = 0; i < apiFeatures.length; i++) {
+          featureWidgets.add(_buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', apiFeatures[i].toString()));
+          if (i < apiFeatures.length - 1) {
+            featureWidgets.add(const SizedBox(height: 16));
+          }
+        }
+        return featureWidgets;
+      } else {
+        // Fallback to default apartment features
+        return [
+          _buildFeatureRow('assets/icons/material-symbols_bed-outline-rounded.svg', '3-bedroom'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/mdi_bathroom.svg', '3 Bathrooms'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/tabler_car.svg', 'Dedicated Parking'),
+          const SizedBox(height: 16),
+          _buildFeatureRow('assets/icons/game-icons_gate.svg', 'Gated & Secured Estate'),
+        ];
+      }
     }
   }
 
@@ -1045,10 +1181,11 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     );
   }
 
-  String _getPriceLabel(String category, bool isForSale) {
-    if (category == 'Hotels') {
+  String _getPriceLabel(String propertyType, bool isForSale) {
+    final type = propertyType.toLowerCase();
+    if (type == 'hotel') {
       return 'Total Price';
-    } else if (category == 'Shortlets') {
+    } else if (type == 'shortlet') {
       return 'Total Price';
     } else if (isForSale) {
       return 'Selling Price';
@@ -1057,15 +1194,67 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     }
   }
 
-  String _getBottomButtonText(String category, bool isForSale) {
-    if (category == 'Hotels') {
+  String _formatPrice(String price) {
+    try {
+      // Remove any existing currency symbols and commas
+      String cleanPrice = price.replaceAll(RegExp(r'[^\d.]'), '');
+      double priceValue = double.parse(cleanPrice);
+      
+      // Format in Naira with comma separators
+      if (priceValue >= 1000000) {
+        return '₦${(priceValue / 1000000).toStringAsFixed(1)}M';
+      } else if (priceValue >= 1000) {
+        return '₦${priceValue.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},'
+        )}';
+      } else {
+        return '₦${priceValue.toStringAsFixed(0)}';
+      }
+    } catch (e) {
+      // Fallback to original price if parsing fails
+      return '₦$price';
+    }
+  }
+
+  String _getBottomButtonText(String propertyType, bool isForSale) {
+    final type = propertyType.toLowerCase();
+    if (type == 'hotel') {
       return 'Book Now';
-    } else if (category == 'Shortlets') {
+    } else if (type == 'shortlet') {
       return 'Book Now';
     } else if (isForSale) {
       return 'Contact agent';
     } else {
       return 'Contact agent';
     }
+  }
+
+  Map<String, double> _getPropertyCoordinates(Map<String, dynamic> property) {
+    // Try to get coordinates from property data
+    final coordinates = property['coordinates'] as Map<String, dynamic>?;
+    if (coordinates != null) {
+      return {
+        'latitude': (coordinates['latitude'] as num?)?.toDouble() ?? 6.5244,
+        'longitude': (coordinates['longitude'] as num?)?.toDouble() ?? 3.3792,
+      };
+    }
+
+    // Try to get coordinates from location string (fallback)
+    final location = property['location'] as String?;
+    if (location != null) {
+      // Parse location string to extract coordinates if available
+      // For now, return default Lagos coordinates
+      return {
+        'latitude': 6.5244,
+        'longitude': 3.3792,
+      };
+    }
+
+    // Default coordinates (Lagos, Nigeria)
+    return {
+      'latitude': 6.5244,
+      'longitude': 3.3792,
+    };
   }
 } 

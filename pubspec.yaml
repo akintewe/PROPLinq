@@ -71,6 +71,9 @@ dependencies:
   # Google Places API for location autocomplete
   google_places_flutter: ^2.0.9
   
+  # Google Maps for map display
+  google_maps_flutter: ^2.5.3
+  
   # 3D graphics and sensor support for 360° viewing
   vector_math: ^2.1.4
   sensors_plus: ^4.0.2

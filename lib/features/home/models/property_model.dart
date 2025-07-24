@@ -12,6 +12,7 @@ class PropertyModel {
   final int? bedrooms;
   final int? bathrooms;
   final double? area;
+  final List<String>? features;
   final bool isFavorite;
 
   const PropertyModel({
@@ -27,6 +28,7 @@ class PropertyModel {
     this.bedrooms,
     this.bathrooms,
     this.area,
+    this.features,
     this.isFavorite = false,
   });
 
@@ -44,6 +46,7 @@ class PropertyModel {
     int? bedrooms,
     int? bathrooms,
     double? area,
+    List<String>? features,
     bool? isFavorite,
   }) {
     return PropertyModel(
@@ -59,6 +62,7 @@ class PropertyModel {
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       area: area ?? this.area,
+      features: features ?? this.features,
       isFavorite: isFavorite ?? this.isFavorite,
     );
   }
@@ -78,12 +82,20 @@ class PropertyModel {
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
       'area': area,
+      'features': features,
       'is_favorite': isFavorite,
     };
   }
 
   /// Create from JSON
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
+    // Parse features from JSON
+    List<String>? features;
+    if (json['features'] != null) {
+      final featuresList = json['features'] as List<dynamic>;
+      features = featuresList.map((feature) => feature.toString()).toList();
+    }
+    
     return PropertyModel(
       id: json['id'] as int,
       userId: json['user_id'] as int,
@@ -97,6 +109,7 @@ class PropertyModel {
       bedrooms: json['bedrooms'] as int?,
       bathrooms: json['bathrooms'] as int?,
       area: json['area'] != null ? (json['area'] as num).toDouble() : null,
+      features: features,
       isFavorite: json['is_favorite'] as bool? ?? false,
     );
   }
