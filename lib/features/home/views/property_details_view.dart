@@ -877,15 +877,21 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           Builder(
                             builder: (context) {
                               try {
+                                final coordinates = _getPropertyCoordinates(property);
+                                print('🗺️ PropertyDetailsView: Calling GoogleMapWidget with coordinates:');
+                                print('  - Latitude: ${coordinates['latitude']}');
+                                print('  - Longitude: ${coordinates['longitude']}');
+                                print('  - Property Title: ${property['title']}');
+                                
                                 return GoogleMapWidget(
-                                  latitude: _getPropertyCoordinates(property)['latitude'],
-                                  longitude: _getPropertyCoordinates(property)['longitude'],
+                                  latitude: coordinates['latitude'],
+                                  longitude: coordinates['longitude'],
                                   propertyTitle: property['title'] as String?,
                                   height: 200,
                                   showMarker: true,
                                 );
                               } catch (e) {
-                                print('Error loading Google Maps: $e');
+                                print('❌ PropertyDetailsView: Error loading Google Maps: $e');
                                 // Fallback to placeholder if map fails
                                 return Container(
                                   height: 200,
@@ -1231,9 +1237,13 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   }
 
   Map<String, double> _getPropertyCoordinates(Map<String, dynamic> property) {
+    print('🗺️ PropertyDetailsView: _getPropertyCoordinates called');
+    print('🗺️ PropertyDetailsView: Property data keys: ${property.keys.toList()}');
+    
     // Try to get coordinates from property data
     final coordinates = property['coordinates'] as Map<String, dynamic>?;
     if (coordinates != null) {
+      print('🗺️ PropertyDetailsView: Found coordinates in property data: $coordinates');
       return {
         'latitude': (coordinates['latitude'] as num?)?.toDouble() ?? 6.5244,
         'longitude': (coordinates['longitude'] as num?)?.toDouble() ?? 3.3792,
@@ -1243,6 +1253,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     // Try to get coordinates from location string (fallback)
     final location = property['location'] as String?;
     if (location != null) {
+      print('🗺️ PropertyDetailsView: No coordinates found, using location: $location');
       // Parse location string to extract coordinates if available
       // For now, return default Lagos coordinates
       return {
@@ -1251,6 +1262,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       };
     }
 
+    print('🗺️ PropertyDetailsView: No location found, using default coordinates');
     // Default coordinates (Lagos, Nigeria)
     return {
       'latitude': 6.5244,

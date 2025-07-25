@@ -52,6 +52,11 @@
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>This app needs access to location when in the background to show nearby properties on the map.</string>
 	<key>GMSApiKey</key>
-	<string>AIzaSyAvX6t08iCB6TB09kjCieP3jrCmLpJp38Y</string>
+	<string>AIzaSyAvX6tO8iCB6TBo9kjCieP3jrCmLpJp38Y</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

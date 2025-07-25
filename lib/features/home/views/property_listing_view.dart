@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/location_autocomplete_field.dart';
 import '../services/property_service.dart';
 import 'property_listing_success_view.dart';
 
@@ -551,30 +552,16 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         
         const SizedBox(height: 24),
         
-        // Location
-        CustomTextField(
+        // Location with Google Places Autocomplete
+        LocationAutocompleteField(
           label: 'Location',
           hintText: 'Enter property location',
           controller: _locationController,
-          prefixIcon: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: SvgPicture.asset(
-              'assets/icons/location.svg',
-              width: 20,
-              height: 20,
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF868686),
-                BlendMode.srcIn,
-              ),
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(
-                  Icons.location_on,
-                  size: 20,
-                  color: Color(0xFF868686),
-                );
-              },
-            ),
-          ),
+          apiKey: 'AIzaSyAvX6tO8iCB6TBo9kjCieP3jrCmLpJp38Y',
+          onLocationSelected: () {
+            // Optional: Add any additional logic when location is selected
+            print('📍 Location selected: ${_locationController.text}');
+          },
         ),
         
         const SizedBox(height: 40),

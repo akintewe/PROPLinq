@@ -618,7 +618,6 @@ class _SignUpViewState extends State<SignUpView> {
                       label: 'Location',
                       hintText: 'Enter your location',
                       controller: _locationController,
-                      focusNode: _focusNodeLocation,
                       apiKey: _googleApiKey,
                     ),
                     
