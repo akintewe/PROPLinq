@@ -523,40 +523,40 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                               
                               const SizedBox(height: 16),
                               
-                              Container(
-                                width: double.infinity,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: const Color(0xFF426DC2)),
-                                  borderRadius: BorderRadius.circular(25),
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => const RentNowPayLaterView(),
-                                      ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    shadowColor: Colors.transparent,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Rent now-pay later',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF426DC2),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              // Container(
+                              //   width: double.infinity,
+                              //   height: 50,
+                              //   decoration: BoxDecoration(
+                              //     border: Border.all(color: const Color(0xFF426DC2)),
+                              //     borderRadius: BorderRadius.circular(25),
+                              //   ),
+                              //   child: ElevatedButton(
+                              //     onPressed: () {
+                              //       Navigator.of(context).push(
+                              //         MaterialPageRoute(
+                              //           builder: (context) => const RentNowPayLaterView(),
+                              //         ),
+                              //       );
+                              //     },
+                              //     style: ElevatedButton.styleFrom(
+                              //       backgroundColor: Colors.white,
+                              //       shadowColor: Colors.transparent,
+                              //       elevation: 0,
+                              //       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              //       shape: RoundedRectangleBorder(
+                              //         borderRadius: BorderRadius.circular(25),
+                              //       ),
+                              //     ),
+                              //     child: const Text(
+                              //       'Rent now-pay later',
+                              //       style: TextStyle(
+                              //         fontSize: 15,
+                              //         fontWeight: FontWeight.w600,
+                              //         color: Color(0xFF426DC2),
+                              //       ),
+                              //     ),
+                              //   ),
+                              // ),
                             ] else ...[
                               // Apartment buttons (for rent or sale)
                               Row(

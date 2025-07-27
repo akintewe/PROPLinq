@@ -426,7 +426,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     print('🗺️ GoogleMapWidget: Building static map');
     
     // Create static map URL with better styling
-    final apiKey = 'AIzaSyAvX6tO8iCB6TBo9kjCieP3jrCmLpJp38Y';
+    final apiKey = 'AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ';
     final staticMapUrl = 'https://maps.googleapis.com/maps/api/staticmap?'
         'center=$lat,$lng&'
         'zoom=15&'

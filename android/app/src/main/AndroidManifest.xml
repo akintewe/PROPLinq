@@ -2,7 +2,7 @@
     <!-- Google Maps API Key -->
     <meta-data
         android:name="com.google.android.geo.API_KEY"
-        android:value="AIzaSyAvX6tO8iCB6TBo9kjCieP3jrCmLpJp38Y" />
+        android:value="AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ" />
     
     <application
         android:label="proplinq"
