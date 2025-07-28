@@ -82,29 +82,19 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
           '&components=country:ng'
           '&key=${widget.apiKey}';
 
-      print('🔍 LocationAutocompleteField: Searching for "$query"');
-      print('🔗 URL: $url');
-
       final response = await http.get(Uri.parse(url));
-
-      print('📡 Response status: ${response.statusCode}');
-      print('📄 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('📊 Parsed data: $data');
         
         if (data['status'] == 'OK') {
           final predictions = List<Map<String, dynamic>>.from(data['predictions']);
-          print('✅ Found ${predictions.length} predictions');
           setState(() {
             _predictions = predictions;
             _showPredictions = true;
             _isLoading = false;
           });
         } else {
-          print('❌ API returned status: ${data['status']}');
-          print('❌ Error message: ${data['error_message']}');
           setState(() {
             _predictions = [];
             _showPredictions = false;
@@ -112,13 +102,11 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
           });
         }
       } else {
-        print('❌ HTTP error: ${response.statusCode}');
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('❌ LocationAutocompleteField: Error searching places: $e');
       setState(() {
         _isLoading = false;
       });
@@ -228,13 +216,7 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
                 validator: widget.validator,
               ),
               
-              // Debug info
-              Builder(
-                builder: (context) {
-                  print('🎯 Debug - _showPredictions: $_showPredictions, _predictions.length: ${_predictions.length}');
-                  return const SizedBox.shrink();
-                },
-              ),
+
               
               // Predictions List
               if (_showPredictions && _predictions.isNotEmpty)
