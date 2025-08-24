@@ -738,7 +738,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => VirtualTour360View(
-                                    imageUrl: 'assets/images/shot-panoramic-composition-living-room.jpg',
                                     title: 'Virtual Tour - ${property['title'] as String? ?? 'Property'}',
                                   ),
                                 ),
