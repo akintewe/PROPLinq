@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'property_listing_view.dart';
 import 'property_details_view.dart';
+import 'subscription_view.dart';
 import '../../finance/views/agent_kyc_view.dart';
 import '../../finance/views/kyc_status_review_view.dart';
 import '../../finance/views/user_kyc_status_review_view.dart';
@@ -1227,6 +1228,7 @@ class _ProfileViewState extends State<ProfileView> {
                 'category': property.category,
                 'description': property.description,
                 'features': property.features,
+                'imageUrl': property.imageUrl, // Pass actual image URL from API
                 'agent': {
                   'name': _currentUser?.fullName ?? 'Agent',
                   'title': 'Agent',
@@ -1480,7 +1482,13 @@ class _ProfileViewState extends State<ProfileView> {
             width: double.infinity,
             height: 47,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const SubscriptionView(),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(

@@ -14,7 +14,7 @@ import '../../finance/views/agent_kyc_view.dart';
 import '../services/property_service.dart';
 import '../models/property_model.dart';
 import 'property_details_view.dart';
-import 'search_results_view.dart';
+
 
 class TenantHomeView extends StatefulWidget {
   const TenantHomeView({super.key});
@@ -1035,6 +1035,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // Test property details endpoint first
         await _testPropertyDetails(property.id);
         
+        // DEBUG: Check what imageUrl we're passing
+        print('🚀 TENANT FEATURED HOUSES DEBUG: property.imageUrl = ${property.imageUrl}');
+        print('🚀 TENANT FEATURED HOUSES DEBUG: property.title = ${property.title}');
+        
         // Then navigate to property details with actual API data
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
@@ -1047,6 +1051,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'category': property.category,
             'description': property.description,
             'features': property.features, // Pass actual features from API
+            'imageUrl': property.imageUrl, // Pass actual image URL from API
+            'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
             'agent': {
               'name': 'James Mark',
               'title': 'Agent',
@@ -1303,56 +1309,66 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   Widget _buildPropertyListItem(int index) {
-    final Map<String, dynamic> properties = [
-      {
-        'badges': ['For sale', 'Verified Agent'],
-        'title': '3-Bedroom Apartment',
-        'location': 'Lekki Phase 1, Lagos Nigeria',
-        'rating': '(5.0)',
-        'price': '#2,500,000',
-        'type': 'Apartment',
-        'category': 'Real Estate',
-        'image': 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'
-      },
-      {
-        'badges': ['Verified Agent'],
-        'title': 'Rome in Rollace Hotel',
-        'location': 'Lekki Phase 1, Lagos Nigeria',
-        'rating': '(5.0)',
-        'price': '#90,000',
-        'type': 'Hotel',
-        'category': 'Hotels',
-        'period': 'per night',
-        'image': 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=600&h=400&fit=crop&crop=center'
-      },
-      {
-        'badges': ['Verified Agent'],
-        'title': '3-Bedroom Apartment',
-        'location': 'Lekki Phase 1, Lagos Nigeria',
-        'rating': '(5.0)',
-        'price': '#2,500,000',
-        'type': 'Apartment',
-        'category': 'Real Estate',
-        'image': 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop&crop=center'
-      },
-    ][index];
+    // Show loading if properties are still loading
+    if (_isLoadingProperties) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    // Use real properties data if available, otherwise show placeholder
+    if (_properties.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Text('No properties available'),
+          ),
+        ),
+      );
+    }
+
+    // Get property at index, or use first property if index is out of bounds
+    final propertyIndex = index < _properties.length ? index : 0;
+    final property = _properties[propertyIndex];
     
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
+        // Test property details endpoint first
+        await _testPropertyDetails(property.id);
+        
+        // DEBUG: Check what imageUrl we're passing
+        print('🚀 TENANT CATEGORIES DEBUG: property.imageUrl = ${property.imageUrl}');
+        print('🚀 TENANT CATEGORIES DEBUG: property.title = ${property.title}');
+        
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-            'badges': properties['badges'],
-            'title': properties['title'],
-            'location': properties['location'],
-            'rating': properties['rating'],
-            'price': properties['price'],
-            'type': properties['type'],
-            'category': properties['category'],
-            'period': properties['period'],
-            'features': properties['features'], // Pass features from API
-            'description': properties['type'] == 'Hotel' 
-                ? 'Step into luxury with this fully furnished hotel room located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
-                : 'Step into luxury with this fully furnished 3-bedroom apartment located in the heart of Lekki Phase 1. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+            'badges': ['Verified Agent'],
+            'title': property.title,
+            'location': property.location,
+            'rating': '(5.0)',
+            'price': property.price,
+            'type': property.type,
+            'category': property.category,
+            'description': property.description,
+            'features': property.features, // Pass actual features from API
+            'imageUrl': property.imageUrl, // Pass actual image URL from API
+            'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
             'agent': {
               'name': 'James Mark',
               'title': 'Agent',
@@ -1386,7 +1402,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                 width: double.infinity,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: NetworkImage(properties['image'] as String),
+                    image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -1408,7 +1424,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         top: 16,
                         left: 16,
                         child: Row(
-                          children: (properties['badges'] as List<String>).map((badge) {
+                          children: ['Verified Agent'].map((badge) {
                             return Container(
                               margin: const EdgeInsets.only(right: 8),
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1476,7 +1492,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       children: [
                         Expanded(
                           child: Text(
-                            properties['title'] as String,
+                            property.title,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
@@ -1491,7 +1507,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            properties['type'] as String,
+                            property.type,
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -1519,7 +1535,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            properties['location'] as String,
+                            property.location,
                             style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF868686),
@@ -1532,7 +1548,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     Row(
                       children: [
                         Text(
-                          properties['rating'] as String,
+                          '(5.0)', // Default rating for PropertyModel
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFF868686),
@@ -1549,21 +1565,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              properties['price'] as String,
+                              '₦${property.price}',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF426DC2),
                               ),
                             ),
-                            if (properties.containsKey('period'))
-                              Text(
-                                properties['period'] as String,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF426DC2),
-                                ),
-                              ),
                           ],
                         ),
                       ],
@@ -1596,6 +1604,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'category': property['category'],
             'period': property['period'],
             'features': property['features'], // Pass features from API
+            'imageUrl': property['image'], // Pass image URL from search data
+            'images': property['image'] != null ? [{'full_url': property['image']}] : null, // Pass image in API format
             'description': property['type'] == 'Hotel' 
                 ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                 : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',

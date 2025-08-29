@@ -19,7 +19,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   final PageController _pageController = PageController();
   int _currentImageIndex = 0;
   
-  final List<String> _propertyImages = [
+  // Default fallback images for when property has no images
+  final List<String> _fallbackImages = [
     'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center',
     'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop&crop=center',
     'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&h=400&fit=crop&crop=center',
@@ -30,6 +31,48 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  /// Get property images from property data, fallback to default images
+  List<String> _getPropertyImages() {
+    final property = widget.propertyData ?? _getDefaultProperty();
+    
+    print('🖼️ DEBUG: Getting property images...');
+    print('🖼️ Property data keys: ${property.keys.toList()}');
+    print('🖼️ Property imageUrl value: ${property['imageUrl']}');
+    print('🖼️ Property images value: ${property['images']}');
+    
+    // Check if property has imageUrl (from PropertyModel)
+    if (property['imageUrl'] != null && property['imageUrl'].toString().isNotEmpty) {
+      print('✅ Found imageUrl: ${property['imageUrl']}');
+      // If we have a real property image, use it as the primary image
+      return [property['imageUrl'].toString()];
+    }
+    
+    // Check if property has multiple images array
+    if (property['images'] != null && property['images'] is List) {
+      final images = property['images'] as List<dynamic>;
+      print('🖼️ Found images array with ${images.length} items: $images');
+      if (images.isNotEmpty) {
+        final imageUrls = images.map((image) {
+          if (image is Map<String, dynamic> && image['full_url'] != null) {
+            print('✅ Extracting full_url: ${image['full_url']}');
+            return image['full_url'].toString();
+          } else if (image is String) {
+            print('✅ Using string image: $image');
+            return image;
+          }
+          print('❌ Invalid image format, using fallback');
+          return _fallbackImages.first;
+        }).toList();
+        print('🖼️ Final image URLs: $imageUrls');
+        return imageUrls;
+      }
+    }
+    
+    print('❌ No images found, using fallback images');
+    // Fallback to default images
+    return _fallbackImages;
   }
 
   Map<String, dynamic> _getDefaultProperty() {
@@ -61,13 +104,17 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     final isHotel = normalizedType == 'hotel';
     final isShortlet = normalizedType == 'shortlet';
     
+    // Get actual property images
+    final propertyImages = _getPropertyImages();
+    
     // Debug logging
     print('🏠 Property Details Debug:');
     print('Property Type: $propertyType');
     print('Normalized Type: $normalizedType');
     print('Is Hotel: $isHotel');
     print('Is Shortlet: $isShortlet');
-    print('Property Data: ${property.toString()}');
+    print('Property Images: $propertyImages');
+    print('Property Data Keys: ${property.keys.toList()}');
     
     // Determine category based on property type
     String category;
@@ -101,14 +148,14 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                             _currentImageIndex = index;
                           });
                         },
-                        itemCount: _propertyImages.length,
+                        itemCount: propertyImages.length,
                         itemBuilder: (context, index) {
                           return Container(
                             width: double.infinity,
                             height: 400,
                             decoration: BoxDecoration(
                               image: DecorationImage(
-                                image: NetworkImage(_propertyImages[index]),
+                                image: NetworkImage(propertyImages[index]),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -186,7 +233,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
-                            _propertyImages.length,
+                            propertyImages.length,
                             (index) => Container(
                               margin: const EdgeInsets.symmetric(horizontal: 3),
                               width: 10,

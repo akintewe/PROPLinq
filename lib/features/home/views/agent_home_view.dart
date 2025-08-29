@@ -643,6 +643,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'category': property['category'],
                       'period': property['period'],
                       'features': property['features'], // Pass features from API
+                      'imageUrl': property['image'], // Pass image URL from search data
+                      'images': property['image'] != null ? [{'full_url': property['image']}] : null, // Pass image in API format
                       'description': property['type'] == 'Hotel' 
                           ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                           : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
@@ -1215,6 +1217,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   await _testPropertyDetails(property.id);
                   
                   // Then navigate to property details
+                  // DEBUG: Check what imageUrl we're passing
+                  print('🚀 NAVIGATION DEBUG: property.imageUrl = ${property.imageUrl}');
+                  print('🚀 NAVIGATION DEBUG: property.title = ${property.title}');
+                  
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
                       'badges': ['Verified Agent'],
@@ -1226,6 +1232,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'category': property.category,
                       'description': property.description,
                       'features': property.features, // Pass actual features from API
+                      'imageUrl': property.imageUrl, // Pass actual image URL from API
+                      'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
                       'agent': {
                         'name': 'James Mark',
                         'title': 'Agent',
@@ -1297,6 +1305,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   await _testPropertyDetails(property.id);
                   
                   // Then navigate to property details
+                  // DEBUG: Check what imageUrl we're passing
+                  print('🚀 NAVIGATION DEBUG: property.imageUrl = ${property.imageUrl}');
+                  print('🚀 NAVIGATION DEBUG: property.title = ${property.title}');
+                  
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
                       'badges': ['Verified Agent'],
@@ -1308,6 +1320,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'category': property.category,
                       'description': property.description,
                       'features': property.features, // Pass actual features from API
+                      'imageUrl': property.imageUrl, // Pass actual image URL from API
+                      'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
                       'agent': {
                         'name': 'James Mark',
                         'title': 'Agent',
@@ -1368,6 +1382,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     
     return GestureDetector(
       onTap: () {
+        // DEBUG: Check what imageUrl we're passing
+        print('🚀 FEATURED HOUSES DEBUG: property.imageUrl = ${property.imageUrl}');
+        print('🚀 FEATURED HOUSES DEBUG: property.title = ${property.title}');
+        
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
             'badges': ['Verified Agent'],
@@ -1379,6 +1397,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             'category': property.category,
             'description': property.description,
             'features': property.features, // Pass actual features from API
+            'imageUrl': property.imageUrl, // Pass actual image URL from API
+            'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
             'agent': {
               'name': 'James Mark',
               'title': 'Agent',
@@ -1683,6 +1703,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               'type': property.type,
               'category': property.category,
               'description': property.description,
+              'features': property.features, // Pass actual features from API
+              'imageUrl': property.imageUrl, // Pass actual image URL from API
+              'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
               'agent': {
                 'name': 'James Mark',
                 'title': 'Agent',
@@ -2370,6 +2393,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                                 'category': property.category,
                                 'description': property.description,
                                 'features': property.features,
+                                'imageUrl': property.imageUrl, // Pass actual image URL from API
+                                'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
                                 'agent': {
                                   'name': 'James Mark',
                                   'title': 'Agent',
