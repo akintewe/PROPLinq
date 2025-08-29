@@ -5,16 +5,16 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 
 class LocationAutocompleteField extends StatefulWidget {
-  final String label;
+  final String? label;
   final String hintText;
   final TextEditingController controller;
   final String? Function(String?)? validator;
-  final VoidCallback? onLocationSelected;
+  final Function(String)? onLocationSelected;
   final String apiKey;
 
   const LocationAutocompleteField({
     super.key,
-    required this.label,
+    this.label,
     required this.hintText,
     required this.controller,
     this.validator,
@@ -120,7 +120,7 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
     });
     
     if (widget.onLocationSelected != null) {
-      widget.onLocationSelected!();
+      widget.onLocationSelected!(prediction['description']);
     }
     
     _focusNode.unfocus();
@@ -131,17 +131,18 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label
-        Text(
-          widget.label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
+        // Label (optional)
+        if (widget.label != null) ...[
+          Text(
+            widget.label!,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
           ),
-        ),
-        
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
         
         // Text Field with Autocomplete
         Container(

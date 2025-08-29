@@ -153,14 +153,14 @@ class _HotelReservationViewState extends State<HotelReservationView> {
   Widget _buildPriceAndQuantity(double price) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Price
+        children: [
+          // Price
         Text(
-          '₦${_formatPrice(price)}/night',
-          style: const TextStyle(
+              '₦${_formatPrice(price)}/night',
+              style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+                color: Colors.black,
           ),
         ),
         
@@ -189,7 +189,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(8),
                       bottomLeft: Radius.circular(8),
-                    ),
+                  ),
                   ),
                   child: Icon(
                     Icons.remove,
@@ -211,11 +211,11 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                 ),
                 child: Center(
                   child: Text(
-                    '$_nights',
-                    style: const TextStyle(
+                '$_nights',
+                style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
                     ),
                   ),
                 ),
@@ -247,7 +247,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
               ),
             ],
           ),
-        ),
+      ),
       ],
     );
   }
@@ -290,7 +290,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Icon(
-                            Icons.calendar_today,
+                          Icons.calendar_today,
                             size: 12,
                             color: Colors.white,
                           ),
@@ -344,7 +344,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Icon(
-                            Icons.calendar_today,
+                          Icons.calendar_today,
                             size: 12,
                             color: Colors.white,
                           ),
@@ -418,16 +418,16 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                   // Show month/year picker
                 },
                 child: Row(
-                  children: [
+                children: [
                     Text(
                       '${_getMonthName(_currentMonth.month)} ${_currentMonth.year}',
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                         color: Colors.black,
-                      ),
                     ),
-                    const SizedBox(width: 8),
+                  ),
+                  const SizedBox(width: 8),
                     const Icon(
                       Icons.keyboard_arrow_down,
                       size: 20,
@@ -518,28 +518,28 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           },
           child: Container(
             height: 40,
-            decoration: BoxDecoration(
+                  decoration: BoxDecoration(
               color: isSelected 
                   ? const Color(0xFF426DC2)
                   : isToday 
                       ? const Color(0xFFE3F2FD)
                       : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
                 day.toString(),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected 
-                      ? Colors.white 
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected 
+                            ? Colors.white 
                       : isToday 
                           ? const Color(0xFF426DC2)
                           : Colors.black,
-                ),
-              ),
-            ),
+                      ),
+                    ),
+                  ),
           ),
         ),
       );
@@ -573,17 +573,17 @@ class _HotelReservationViewState extends State<HotelReservationView> {
         
         // Total guests
         _buildGuestRow('Guests', _guests, (value) {
-          setState(() {
+                      setState(() {
             _guests = value;
-            if (_adults > _guests) _adults = _guests;
-          });
+                        if (_adults > _guests) _adults = _guests;
+                      });
         }),
         
         const SizedBox(height: 16),
         
         // Adults
         _buildGuestRow('Adults', _adults, (value) {
-          setState(() {
+                    setState(() {
             _adults = value;
           });
         }),
@@ -593,49 +593,49 @@ class _HotelReservationViewState extends State<HotelReservationView> {
 
   Widget _buildGuestRow(String label, int value, Function(int) onChanged) {
     return Row(
-      children: [
+          children: [
         Expanded(
-          child: Text(
+              child: Text(
             label,
             style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black,
+                  fontSize: 16,
+                  color: Colors.black,
               fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-          ),
-        ),
-        
+            
         Container(
           decoration: BoxDecoration(
             border: Border.all(color: const Color(0xFFE9ECEF)),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
-            children: [
-              GestureDetector(
-                onTap: () {
+              children: [
+                GestureDetector(
+                  onTap: () {
                   if (value > 1) {
                     onChanged(value - 1);
-                  }
-                },
-                child: Container(
+                    }
+                  },
+                  child: Container(
                   width: 40,
                   height: 40,
                   decoration: const BoxDecoration(
-                    color: Colors.white,
+                      color: Colors.white,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(8),
                       bottomLeft: Radius.circular(8),
                     ),
                   ),
                   child: Icon(
-                    Icons.remove,
+                      Icons.remove,
                     size: 18,
                     color: value > 1 ? const Color(0xFF426DC2) : const Color(0xFFCED4DA),
+                    ),
                   ),
                 ),
-              ),
-              
+                
               Container(
                 width: 50,
                 height: 40,
@@ -649,42 +649,42 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                 child: Center(
                   child: Text(
                     value.toString(),
-                    style: const TextStyle(
+                  style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
                     ),
                   ),
+                  ),
                 ),
-              ),
-              
-              GestureDetector(
-                onTap: () {
+                
+                GestureDetector(
+                  onTap: () {
                   if (label == 'Adults' && value < _guests) {
                     onChanged(value + 1);
                   } else if (label == 'Guests') {
                     onChanged(value + 1);
-                  }
-                },
-                child: Container(
+                    }
+                  },
+                  child: Container(
                   width: 40,
                   height: 40,
                   decoration: const BoxDecoration(
-                    color: Colors.white,
+                      color: Colors.white,
                     borderRadius: BorderRadius.only(
                       topRight: Radius.circular(8),
                       bottomRight: Radius.circular(8),
                     ),
-                  ),
-                  child: const Icon(
-                    Icons.add,
+                    ),
+                    child: const Icon(
+                      Icons.add,
                     size: 18,
-                    color: Color(0xFF426DC2),
+                      color: Color(0xFF426DC2),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ),
       ],
     );
@@ -753,16 +753,16 @@ class _HotelReservationViewState extends State<HotelReservationView> {
       child: SizedBox(
         width: double.infinity,
         height: 56,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                Color(0xFF426DC2),
-                Color(0xFF75CFEA),
-              ],
-            ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Color(0xFF426DC2),
+                      Color(0xFF75CFEA),
+                    ],
+                  ),
             borderRadius: BorderRadius.circular(28),
           ),
           child: ElevatedButton(
@@ -778,15 +778,15 @@ class _HotelReservationViewState extends State<HotelReservationView> {
               ),
             ),
             child: const Text(
-              'Continue',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+                    'Continue',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -929,8 +929,8 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                     // Payment options
                     _buildPaymentOption(
                       'pay_now',
@@ -955,13 +955,13 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
             ),
             
             // Bottom button
-            Container(
+                    Container(
               padding: const EdgeInsets.all(24),
               child: SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: Container(
-                  decoration: BoxDecoration(
+                                  decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
@@ -986,80 +986,80 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     ),
                     child: const Text(
                       'Book now',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
     );
   }
-
+                        
   Widget _buildPaymentOption(String value, String title, String subtitle, bool isRecommended) {
     final isSelected = _selectedPaymentMethod == value;
-    
+                        
     return GestureDetector(
-      onTap: () {
-        setState(() {
+                          onTap: () {
+                            setState(() {
           _selectedPaymentMethod = value;
-        });
-      },
-      child: Container(
+                            });
+                          },
+                          child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          border: Border.all(
+                      decoration: BoxDecoration(
+                              border: Border.all(
             color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFE9ECEF),
             width: isSelected ? 2 : 1,
-          ),
+                              ),
           borderRadius: BorderRadius.circular(16),
           color: Colors.white,
-        ),
-        child: Row(
-          children: [
-            Container(
+                      ),
+                      child: Row(
+                        children: [
+                                Container(
               width: 24,
               height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
                 color: isSelected ? const Color(0xFF426DC2) : Colors.transparent,
-                border: Border.all(
+                                    border: Border.all(
                   color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFCED4DA),
                   width: 2,
-                ),
-              ),
+                                    ),
+                                  ),
               child: isSelected
-                  ? const Icon(
-                      Icons.check,
+                                      ? const Icon(
+                                          Icons.check,
                       size: 14,
-                      color: Colors.white,
-                    )
-                  : null,
-            ),
-            
-            const SizedBox(width: 16),
-            
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                          ),
+                                
+                          const SizedBox(width: 16),
+                                
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           title,
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        ),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
+                                ),
                       ),
                       if (isRecommended) ...[
                         const SizedBox(width: 8),
@@ -1075,7 +1075,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                               fontSize: 10,
                               color: Color(0xFF2E7D32),
                               fontWeight: FontWeight.w500,
-                            ),
+                      ),
                           ),
                         ),
                       ],
@@ -1154,7 +1154,7 @@ class HotelBookingSuccessView extends StatelessWidget {
                     child: Icon(
                       Icons.add,
                       size: 16,
-                      color: const Color(0xFF426DC2).withOpacity(0.3),
+                        color: const Color(0xFF426DC2).withOpacity(0.3),
                     ),
                   ),
                   Positioned(
@@ -1192,20 +1192,20 @@ class HotelBookingSuccessView extends StatelessWidget {
                   ),
                   
                   // Main success icon
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF426DC2), Color(0xFF75CFEA)],
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 40,
-                    ),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF426DC2), Color(0xFF75CFEA)],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check,
+                  color: Colors.white,
+                  size: 40,
+                ),
                   ),
                 ],
               ),
@@ -1281,16 +1281,16 @@ class HotelBookingSuccessView extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [
-                            Color(0xFF426DC2),
-                            Color(0xFF75CFEA),
-                          ],
-                        ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              Color(0xFF426DC2),
+                              Color(0xFF75CFEA),
+                            ],
+                          ),
                         borderRadius: BorderRadius.circular(28),
                       ),
                       child: ElevatedButton(
@@ -1304,11 +1304,11 @@ class HotelBookingSuccessView extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                          'Confirm availability',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            'Confirm availability',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
                           ),
                         ),
                       ),

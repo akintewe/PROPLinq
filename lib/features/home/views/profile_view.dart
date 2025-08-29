@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'property_listing_view.dart';
+import 'property_details_view.dart';
 import '../../finance/views/agent_kyc_view.dart';
 import '../../finance/views/kyc_status_review_view.dart';
 import '../../finance/views/user_kyc_status_review_view.dart';
@@ -9,6 +9,8 @@ import '../../finance/views/complete_kyc_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/kyc_status_response.dart';
+import '../services/property_service.dart';
+import '../models/property_model.dart';
 
 class ProfileView extends StatefulWidget {
   final bool isAgent;
@@ -21,10 +23,13 @@ class ProfileView extends StatefulWidget {
 
 class _ProfileViewState extends State<ProfileView> {
   final AuthService _authService = AuthService();
+  final PropertyService _propertyService = PropertyService();
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   KycStatusResponse? _kycStatus;
   bool _isLoadingKycStatus = true;
+  List<PropertyModel> _myProperties = [];
+  bool _isLoadingMyProperties = true;
 
   @override
   void initState() {
@@ -32,6 +37,10 @@ class _ProfileViewState extends State<ProfileView> {
     _fetchUserProfile();
     // Fetch KYC status for both agents and tenants
     _fetchKycStatus();
+    // Fetch agent's properties if they are an agent
+    if (widget.isAgent) {
+      _fetchMyProperties();
+    }
   }
 
   @override
@@ -172,6 +181,40 @@ class _ProfileViewState extends State<ProfileView> {
     }
   }
 
+  Future<void> _fetchMyProperties() async {
+    try {
+      print('🏠 Fetching my properties for profile view...');
+      setState(() {
+        _isLoadingMyProperties = true;
+      });
+
+      final properties = await _propertyService.fetchMyProperties();
+      
+      print('✅ My properties fetched successfully: ${properties.length} properties');
+      
+      setState(() {
+        _myProperties = properties;
+        _isLoadingMyProperties = false;
+      });
+    } catch (e) {
+      print('❌ Error fetching my properties: $e');
+      setState(() {
+        _isLoadingMyProperties = false;
+      });
+      
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load your properties: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   String _getUserTypeDisplay() {
     if (_currentUser == null) return 'User';
     
@@ -188,7 +231,7 @@ class _ProfileViewState extends State<ProfileView> {
     } else if (_currentUser!.userType == 'home_seeker') {
       return 'Home Seeker';
     } else {
-      return _currentUser!.userType?.replaceAll('_', ' ') ?? 'User';
+      return _currentUser!.userType.replaceAll('_', ' ');
     }
   }
 
@@ -773,12 +816,10 @@ class _ProfileViewState extends State<ProfileView> {
   Widget _buildTenantKycSection(BuildContext context) {
     // Determine button text and layout based on KYC status
     String kycButtonText = 'Complete KYC';
-    bool isKycApproved = false;
     
     if (!_isLoadingKycStatus && _kycStatus != null) {
       if (_kycStatus!.isKycVerified()) {
         kycButtonText = 'View KYC Status';
-        isKycApproved = true;
       } else if (_kycStatus!.isKycPending()) {
         kycButtonText = 'View KYC Status';
       } else if (_kycStatus!.isKycRejected()) {
@@ -1028,6 +1069,9 @@ class _ProfileViewState extends State<ProfileView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
         const Text(
           'Current listing',
           style: TextStyle(
@@ -1035,15 +1079,32 @@ class _ProfileViewState extends State<ProfileView> {
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
+            ),
+            if (!_isLoadingMyProperties && _myProperties.isNotEmpty)
+              Text(
+                '${_myProperties.length} properties',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF666666),
+                ),
+              ),
+          ],
         ),
         
         const SizedBox(height: 16),
         
         SizedBox(
           height: 300,
-          child: ListView.separated(
+          child: _isLoadingMyProperties
+              ? const Center(
+                  child: CircularProgressIndicator(),
+                )
+              : _myProperties.isEmpty
+                  ? _buildEmptyPropertiesState()
+                  : ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: 2,
+                      itemCount: _myProperties.length,
             separatorBuilder: (context, index) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
               return _buildPropertyCard(index);
@@ -1054,29 +1115,131 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildPropertyCard(int index) {
-    final properties = [
-      {
-        'image': 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center',
-        'title': '3-Bedroom Apartment',
-        'location': 'Lekki Phase 1, Lagos Nigeria',
-        'rating': '5.0',
-        'price': '#2,500,000',
-        'badge': 'For sale'
-      },
-      {
-        'image': 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop&crop=center',
-        'title': '3-Bedroom Duplex',
-        'location': 'Lekki Phase 1, Lagos Nigeria',
-        'rating': '5.0',
-        'price': '#3,200,000',
-        'badge': 'For sale'
-      },
-    ];
-
-    final property = properties[index];
-
+  Widget _buildEmptyPropertiesState() {
     return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE9ECEF),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.home_outlined,
+            size: 48,
+            color: Color(0xFF999999),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No properties listed yet',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Start by listing your first property',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF666666),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: 140,
+            height: 40,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Color(0xFF426DC2),
+                    Color(0xFF63ADDC),
+                    Color(0xFF75CFEA),
+                  ],
+                  stops: [0.0, 1.0, 1.0],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const PropertyListingView(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  elevation: 0,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: const Center(
+                  child: Text(
+                    'List a property',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPropertyCard(int index) {
+    if (index >= _myProperties.length) {
+      return const SizedBox.shrink();
+    }
+
+    final property = _myProperties[index];
+
+    return GestureDetector(
+      onTap: () {
+        // Navigate to property details
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PropertyDetailsView(
+              propertyData: {
+                'badges': ['Verified Agent'],
+                'title': property.title,
+                'location': property.location,
+                'rating': '(5.0)',
+                'price': property.price,
+                'type': property.type,
+                'category': property.category,
+                'description': property.description,
+                'features': property.features,
+                'agent': {
+                  'name': _currentUser?.fullName ?? 'Agent',
+                  'title': 'Agent',
+                  'phone': _currentUser?.phoneNumber ?? '',
+                  'email': _currentUser?.email ?? '',
+                  'whatsapp': _currentUser?.whatsappNumber ?? _currentUser?.phoneNumber ?? '',
+                },
+              },
+            ),
+          ),
+        );
+      },
+      child: Container(
       width: 240,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1098,7 +1261,7 @@ class _ProfileViewState extends State<ProfileView> {
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
               image: DecorationImage(
-                image: NetworkImage(property['image']!),
+                  image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -1115,7 +1278,7 @@ class _ProfileViewState extends State<ProfileView> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      property['badge']!,
+                        property.category.replaceAll('_', ' '),
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
@@ -1176,7 +1339,7 @@ class _ProfileViewState extends State<ProfileView> {
                     children: [
                       Expanded(
                         child: Text(
-                          property['title']!,
+                            property.title,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -1190,9 +1353,9 @@ class _ProfileViewState extends State<ProfileView> {
                           color: const Color(0xFFE3F2FD),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text(
-                          'Apartment',
-                          style: TextStyle(
+                          child: Text(
+                            property.type,
+                            style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF426DC2),
@@ -1212,7 +1375,7 @@ class _ProfileViewState extends State<ProfileView> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          property['location']!,
+                            property.location,
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF666666),
@@ -1226,9 +1389,9 @@ class _ProfileViewState extends State<ProfileView> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Text(
-                        '(${property['rating']!})',
-                        style: const TextStyle(
+                        const Text(
+                          '(5.0)',
+                          style: TextStyle(
                           fontSize: 11,
                           color: Color(0xFF666666),
                         ),
@@ -1241,7 +1404,7 @@ class _ProfileViewState extends State<ProfileView> {
                       ),
                       const Spacer(),
                       Text(
-                        property['price']!,
+                          '₦${property.price}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -1280,6 +1443,7 @@ class _ProfileViewState extends State<ProfileView> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

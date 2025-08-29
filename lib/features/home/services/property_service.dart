@@ -370,4 +370,82 @@ class PropertyService {
       return null;
     }
   }
+
+  /// Fetch agent's own properties
+  Future<List<PropertyModel>> fetchMyProperties() async {
+    try {
+      print('🏠 Fetching my properties from API...');
+      print('🔗 Endpoint: ${ApiConstants.myProperties}');
+      print('🔑 Using authentication: true');
+      
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiConstants.myProperties,
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+
+      print('\n📋 ===== MY PROPERTIES API RESPONSE =====');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+      print('🔍 Raw Response Data: ${response.data}');
+      print('📊 Response Type: ${response.data.runtimeType}');
+      
+      if (response.errors != null && response.errors!.isNotEmpty) {
+        print('❌ Errors: ${response.errors}');
+      }
+
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        print('\n📦 Response Data Structure:');
+        print('🔸 Data keys: ${data.keys.toList()}');
+        print('🔸 Full data: $data');
+        
+        // Check if data has the expected structure
+        if (data.containsKey('data')) {
+          final List<dynamic> propertiesData = data['data'] as List<dynamic>;
+          print('📊 Properties array length: ${propertiesData.length}');
+          
+          if (propertiesData.isNotEmpty) {
+            print('\n🏠 Sample property data:');
+            print('🔸 First property: ${propertiesData.first}');
+            print('🔸 Property keys: ${(propertiesData.first as Map<String, dynamic>).keys.toList()}');
+          }
+          
+          final List<PropertyModel> properties = propertiesData
+              .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
+              .toList();
+
+          print('✅ Successfully parsed ${properties.length} of my properties');
+          
+          if (properties.isNotEmpty) {
+            print('\n🏠 Parsed Properties Summary:');
+            for (int i = 0; i < properties.length && i < 3; i++) {
+              final prop = properties[i];
+              print('🔸 Property ${i + 1}: ${prop.title} - ${prop.location} - ₦${prop.price}');
+            }
+            if (properties.length > 3) {
+              print('🔸 ... and ${properties.length - 3} more properties');
+            }
+          }
+          
+          return properties;
+        } else {
+          print('⚠️ Response data does not contain "data" key');
+          print('🔸 Available keys: ${data.keys.toList()}');
+          return [];
+        }
+      } else {
+        print('❌ Failed to fetch my properties: ${response.message}');
+        if (response.statusCode != null) {
+          print('🔸 HTTP Status Code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error fetching my properties: $e');
+      print('📍 Stack trace: $stackTrace');
+      return [];
+    }
+  }
 } 

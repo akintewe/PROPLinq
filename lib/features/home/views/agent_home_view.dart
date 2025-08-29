@@ -31,6 +31,12 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   String _selectedLocation = '';
   String _selectedCategory = 'All';
   
+  // Filter state
+  Map<String, dynamic> _activeFilters = {};
+  bool _hasActiveFilters = false;
+  List<PropertyModel> _filteredProperties = [];
+  bool _isShowingFilterResults = false;
+  
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
   UserModel? _currentUser;
@@ -298,14 +304,127 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     FilterBottomSheet.show(
       context,
       onFiltersApplied: (filters) {
-        // Handle filter application
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Filters applied: ${filters.toString()}'),
-          ),
-        );
+        setState(() {
+          _activeFilters = filters;
+          _hasActiveFilters = _checkHasActiveFilters(filters);
+          _filteredProperties = _applyFilters(filters);
+          _isShowingFilterResults = true;
+        });
+        
+        print('🔍 Filters applied: $filters');
+        print('📊 Filtered properties: ${_filteredProperties.length}');
+        print('🎯 About to show filtered results bottom sheet...');
+        
+        // Add a small delay to ensure the filter bottom sheet is fully closed
+        Future.delayed(const Duration(milliseconds: 300), () {
+          print('🔥 Showing filtered results bottom sheet now!');
+          _showSimpleBottomSheet(); // Test with a simple version first
+        });
       },
     );
+  }
+  
+  bool _checkHasActiveFilters(Map<String, dynamic> filters) {
+    return filters['category'] != 'All' ||
+           filters['status'] != 'All' ||
+           filters['rating'] != 'All' ||
+           (filters['fromPrice'] != null && filters['fromPrice'].toString().isNotEmpty) ||
+           (filters['toPrice'] != null && filters['toPrice'].toString().isNotEmpty) ||
+           (filters['location'] != null && filters['location'].toString().isNotEmpty);
+  }
+  
+  List<PropertyModel> _applyFilters(Map<String, dynamic> filters) {
+    List<PropertyModel> filtered = List.from(_properties);
+    
+    // Debug: Print all property categories and types to understand the data
+    print('🔍 DEBUG: Available properties for filtering:');
+    for (int i = 0; i < _properties.length && i < 5; i++) {
+      final prop = _properties[i];
+      print('  Property ${i + 1}: "${prop.title}" - Type: "${prop.type}" - Category: "${prop.category}" - Location: "${prop.location}"');
+    }
+    print('🔍 DEBUG: Filter being applied - Category: "${filters['category']}", Location: "${filters['location']}"');
+    
+    // Apply category filter
+    if (filters['category'] != null && filters['category'] != 'All') {
+      final categoryFilter = filters['category'].toString().toLowerCase();
+      filtered = filtered.where((property) {
+        final propertyType = property.type.toLowerCase();
+        final propertyCategory = property.category.toLowerCase();
+        
+        print('🔍 Checking property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
+        
+        // Updated mapping logic based on actual API data
+        if (categoryFilter == 'hotels') {
+          // Match by type or category
+          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
+        } else if (categoryFilter == 'real estate') {
+          // Match apartments and other real estate
+          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
+        } else if (categoryFilter == 'shortlets') {
+          // Match shortlets
+          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
+        }
+        return true;
+      }).toList();
+    }
+    
+    // Apply status filter (for rent, for sale)
+    if (filters['status'] != null && filters['status'] != 'All') {
+      final statusFilter = filters['status'].toString().toLowerCase().replaceAll(' ', '_');
+      filtered = filtered.where((property) => 
+        property.category.toLowerCase() == statusFilter
+      ).toList();
+    }
+    
+    // Apply location filter
+    if (filters['location'] != null && filters['location'].toString().isNotEmpty) {
+      final locationFilter = filters['location'].toString().toLowerCase();
+      print('🔍 DEBUG: Applying location filter: "$locationFilter"');
+      
+      List<PropertyModel> beforeLocationFilter = List.from(filtered);
+      filtered = filtered.where((property) {
+        final propertyLocation = property.location.toLowerCase();
+        // Check if property location contains filter term OR if any part of property location matches
+        final locationParts = propertyLocation.split(',').map((part) => part.trim()).toList();
+        final filterParts = locationFilter.split(',').map((part) => part.trim()).toList();
+        
+        // Check direct contains or any location part contains any filter part
+        final matches = propertyLocation.contains(locationFilter) || 
+                       locationParts.any((locPart) => filterParts.any((filterPart) => 
+                         locPart.contains(filterPart) || filterPart.contains(locPart)));
+        
+        print('🔍 Location check: "${property.location}" matches "$locationFilter" = $matches');
+        return matches;
+      }).toList();
+      
+      print('🔍 DEBUG: Location filter results: ${beforeLocationFilter.length} -> ${filtered.length} properties');
+    }
+    
+    // Apply price range filter
+    if (filters['fromPrice'] != null && filters['fromPrice'].toString().isNotEmpty) {
+      final fromPrice = double.tryParse(filters['fromPrice'].toString().replaceAll(RegExp(r'[^\d.]'), ''));
+      if (fromPrice != null) {
+        filtered = filtered.where((property) {
+          final propertyPrice = double.tryParse(property.price.toString().replaceAll(RegExp(r'[^\d.]'), ''));
+          return propertyPrice != null && propertyPrice >= fromPrice;
+        }).toList();
+      }
+    }
+    
+    if (filters['toPrice'] != null && filters['toPrice'].toString().isNotEmpty) {
+      final toPrice = double.tryParse(filters['toPrice'].toString().replaceAll(RegExp(r'[^\d.]'), ''));
+      if (toPrice != null) {
+        filtered = filtered.where((property) {
+          final propertyPrice = double.tryParse(property.price.toString().replaceAll(RegExp(r'[^\d.]'), ''));
+          return propertyPrice != null && propertyPrice <= toPrice;
+        }).toList();
+      }
+    }
+    
+    print('🎯 Applied filters: ${filters}');
+    print('📊 Results: ${filtered.length} properties after filtering');
+    
+    return filtered;
   }
 
   @override
@@ -2112,6 +2231,389 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(4),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // Simple test method to verify bottom sheet functionality
+  void _showSimpleBottomSheet() {
+    print('🧪 Testing simple bottom sheet...');
+    
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          height: 300,
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              const Text(
+                'Filtered Properties',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text('Found ${_filteredProperties.length} properties'),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Show the full bottom sheet
+                  _showFilteredResultsBottomSheet();
+                },
+                child: const Text('Show Full Results'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  void _showFilteredResultsBottomSheet() {
+    print('🚀 _showFilteredResultsBottomSheet called with ${_filteredProperties.length} properties');
+    print('📱 Attempting to show modal bottom sheet...');
+    
+    if (!mounted) {
+      print('❌ Widget not mounted, cannot show bottom sheet');
+      return;
+    }
+    
+    try {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        enableDrag: true,
+        isDismissible: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0E0E0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Filtered Results (${_filteredProperties.length})',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Icon(
+                      Icons.close,
+                      color: Color(0xFF868686),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Filtered properties list
+            Expanded(
+              child: _filteredProperties.isEmpty
+                  ? _buildEmptyFilterResults()
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: _filteredProperties.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            final property = _filteredProperties[index];
+                            Navigator.of(context).pop(); // Close bottom sheet
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+                                'badges': ['Verified Agent'],
+                                'title': property.title,
+                                'location': property.location,
+                                'rating': '(5.0)',
+                                'price': property.price,
+                                'type': property.type,
+                                'category': property.category,
+                                'description': property.description,
+                                'features': property.features,
+                                'agent': {
+                                  'name': 'James Mark',
+                                  'title': 'Agent',
+                                  'phone': '09011111111',
+                                  'email': 'jamesmark@gmail.com',
+                                  'whatsapp': '08111111111',
+                                },
+                              })),
+                            );
+                          },
+                          child: _buildFilteredPropertyCard(_filteredProperties[index]),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    ).then((value) {
+      print('✅ Bottom sheet closed');
+    }).catchError((error) {
+      print('❌ Error showing bottom sheet: $error');
+    });
+    
+    print('✅ showModalBottomSheet called successfully');
+    } catch (e) {
+      print('❌ Exception in _showFilteredResultsBottomSheet: $e');
+    }
+  }
+  
+  Widget _buildEmptyFilterResults() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.search_off,
+              size: 64,
+              color: Color(0xFF999999),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No properties found',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Try adjusting your filters to see more results',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF666666),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildFilteredPropertyCard(PropertyModel property) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          children: [
+            // Property image
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.3),
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // Badge
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.verified,
+                              size: 14,
+                              color: Colors.green,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Verified Agent',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Favorite button
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.favorite_border,
+                          size: 18,
+                          color: Color(0xFF868686),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Property details
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          property.title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECF0F9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          property.type,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF426DC2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Color(0xFF868686),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          property.location,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF868686),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text(
+                        '(5.0)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF868686),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.star,
+                        size: 16,
+                        color: Colors.green,
+                      ),
+                      const Spacer(),
+                      Text(
+                        '₦${property.price}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF426DC2),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

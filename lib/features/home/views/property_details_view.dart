@@ -559,54 +559,54 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                               // ),
                             ] else ...[
                               // Apartment buttons (for rent or sale)
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          begin: Alignment.centerLeft,
-                                          end: Alignment.centerRight,
-                                          stops: [0.0, 1.0, 1.0],
-                                          colors: [
-                                            Color(0xFF426DC2),
-                                            Color(0xFF63ADDC),
-                                            Color(0xFF75CFEA),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (context) => const RentNowPayLaterView(),
-                                            ),
-                                          );
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(25),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Rent now-pay later',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              // Row(
+                              //   children: [
+                              //     Expanded(
+                              //       child: Container(
+                              //         height: 50,
+                              //         decoration: BoxDecoration(
+                              //           gradient: const LinearGradient(
+                              //             begin: Alignment.centerLeft,
+                              //             end: Alignment.centerRight,
+                              //             stops: [0.0, 1.0, 1.0],
+                              //             colors: [
+                              //               Color(0xFF426DC2),
+                              //               Color(0xFF63ADDC),
+                              //               Color(0xFF75CFEA),
+                              //             ],
+                              //           ),
+                              //           borderRadius: BorderRadius.circular(25),
+                              //         ),
+                              //         child: ElevatedButton(
+                              //           onPressed: () {
+                              //             Navigator.of(context).push(
+                              //               MaterialPageRoute(
+                              //                 builder: (context) => const RentNowPayLaterView(),
+                              //               ),
+                              //             );
+                              //           },
+                              //           style: ElevatedButton.styleFrom(
+                              //             backgroundColor: Colors.transparent,
+                              //             shadowColor: Colors.transparent,
+                              //             elevation: 0,
+                              //             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              //             shape: RoundedRectangleBorder(
+                              //               borderRadius: BorderRadius.circular(25),
+                              //             ),
+                              //           ),
+                              //           child: const Text(
+                              //             'Rent now-pay later',
+                              //             style: TextStyle(
+                              //               fontSize: 15,
+                              //               fontWeight: FontWeight.w600,
+                              //               color: Colors.white,
+                              //             ),
+                              //           ),
+                              //         ),
+                              //       ),
+                              //     ),
+                              //   ],
+                              // ),
                               
                               const SizedBox(height: 16),
                               
