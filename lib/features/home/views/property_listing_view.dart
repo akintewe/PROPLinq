@@ -558,9 +558,9 @@ class _PropertyListingViewState extends State<PropertyListingView> {
           hintText: 'Enter property location',
           controller: _locationController,
                               apiKey: 'AIzaSyDLvqz3w_9ASjj--fmcfBz9CH7S_R1gZnM',
-          onLocationSelected: () {
+          onLocationSelected: (location) {
             // Optional: Add any additional logic when location is selected
-            print('📍 Location selected: ${_locationController.text}');
+            print('📍 Location selected: $location');
           },
         ),
         

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'gradient_button.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'location_autocomplete_field.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final Function(Map<String, dynamic>) onFiltersApplied;
@@ -39,6 +40,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   final TextEditingController _fromPriceController = TextEditingController();
   final TextEditingController _toPriceController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  
+  // Google Places API Key
+  final String _googleApiKey = 'AIzaSyDLvqz3w_9ASjj--fmcfBz9CH7S_R1gZnM';
 
   @override
   void dispose() {
@@ -276,57 +280,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   // Location
                   _buildSectionTitle('Location'),
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: const Color(0xFF426DC2),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        SvgPicture.asset(
-                          'assets/icons/location.svg',
-                          width: 20,
-                          height: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: _locationController,
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              disabledBorder: InputBorder.none,
-                              errorBorder: InputBorder.none,
-                              focusedErrorBorder: InputBorder.none,
-                              hintText: 'Enter location',
-                              hintStyle: TextStyle(
-                                color: Color(0xFF868686),
-                              ),
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                _location = value;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                  LocationAutocompleteField(
+                    label: null,
+                    hintText: 'Enter location',
+                    controller: _locationController,
+                    apiKey: _googleApiKey,
+                    onLocationSelected: (location) {
+                      setState(() {
+                        _location = location;
+                      });
+                    },
                   ),
                   
                   const SizedBox(height: 32),
