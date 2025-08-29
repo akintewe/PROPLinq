@@ -96,6 +96,18 @@ class PropertyModel {
       features = featuresList.map((feature) => feature.toString()).toList();
     }
     
+    // Parse image URL from images array
+    String? imageUrl;
+    if (json['images'] != null && json['images'] is List && (json['images'] as List).isNotEmpty) {
+      final images = json['images'] as List<dynamic>;
+      print('🖼️ PropertyModel: Found ${images.length} images in API data');
+      final firstImage = images.first as Map<String, dynamic>;
+      imageUrl = firstImage['full_url'] as String?;
+      print('✅ PropertyModel: Extracted imageUrl: $imageUrl');
+    } else {
+      print('❌ PropertyModel: No images found in API data');
+    }
+    
     return PropertyModel(
       id: json['id'] as int,
       userId: json['user_id'] as int,
@@ -105,7 +117,7 @@ class PropertyModel {
       price: json['price'] as String,
       category: json['category'] as String,
       location: json['location'] as String,
-      imageUrl: json['image_url'] as String?,
+      imageUrl: imageUrl,
       bedrooms: json['bedrooms'] as int?,
       bathrooms: json['bathrooms'] as int?,
       area: json['area'] != null ? (json['area'] as num).toDouble() : null,

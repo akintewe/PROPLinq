@@ -315,6 +315,13 @@ class PropertyService {
           
           print('📊 Page $currentPageFromResponse: Found ${propertiesData.length} properties');
           
+          // Debug: Check if API data includes images
+          if (propertiesData.isNotEmpty) {
+            final firstProperty = propertiesData.first as Map<String, dynamic>;
+            print('🔍 First property keys: ${firstProperty.keys.toList()}');
+            print('🔍 First property images: ${firstProperty['images']}');
+          }
+          
           final List<PropertyModel> pageProperties = propertiesData
               .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
               .toList();
