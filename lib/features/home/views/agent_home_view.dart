@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
+import 'dart:async';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'saved_view.dart';
 import 'profile_view.dart';
@@ -26,6 +27,7 @@ class AgentHomeView extends StatefulWidget {
 class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateMixin {
   int _currentIndex = 0;
   late AnimationController _animationController;
+  late ScrollController _featuredScrollController;
   bool _hasShownKycDialog = false;
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
@@ -52,11 +54,14 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       vsync: this,
     )..repeat();
     
+    _featuredScrollController = ScrollController();
+    
     // Fetch user profile, properties, and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserProfile();
       await _fetchProperties();
       await _showKycDialogIfNeeded();
+      _startFeaturedAutoScroll();
     });
   }
 
@@ -122,6 +127,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         _properties = properties;
         _isLoadingProperties = false;
       });
+      
+      // Start auto-scrolling after properties are loaded
+      _startFeaturedAutoScroll();
     } catch (e) {
       print('❌ Error fetching properties: $e');
       setState(() {
@@ -272,7 +280,42 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   @override
   void dispose() {
     _animationController.dispose();
+    _featuredScrollController.dispose();
     super.dispose();
+  }
+
+  void _startFeaturedAutoScroll() {
+    if (_properties.isEmpty) return;
+    
+    // Auto-scroll every 3 seconds
+    Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!mounted || _properties.isEmpty) {
+        timer.cancel();
+        return;
+      }
+      
+      if (_featuredScrollController.hasClients) {
+        final maxScroll = _featuredScrollController.position.maxScrollExtent;
+        final currentScroll = _featuredScrollController.offset;
+        
+        // If we're at the end, scroll back to the beginning
+        if (currentScroll >= maxScroll) {
+          _featuredScrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          );
+        } else {
+          // Scroll to the next item
+          final nextScroll = currentScroll + 300; // Approximate width of card + spacing
+          _featuredScrollController.animateTo(
+            nextScroll.clamp(0, maxScroll),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    });
   }
 
   void _openSearchBottomSheet() {
@@ -1202,6 +1245,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         SizedBox(
           height: 176,
           child: ListView.separated(
+            controller: _featuredScrollController,
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(left: 24.0, right: 0),
             itemCount: _isLoadingProperties ? 3 : _properties.length,
