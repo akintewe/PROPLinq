@@ -45,6 +45,11 @@ class ApiConstants {
   static const String emailVerifyRequest = '/email/verify/request';
   static const String emailVerify = '/email/verify';
   
+  // Favorites
+  static const String getFavourites = '/favourite/get-favourites';
+  static const String addFavourite = '/favourite/add-favourite';
+  static const String deleteFavourite = '/favourite/delete-favourite';
+  
   // Headers
   static Map<String, String> get defaultHeaders => {
     'Accept': 'application/json',

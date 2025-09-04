@@ -33,6 +33,253 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     super.dispose();
   }
 
+  /// Build verification badge based on property data
+  Widget _buildVerificationBadge(Map<String, dynamic> property) {
+    // Check if we have user data with KYC status
+    final user = property['user'] as Map<String, dynamic>?;
+    final kyc = user?['kyc'] as Map<String, dynamic>?;
+    final kycStatus = kyc?['status'] as String?;
+    
+    IconData icon;
+    Color iconColor;
+    String text;
+    Color backgroundColor;
+    Color textColor;
+
+    switch (kycStatus) {
+      case 'verified':
+        icon = Icons.verified;
+        iconColor = Colors.green;
+        text = 'Verified';
+        backgroundColor = const Color(0xFFE8F5E8);
+        textColor = const Color(0xFF2E7D32);
+        break;
+      case 'pending':
+        icon = Icons.pending;
+        iconColor = Colors.orange;
+        text = 'Pending';
+        backgroundColor = const Color(0xFFFFF3E0);
+        textColor = const Color(0xFFE65100);
+        break;
+      case 'rejected':
+        icon = Icons.cancel;
+        iconColor = Colors.red;
+        text = 'Rejected';
+        backgroundColor = const Color(0xFFFFEBEE);
+        textColor = const Color(0xFFC62828);
+        break;
+      default:
+        icon = Icons.pending;
+        iconColor = Colors.orange;
+        text = 'Unverified';
+        backgroundColor = const Color(0xFFFFF3E0);
+        textColor = const Color(0xFFE65100);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 15,
+            color: iconColor,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build small verification badge for header
+  Widget _buildSmallVerificationBadge(Map<String, dynamic> property) {
+    // Check if we have user data with KYC status
+    final user = property['user'] as Map<String, dynamic>?;
+    final kyc = user?['kyc'] as Map<String, dynamic>?;
+    final kycStatus = kyc?['status'] as String?;
+    
+    IconData icon;
+    Color iconColor;
+    String text;
+
+    switch (kycStatus) {
+      case 'verified':
+        icon = Icons.verified;
+        iconColor = Colors.green;
+        text = 'Verified';
+        break;
+      case 'pending':
+        icon = Icons.pending;
+        iconColor = Colors.orange;
+        text = 'Pending';
+        break;
+      case 'rejected':
+        icon = Icons.cancel;
+        iconColor = Colors.red;
+        text = 'Rejected';
+        break;
+      default:
+        icon = Icons.pending;
+        iconColor = Colors.orange;
+        text = 'Unverified';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFECF0F9),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: iconColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF426DC2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get verification icon based on property data
+  IconData _getVerificationIcon(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    final kyc = user?['kyc'] as Map<String, dynamic>?;
+    final kycStatus = kyc?['status'] as String?;
+    
+    switch (kycStatus) {
+      case 'verified':
+        return Icons.verified;
+      case 'pending':
+        return Icons.pending;
+      case 'rejected':
+        return Icons.cancel;
+      default:
+        return Icons.pending;
+    }
+  }
+
+  /// Get verification color based on property data
+  Color _getVerificationColor(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    final kyc = user?['kyc'] as Map<String, dynamic>?;
+    final kycStatus = kyc?['status'] as String?;
+    
+    switch (kycStatus) {
+      case 'verified':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.orange;
+    }
+  }
+
+  /// Get verification text based on property data
+  String _getVerificationText(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    final kyc = user?['kyc'] as Map<String, dynamic>?;
+    final kycStatus = kyc?['status'] as String?;
+    
+    switch (kycStatus) {
+      case 'verified':
+        return 'Verified';
+      case 'pending':
+        return 'Pending';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return 'Unverified';
+    }
+  }
+
+  /// Get agent name from property data
+  String _getAgentName(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    if (user != null && user['full_name'] != null) {
+      return user['full_name'] as String;
+    }
+    // Fallback to agent data if user data not available
+    final agent = property['agent'] as Map<String, dynamic>?;
+    return agent?['name'] as String? ?? 'Agent';
+  }
+
+  /// Get agent title from property data
+  String _getAgentTitle(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    if (user != null && user['agent_type'] != null) {
+      final agentType = user['agent_type'] as String;
+      return agentType.replaceAll('_', ' ').split(' ').map((word) => 
+        word[0].toUpperCase() + word.substring(1)
+      ).join(' ');
+    }
+    // Fallback to agent data if user data not available
+    final agent = property['agent'] as Map<String, dynamic>?;
+    return agent?['title'] as String? ?? 'Agent';
+  }
+
+  /// Get agent phone from property data
+  String _getAgentPhone(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    if (user != null && user['phone_number'] != null) {
+      return user['phone_number'] as String;
+    }
+    // Fallback to agent data if user data not available
+    final agent = property['agent'] as Map<String, dynamic>?;
+    return agent?['phone'] as String? ?? '';
+  }
+
+  /// Get agent email from property data
+  String _getAgentEmail(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    if (user != null && user['email'] != null) {
+      return user['email'] as String;
+    }
+    // Fallback to agent data if user data not available
+    final agent = property['agent'] as Map<String, dynamic>?;
+    return agent?['email'] as String? ?? '';
+  }
+
+  /// Get agent WhatsApp from property data
+  String _getAgentWhatsApp(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    if (user != null && user['whatsapp_number'] != null) {
+      return user['whatsapp_number'] as String;
+    }
+    if (user != null && user['phone_number'] != null) {
+      return user['phone_number'] as String;
+    }
+    // Fallback to agent data if user data not available
+    final agent = property['agent'] as Map<String, dynamic>?;
+    return agent?['whatsapp'] as String? ?? agent?['phone'] as String? ?? '';
+  }
+
   /// Get property images from property data, fallback to default images
   List<String> _getPropertyImages() {
     final property = widget.propertyData ?? _getDefaultProperty();
@@ -292,34 +539,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                 ),
                               ),
                               const Spacer(),
-                              // Only show "Verified Agent" badge for non-hotel properties
+                              // Only show verification badge for non-hotel properties
                               if (!isHotel) ...[
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFECF0F9),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.verified,
-                                        size: 14,
-                                        color: Colors.green,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Verified Agent',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF426DC2),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                _buildSmallVerificationBadge(property),
                               ],
                             ],
                           ),
@@ -385,25 +607,28 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                           
                           const SizedBox(height: 8),
                           
-                          // Verified tag under location
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.verified,
-                                size: 14,
-                                color: Colors.green,
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                'Verified',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.green,
+                          // Verification tag under location
+                          if (!isHotel) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(
+                                  _getVerificationIcon(property),
+                                  size: 14,
+                                  color: _getVerificationColor(property),
                                 ),
-                              ),
-                            ],
-                          ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _getVerificationText(property),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: _getVerificationColor(property),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           
                           const SizedBox(height: 24),
                           
@@ -456,7 +681,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        property['agent']['name'] as String,
+                                        _getAgentName(property),
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w600,
@@ -464,7 +689,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                         ),
                                       ),
                                       Text(
-                                        property['agent']['title'] as String,
+                                        _getAgentTitle(property),
                                         style: const TextStyle(
                                           fontSize: 14,
                                           color: Color(0xFF868686),
@@ -474,34 +699,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                                   ),
                                 ),
                                 
-                                // Verified badge positioned to the right
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE8F5E8), // Light green background
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                          Icons.verified,
-                                          size: 15,
-                                          color: Colors.green,
-                                        ),
-                                      
-                                      const SizedBox(width: 6),
-                                      const Text(
-                                        'Verified',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF2E7D32), // Dark green text
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                // Verification badge positioned to the right
+                                _buildVerificationBadge(property),
                               ],
                             ),
                             
@@ -510,11 +709,11 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                             // Contact info
                             Column(
                               children: [
-                                _buildContactRow('assets/icons/fluent_call-24-filled.svg', property['agent']['phone'] as String),
+                                _buildContactRow('assets/icons/fluent_call-24-filled.svg', _getAgentPhone(property)),
                                 const SizedBox(height: 16),
-                                _buildContactRow('assets/icons/majesticons_mail.svg', property['agent']['email'] as String),
+                                _buildContactRow('assets/icons/majesticons_mail.svg', _getAgentEmail(property)),
                                 const SizedBox(height: 16),
-                                _buildContactRow('assets/icons/logos_whatsapp-icon.svg', property['agent']['whatsapp'] as String),
+                                _buildContactRow('assets/icons/logos_whatsapp-icon.svg', _getAgentWhatsApp(property)),
                               ],
                             ),
                           ],
