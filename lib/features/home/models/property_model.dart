@@ -14,6 +14,7 @@ class PropertyModel {
   final double? area;
   final List<String>? features;
   final bool isFavorite;
+  final PropertyUser? user;
 
   const PropertyModel({
     required this.id,
@@ -30,6 +31,7 @@ class PropertyModel {
     this.area,
     this.features,
     this.isFavorite = false,
+    this.user,
   });
 
   /// Create a copy of this model with updated fields
@@ -48,6 +50,7 @@ class PropertyModel {
     double? area,
     List<String>? features,
     bool? isFavorite,
+    PropertyUser? user,
   }) {
     return PropertyModel(
       id: id ?? this.id,
@@ -64,6 +67,7 @@ class PropertyModel {
       area: area ?? this.area,
       features: features ?? this.features,
       isFavorite: isFavorite ?? this.isFavorite,
+      user: user ?? this.user,
     );
   }
 
@@ -84,6 +88,7 @@ class PropertyModel {
       'area': area,
       'features': features,
       'is_favorite': isFavorite,
+      'user': user?.toJson(),
     };
   }
 
@@ -108,6 +113,13 @@ class PropertyModel {
       print('❌ PropertyModel: No images found in API data');
     }
     
+    // Parse user data
+    PropertyUser? user;
+    if (json['user'] != null) {
+      user = PropertyUser.fromJson(json['user'] as Map<String, dynamic>);
+      print('👤 PropertyModel: Parsed user data - KYC Status: ${user.verificationStatus}');
+    }
+    
     return PropertyModel(
       id: json['id'] as int,
       userId: json['user_id'] as int,
@@ -123,6 +135,7 @@ class PropertyModel {
       area: json['area'] != null ? (json['area'] as num).toDouble() : null,
       features: features,
       isFavorite: json['is_favorite'] as bool? ?? false,
+      user: user,
     );
   }
 
@@ -130,11 +143,11 @@ class PropertyModel {
   String get formattedPrice {
     final priceValue = double.tryParse(price) ?? 0.0;
     if (priceValue >= 1000000) {
-      return '\$${(priceValue / 1000000).toStringAsFixed(1)}M';
+      return '₦${(priceValue / 1000000).toStringAsFixed(1)}M';
     } else if (priceValue >= 1000) {
-      return '\$${(priceValue / 1000).toStringAsFixed(0)}K';
+      return '₦${(priceValue / 1000).toStringAsFixed(0)}K';
     } else {
-      return '\$${priceValue.toStringAsFixed(0)}';
+      return '₦${priceValue.toStringAsFixed(0)}';
     }
   }
 
@@ -158,5 +171,129 @@ class PropertyModel {
   @override
   int get hashCode {
     return id.hashCode;
+  }
+}
+
+/// User information associated with a property
+class PropertyUser {
+  final int id;
+  final String fullName;
+  final String email;
+  final String? phoneNumber;
+  final String? location;
+  final String? agencyName;
+  final String? agentType;
+  final String? whatsappNumber;
+  final PropertyKyc? kyc;
+
+  const PropertyUser({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    this.phoneNumber,
+    this.location,
+    this.agencyName,
+    this.agentType,
+    this.whatsappNumber,
+    this.kyc,
+  });
+
+  /// Create from JSON
+  factory PropertyUser.fromJson(Map<String, dynamic> json) {
+    return PropertyUser(
+      id: json['id'] as int,
+      fullName: json['full_name'] as String,
+      email: json['email'] as String,
+      phoneNumber: json['phone_number'] as String?,
+      location: json['location'] as String?,
+      agencyName: json['agency_name'] as String?,
+      agentType: json['agent_type'] as String?,
+      whatsappNumber: json['whatsapp_number'] as String?,
+      kyc: json['kyc'] != null ? PropertyKyc.fromJson(json['kyc'] as Map<String, dynamic>) : null,
+    );
+  }
+
+  /// Get verification status text
+  String get verificationStatus {
+    if (kyc == null) return 'Unverified';
+    switch (kyc!.status) {
+      case 'verified':
+        return 'Verified';
+      case 'pending':
+        return 'Pending';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return 'Unverified';
+    }
+  }
+
+  /// Check if user is verified
+  bool get isVerified {
+    return kyc?.status == 'verified';
+  }
+
+  /// Check if user is pending verification
+  bool get isPending {
+    return kyc?.status == 'pending';
+  }
+
+  /// Check if user is rejected
+  bool get isRejected {
+    return kyc?.status == 'rejected';
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'full_name': fullName,
+      'email': email,
+      'phone_number': phoneNumber,
+      'location': location,
+      'agency_name': agencyName,
+      'agent_type': agentType,
+      'whatsapp_number': whatsappNumber,
+      'kyc': kyc?.toJson(),
+    };
+  }
+}
+
+/// KYC information for a property user
+class PropertyKyc {
+  final int userId;
+  final String status;
+  final String? utilityBillFullUrl;
+  final String? bankStatementFullUrl;
+  final String? cacDocumentFullUrl;
+
+  const PropertyKyc({
+    required this.userId,
+    required this.status,
+    this.utilityBillFullUrl,
+    this.bankStatementFullUrl,
+    this.cacDocumentFullUrl,
+  });
+
+  /// Create from JSON
+  factory PropertyKyc.fromJson(Map<String, dynamic> json) {
+    return PropertyKyc(
+      userId: json['user_id'] as int,
+      status: json['status'] as String,
+      utilityBillFullUrl: json['utility_bill_full_url'] as String?,
+      bankStatementFullUrl: json['bank_statement_full_url'] as String?,
+      cacDocumentFullUrl: json['cac_document_full_url'] as String?,
+    );
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'user_id': userId,
+      'status': status,
+      'utility_bill_full_url': utilityBillFullUrl,
+      'bank_statement_full_url': bankStatementFullUrl,
+      'cac_document_full_url': cacDocumentFullUrl,
+    };
   }
 } 

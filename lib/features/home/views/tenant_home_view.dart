@@ -13,6 +13,7 @@ import '../../auth/models/user_model.dart';
 import '../../finance/views/complete_kyc_view.dart';
 import '../../finance/views/agent_kyc_view.dart';
 import '../services/property_service.dart';
+import '../services/favorite_service.dart';
 import '../models/property_model.dart';
 import 'property_details_view.dart';
 
@@ -35,6 +36,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
+  final FavoriteService _favoriteService = FavoriteService();
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   List<PropertyModel> _properties = [];
@@ -340,6 +342,52 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         }
       }
     });
+  }
+
+    Future<void> _toggleFavorite(PropertyModel property) async {
+    try {
+      final success = await _favoriteService.toggleFavorite(property.id, property.isFavorite);
+      if (success) {
+        setState(() {
+          // Update the property's favorite status in the list
+          final index = _properties.indexWhere((p) => p.id == property.id);
+          if (index != -1) {
+            _properties[index] = _properties[index].copyWith(isFavorite: !property.isFavorite);
+          }
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(property.isFavorite 
+                ? 'Property removed from favorites' 
+                : 'Property added to favorites'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Show error message for authentication failure
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please log in to save favorites'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error toggling favorite: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update favorite status'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _openSearchBottomSheet() {
@@ -1035,6 +1083,91 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     );
   }
 
+  Widget _buildVerificationBadge(PropertyModel property) {
+    final user = property.user;
+    if (user == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.pending,
+              size: 14,
+              color: Colors.orange,
+            ),
+            const SizedBox(width: 4),
+            const Text(
+              'Unverified',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    IconData icon;
+    Color iconColor;
+    String text;
+
+    switch (user.verificationStatus) {
+      case 'Verified':
+        icon = Icons.verified;
+        iconColor = Colors.green;
+        text = 'Verified';
+        break;
+      case 'Pending':
+        icon = Icons.pending;
+        iconColor = Colors.orange;
+        text = 'Pending';
+        break;
+      case 'Rejected':
+        icon = Icons.cancel;
+        iconColor = Colors.red;
+        text = 'Rejected';
+        break;
+      default:
+        icon = Icons.pending;
+        iconColor = Colors.orange;
+        text = 'Unverified';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: iconColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFeaturedPropertyCard(int index) {
     // Show loading if properties are still loading
     if (_isLoadingProperties) {
@@ -1086,7 +1219,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // Then navigate to property details with actual API data
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-            'badges': ['Verified Agent'],
+            'badges': [property.user?.verificationStatus ?? 'Unverified'],
             'title': property.title,
             'location': property.location,
             'rating': '(5.0)',
@@ -1097,12 +1230,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'features': property.features, // Pass actual features from API
             'imageUrl': property.imageUrl, // Pass actual image URL from API
             'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+            'user': property.user?.toJson(), // Pass actual user data from API
             'agent': {
-              'name': 'James Mark',
+              'name': property.user?.fullName ?? 'Agent',
               'title': 'Agent',
-              'phone': '09011111111',
-              'email': 'jamesmark@gmail.com',
-              'whatsapp': '08111111111',
+              'phone': property.user?.phoneNumber ?? '',
+              'email': property.user?.email ?? '',
+              'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
             },
           })),
         );
@@ -1218,48 +1352,26 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     Positioned(
                       top: 16,
                       left: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.verified,
-                              size: 14,
-                              color: Colors.green,
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'Verified Agent',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      child: _buildVerificationBadge(property),
                     ),
                     // Favorite button
                     Positioned(
                       top: 16,
                       right: 16,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.favorite_border,
-                          size: 18,
-                          color: Colors.black,
+                      child: GestureDetector(
+                        onTap: () => _toggleFavorite(property),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            property.isFavorite ? Icons.favorite : Icons.favorite_border,
+                            size: 18,
+                            color: property.isFavorite ? Colors.red : Colors.black,
+                          ),
                         ),
                       ),
                     ),
@@ -1402,7 +1514,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-            'badges': ['Verified Agent'],
+            'badges': [property.user?.verificationStatus ?? 'Unverified'],
             'title': property.title,
             'location': property.location,
             'rating': '(5.0)',
@@ -1413,12 +1525,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'features': property.features, // Pass actual features from API
             'imageUrl': property.imageUrl, // Pass actual image URL from API
             'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+            'user': property.user?.toJson(), // Pass actual user data from API
             'agent': {
-              'name': 'James Mark',
+              'name': property.user?.fullName ?? 'Agent',
               'title': 'Agent',
-              'phone': '09011111111',
-              'email': 'jamesmark@gmail.com',
-              'whatsapp': '08111111111',
+              'phone': property.user?.phoneNumber ?? '',
+              'email': property.user?.email ?? '',
+              'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
             },
           })),
         );
@@ -1467,56 +1580,26 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       Positioned(
                         top: 16,
                         left: 16,
-                        child: Row(
-                          children: ['Verified Agent'].map((badge) {
-                            return Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: badge == 'For sale' 
-                                    ? Colors.white
-                                    :  Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (badge == 'Verified Agent')
-                                    const Icon(
-                                      Icons.verified,
-                                      size: 14,
-                                      color: Colors.green,
-                                    ),
-                                  if (badge == 'Verified Agent') const SizedBox(width: 4),
-                                  Text(
-                                    badge,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w400,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
+                        child: _buildVerificationBadge(property),
                       ),
                       // Favorite button
                       Positioned(
                         top: 16,
                         right: 16,
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.favorite_border,
-                            size: 18,
-                            color: Color(0xFF868686),
+                        child: GestureDetector(
+                          onTap: () => _toggleFavorite(property),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              property.isFavorite ? Icons.favorite : Icons.favorite_border,
+                              size: 18,
+                              color: property.isFavorite ? Colors.red : const Color(0xFF868686),
+                            ),
                           ),
                         ),
                       ),
@@ -1639,7 +1722,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // Then navigate to property details
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-            'badges': ['Verified Agent'],
+            'badges': [property['badges']?.first ?? 'Unverified'],
             'title': property['title'],
             'location': property['location'],
             'rating': '(5.0)',
@@ -1654,11 +1737,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                 ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                 : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
             'agent': {
-              'name': 'James Mark',
-              'title': 'Agent',
-              'phone': '09011111111',
-              'email': 'jamesmark@gmail.com',
-              'whatsapp': '08111111111',
+              'name': property['agent']?['name'] ?? 'Agent',
+              'title': property['agent']?['title'] ?? 'Agent',
+              'phone': property['agent']?['phone'] ?? '',
+              'email': property['agent']?['email'] ?? '',
+              'whatsapp': property['agent']?['whatsapp'] ?? property['agent']?['phone'] ?? '',
             },
           })),
         );
