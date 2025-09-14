@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/widgets/google_map_widget.dart';
-import 'package:proplinq/features/finance/views/rent_now_pay_later_view.dart';
 import 'virtual_tour_360_view.dart';
 import 'hotel_reservation_view.dart';
 
@@ -15,9 +15,12 @@ class PropertyDetailsView extends StatefulWidget {
   State<PropertyDetailsView> createState() => _PropertyDetailsViewState();
 }
 
-class _PropertyDetailsViewState extends State<PropertyDetailsView> {
+class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentImageIndex = 0;
+  late AnimationController _textAnimationController;
+  int _currentTextIndex = 0;
+  Timer? _textTimer;
   
   // Default fallback images for when property has no images
   final List<String> _fallbackImages = [
@@ -27,9 +30,51 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop&crop=center',
   ];
 
+  // Promotional messages for rotating banner
+  final List<String> _promotionalMessages = [
+    "Welcome to Proplinq, Nigeria's trusted home & hotel marketplace!",
+    "Find your next home or hotel faster, safer, and easier with Proplinq.",
+    "Verified agents, hotels, and shortlets all in one place.",
+    "Start exploring now, your journey with Proplinq begins here!",
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    print('🎯 PropertyDetailsView: Initializing rotating text banner...');
+    _initializeTextAnimation();
+    _startTextRotation();
+    print('🎯 PropertyDetailsView: Rotating text banner initialized');
+  }
+
+  void _initializeTextAnimation() {
+    print('🎯 Initializing text animation controller...');
+    _textAnimationController = AnimationController(
+      duration: const Duration(seconds: 15),
+      vsync: this,
+    )..repeat();
+    print('🎯 Text animation controller initialized');
+  }
+
+  void _startTextRotation() {
+    print('🎯 Starting text rotation...');
+    _textTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (mounted) {
+        print('🎯 Rotating to next text - Current index: $_currentTextIndex');
+        setState(() {
+          _currentTextIndex = (_currentTextIndex + 1) % _promotionalMessages.length;
+        });
+        print('🎯 New text index: $_currentTextIndex');
+      }
+    });
+    print('🎯 Text rotation timer started');
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
+    _textAnimationController.dispose();
+    _textTimer?.cancel();
     super.dispose();
   }
 
@@ -363,16 +408,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     print('Property Images: $propertyImages');
     print('Property Data Keys: ${property.keys.toList()}');
     
-    // Determine category based on property type
-    String category;
-    if (isHotel) {
-      category = 'Hotels';
-    } else if (isShortlet) {
-      category = 'Shortlets';
-    } else {
-      category = 'Real Estate';
-    }
-    
     final isForSale = (property['badges'] as List<String>?)?.contains('For sale') ?? false;
     
     return Scaffold(
@@ -605,32 +640,15 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                             ],
                           ),
                           
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 16),
                           
-                          // Verification tag under location
+                          // Promotional banner right under location
                           if (!isHotel) ...[
+                            _buildScrollingPromotionalBanner(),
+                            const SizedBox(height: 24),
+                          ] else ...[
                             const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(
-                                  _getVerificationIcon(property),
-                                  size: 14,
-                                  color: _getVerificationColor(property),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _getVerificationText(property),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: _getVerificationColor(property),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ],
-                          
-                          const SizedBox(height: 24),
                           
                           // Description
                           Text(
@@ -853,8 +871,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                               //     ),
                               //   ],
                               // ),
-                              
-                              const SizedBox(height: 16),
                               
                               Container(
                                 width: double.infinity,
@@ -1514,4 +1530,54 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       'longitude': 3.3792,
     };
   }
+
+  /// Build scrolling promotional banner (like home screen)
+  Widget _buildScrollingPromotionalBanner() {
+    print('🎯 Building scrolling promotional banner');
+    
+    return Container(
+      width: double.infinity,
+      height: 40,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment(-1.0, 0.0),
+          end: Alignment(1.0, 0.0),
+          stops: [0.0113, 0.4555, 1.1245],
+          colors: [
+            Color(0xFF426DC2),
+            Color(0xFF75CFEA),
+            Color.fromRGBO(51, 204, 153, 0.8),
+          ],
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: AnimatedBuilder(
+          animation: _textAnimationController,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(_textAnimationController.value * -200, 0),
+              child: Row(
+                children: List.generate(10, (index) => 
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      _promotionalMessages[_currentTextIndex],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
 } 

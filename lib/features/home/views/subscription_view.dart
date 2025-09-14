@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class SubscriptionView extends StatefulWidget {
   const SubscriptionView({super.key});
@@ -9,7 +8,7 @@ class SubscriptionView extends StatefulWidget {
 }
 
 class _SubscriptionViewState extends State<SubscriptionView> {
-  String _selectedPlan = 'standard'; // 'standard' or 'premium'
+  String _selectedPlan = 'starter'; // 'free', 'starter', 'smart', 'pro', 'enterprise'
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +60,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
             // Header
             const Center(
               child: Text(
-                'Proplinq Subscription Overview',
+                'Choose Your Plan',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
@@ -75,7 +74,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
             
             // Description
             const Text(
-              'Proplinq subscription plans are designed to increase visibility, attract verified clients, and help you close more deals.',
+              'Select the perfect plan to grow your real estate business with Proplinq.',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
@@ -87,95 +86,108 @@ class _SubscriptionViewState extends State<SubscriptionView> {
             
             const SizedBox(height: 32),
             
-            // 1. Subscription Plans
-            const Text(
-              '1. Subscription Plans',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
+            // Free Plan
+            _buildPlanCard(
+              planType: 'free',
+              title: 'Free Plan',
+              price: '₦0',
+              description: 'For landlords or new agents testing Proplinq.',
+              features: [
+                'Upload 2 properties',
+                'Listed in general search (no promotion)',
+                'Basic profile',
+                'Access to limited inquiries',
+              ],
+              isSelected: _selectedPlan == 'free',
+              onTap: () => setState(() => _selectedPlan = 'free'),
             ),
             
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             
-            // Standard Plan
+            // Starter Agent Plan
             _buildPlanCard(
-              planType: 'standard',
-              title: 'Standard Plan',
+              planType: 'starter',
+              title: 'Starter Agent',
               price: '₦5,000/month',
+              description: 'For solo agents who want credibility.',
               features: [
-                'List up to 10 properties',
-                'Verified badge for your profile & listings',
-                'Basic exposure in search results',
-                'Ideal for individual agents and small property owners',
+                'Upload up to 10 properties',
+                'Verified Agent Badge (trust boost)',
+                'Basic analytics (views & inquiries count)',
+                'Standard search placement',
+                'In-app chat support',
+                'Video upload',
               ],
-              isSelected: _selectedPlan == 'standard',
-              onTap: () => setState(() => _selectedPlan = 'standard'),
+              isSelected: _selectedPlan == 'starter',
+              onTap: () => setState(() => _selectedPlan = 'starter'),
             ),
             
             const SizedBox(height: 16),
             
-            // Premium Plan
+            // Smart Growth Plan
             _buildPlanCard(
-              planType: 'premium',
-              title: 'Premium Plan',
-              price: '₦12,000/month',
+              planType: 'smart',
+              title: 'Smart Growth',
+              price: '₦10,000/month',
+              description: 'For small & mid-size agencies.',
               features: [
-                'Enjoy unlimited property listings',
-                'Gain full visibility to all verified clients',
-                'Priority exposure in search results',
-                'Access to an agency dashboard and detailed analytics',
-                'Ideal for larger agencies',
+                'Unlimited property uploads',
+                '2 promoted listings per month (top placement)',
+                'Verified Agent/Company Badge',
+                'Lead Dashboard (track inquiries, calls, interest per property)',
+                'Analytics: top-performing listings + demand by location',
+                'Video upload',
+                'Priority customer support',
               ],
-              isSelected: _selectedPlan == 'premium',
-              onTap: () => setState(() => _selectedPlan = 'premium'),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // 2. In-App Promotions
-            const Text(
-              '2. In-App Promotions (Ads)',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
+              isSelected: _selectedPlan == 'smart',
+              onTap: () => setState(() => _selectedPlan = 'smart'),
             ),
             
             const SizedBox(height: 16),
             
-            const Text(
-              'Boost your listings to stand out:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF666666),
-              ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Promotion Options
-            _buildPromotionCard('7-day boost', '₦3,000'),
-            const SizedBox(height: 12),
-            _buildPromotionCard('1-month boost', '₦5,000'),
-            
-            const SizedBox(height: 32),
-            
-            // 3. Hotel & Shortlet Bookings
-            const Text(
-              '3. Hotel & Shortlet Bookings',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
+            // Pro Partner Plan
+            _buildPlanCard(
+              planType: 'pro',
+              title: 'Pro Partner',
+              price: '₦15,000/month',
+              description: 'For professional agencies who want branding & wider reach.',
+              features: [
+                'Unlimited property uploads',
+                '5 promoted listings per month',
+                'Verified Company Badge',
+                'Premium analytics (market heatmap, conversion trends)',
+                '360° Virtual Tour/video upload Support (1 property/month)',
+                'Featured in Proplinq\'s social media campaigns & Realtor Spotlight',
+                'Priority listing verification',
+              ],
+              isSelected: _selectedPlan == 'pro',
+              onTap: () => setState(() => _selectedPlan = 'pro'),
             ),
             
             const SizedBox(height: 16),
             
+            // Enterprise Plus Plan
+            _buildPlanCard(
+              planType: 'enterprise',
+              title: 'Enterprise Plus',
+              price: '₦25,000/month',
+              description: 'For large real estate firms, developers & top agencies.',
+              features: [
+                'Unlimited property uploads',
+                'Unlimited promoted listings (always top search placement)',
+                'Verified Enterprise Badge + dedicated account manager',
+                'Advanced analytics + AI-powered lead recommendations',
+                'Monthly Proplinq in-app ads (exclusive featured exposure)',
+                'Unlimited 360° Virtual Tour/video upload Support (basic tours for all listings)',
+                'Featured in nationwide Proplinq campaigns',
+              ],
+              isSelected: _selectedPlan == 'enterprise',
+              onTap: () => setState(() => _selectedPlan = 'enterprise'),
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // Hotel & Shortlet Bookings
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -188,7 +200,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                 ),
               ),
               child: const Text(
-                'Proplinq charges a 10% commission on each successful hotel or shortlet booking.',
+                'Hotel & Shortlet Bookings: Proplinq charges a 10% commission on each successful booking.',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -232,7 +244,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                 ),
                 child: Center(
                   child: Text(
-                    _selectedPlan == 'standard' ? 'Get Premium Access' : 'Get Premium Access',
+                    _getButtonText(),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -255,6 +267,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
     required String planType,
     required String title,
     required String price,
+    required String description,
     required List<String> features,
     required bool isSelected,
     required VoidCallback onTap,
@@ -303,6 +316,16 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF426DC2),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0xFF666666),
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
                     ],
@@ -368,55 +391,61 @@ class _SubscriptionViewState extends State<SubscriptionView> {
     );
   }
 
-  Widget _buildPromotionCard(String title, String price) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFE8EEFF),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Color(0xFF426DC2),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
-              ),
-            ),
-          ),
-          Text(
-            price,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF426DC2),
-            ),
-          ),
-        ],
-      ),
-    );
+
+  String _getButtonText() {
+    switch (_selectedPlan) {
+      case 'free':
+        return 'Continue with Free Plan';
+      case 'starter':
+        return 'Subscribe to Starter Agent';
+      case 'smart':
+        return 'Subscribe to Smart Growth';
+      case 'pro':
+        return 'Subscribe to Pro Partner';
+      case 'enterprise':
+        return 'Subscribe to Enterprise Plus';
+      default:
+        return 'Subscribe';
+    }
+  }
+
+  String _getPlanName() {
+    switch (_selectedPlan) {
+      case 'free':
+        return 'Free Plan';
+      case 'starter':
+        return 'Starter Agent';
+      case 'smart':
+        return 'Smart Growth';
+      case 'pro':
+        return 'Pro Partner';
+      case 'enterprise':
+        return 'Enterprise Plus';
+      default:
+        return 'Plan';
+    }
+  }
+
+  String _getPlanPrice() {
+    switch (_selectedPlan) {
+      case 'free':
+        return '₦0';
+      case 'starter':
+        return '₦5,000/month';
+      case 'smart':
+        return '₦10,000/month';
+      case 'pro':
+        return '₦15,000/month';
+      case 'enterprise':
+        return '₦25,000/month';
+      default:
+        return '₦0';
+    }
   }
 
   void _showSubscriptionConfirmation() {
-    final selectedPlanName = _selectedPlan == 'standard' ? 'Standard' : 'Premium';
-    final selectedPrice = _selectedPlan == 'standard' ? '₦5,000' : '₦12,000';
+    final selectedPlanName = _getPlanName();
+    final selectedPrice = _getPlanPrice();
     
     showDialog(
       context: context,
@@ -438,7 +467,9 @@ class _SubscriptionViewState extends State<SubscriptionView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'You are about to subscribe to the $selectedPlanName Plan for $selectedPrice/month.',
+                _selectedPlan == 'free' 
+                  ? 'You are about to continue with the $selectedPlanName.'
+                  : 'You are about to subscribe to the $selectedPlanName for $selectedPrice.',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
@@ -494,9 +525,9 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text(
-                  'Subscribe',
-                  style: TextStyle(
+                child: Text(
+                  _selectedPlan == 'free' ? 'Continue' : 'Subscribe',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
