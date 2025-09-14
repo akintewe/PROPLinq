@@ -4,7 +4,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_input_field.dart';
 import '../view_models/home_view_model.dart';
 import '../models/property_model.dart';
@@ -338,26 +337,29 @@ class HomeView extends BaseView<HomeViewModel> {
         onTap: () {
           // Navigate to property details with features
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => PropertyDetailsView(propertyData: {
-              'badges': ['Verified Agent'],
-              'title': property.title,
-              'location': property.location,
-              'rating': '(5.0)',
-              'price': property.price,
-              'type': property.type,
-              'category': property.category,
-              'description': property.description,
-              'features': property.features, // Pass actual features from API
-              'imageUrl': property.imageUrl, // Pass actual image URL from API
-              'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
-              'agent': {
-                'name': 'James Mark',
-                'title': 'Agent',
-                'phone': '09011111111',
-                'email': 'jamesmark@gmail.com',
-                'whatsapp': '08111111111',
+            MaterialPageRoute(builder: (context) => PropertyDetailsView(
+              propertyData: {
+                'badges': ['Verified Agent'],
+                'title': property.title,
+                'location': property.location,
+                'rating': '(5.0)',
+                'price': property.price,
+                'type': property.type,
+                'category': property.category,
+                'description': property.description,
+                'features': property.features, // Pass actual features from API
+                'imageUrl': property.imageUrl, // Pass actual image URL from API
+                'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+                'agent': {
+                  'name': 'James Mark',
+                  'title': 'Agent',
+                  'phone': '09011111111',
+                  'email': 'jamesmark@gmail.com',
+                  'whatsapp': '08111111111',
+                },
               },
-            })),
+              isHomeSeeker: true, // This is the home view for home seekers
+            )),
           );
         },
       ),

@@ -5,11 +5,17 @@ import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/widgets/google_map_widget.dart';
 import 'virtual_tour_360_view.dart';
 import 'hotel_reservation_view.dart';
+import 'in_app_chat_view.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   final Map<String, dynamic>? propertyData;
+  final bool isHomeSeeker;
   
-  const PropertyDetailsView({super.key, this.propertyData});
+  const PropertyDetailsView({
+    super.key, 
+    this.propertyData,
+    this.isHomeSeeker = true, // Default to true for home seekers
+  });
 
   @override
   State<PropertyDetailsView> createState() => _PropertyDetailsViewState();
@@ -210,59 +216,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     );
   }
 
-  /// Get verification icon based on property data
-  IconData _getVerificationIcon(Map<String, dynamic> property) {
-    final user = property['user'] as Map<String, dynamic>?;
-    final kyc = user?['kyc'] as Map<String, dynamic>?;
-    final kycStatus = kyc?['status'] as String?;
-    
-    switch (kycStatus) {
-      case 'verified':
-        return Icons.verified;
-      case 'pending':
-        return Icons.pending;
-      case 'rejected':
-        return Icons.cancel;
-      default:
-        return Icons.pending;
-    }
-  }
-
-  /// Get verification color based on property data
-  Color _getVerificationColor(Map<String, dynamic> property) {
-    final user = property['user'] as Map<String, dynamic>?;
-    final kyc = user?['kyc'] as Map<String, dynamic>?;
-    final kycStatus = kyc?['status'] as String?;
-    
-    switch (kycStatus) {
-      case 'verified':
-        return Colors.green;
-      case 'pending':
-        return Colors.orange;
-      case 'rejected':
-        return Colors.red;
-      default:
-        return Colors.orange;
-    }
-  }
-
-  /// Get verification text based on property data
-  String _getVerificationText(Map<String, dynamic> property) {
-    final user = property['user'] as Map<String, dynamic>?;
-    final kyc = user?['kyc'] as Map<String, dynamic>?;
-    final kycStatus = kyc?['status'] as String?;
-    
-    switch (kycStatus) {
-      case 'verified':
-        return 'Verified';
-      case 'pending':
-        return 'Pending';
-      case 'rejected':
-        return 'Rejected';
-      default:
-        return 'Unverified';
-    }
-  }
 
   /// Get agent name from property data
   String _getAgentName(Map<String, dynamic> property) {
@@ -872,6 +825,69 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               //   ],
                               // ),
                               
+                              // Message Agent/Hotel button for home seekers
+                              if (widget.isHomeSeeker) ...[
+                                Container(
+                                  width: double.infinity,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      stops: [0.0, 1.0, 1.0],
+                                      colors: [
+                                        Color(0xFF426DC2),
+                                        Color(0xFF63ADDC),
+                                        Color(0xFF75CFEA),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => InAppChatView(
+                                            agentData: property,
+                                            propertyTitle: property['title'] as String,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.message,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          isHotel ? 'Message Hotel' : 'Message Agent',
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                
+                                const SizedBox(height: 16),
+                              ],
+                              
                               Container(
                                 width: double.infinity,
                                 height: 50,
@@ -890,9 +906,11 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                       borderRadius: BorderRadius.circular(25),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'Mark as rented',
-                                    style: TextStyle(
+                                  child: Text(
+                                    widget.isHomeSeeker 
+                                        ? (isHotel ? 'Book Now' : 'Contact Agent')
+                                        : 'Mark as rented',
+                                    style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                       color: Color(0xFF426DC2),
