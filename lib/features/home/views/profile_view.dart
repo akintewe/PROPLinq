@@ -1259,6 +1259,7 @@ class _ProfileViewState extends State<ProfileView> {
                   'whatsapp': _currentUser?.whatsappNumber ?? _currentUser?.phoneNumber ?? '',
                 },
               },
+              isHomeSeeker: false, // Agents viewing their own properties
             ),
           ),
         );
