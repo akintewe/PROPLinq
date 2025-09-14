@@ -152,123 +152,123 @@ class _SavedViewState extends State<SavedView> {
             physics: const AlwaysScrollableScrollPhysics(),
             child: Container(
               height: MediaQuery.of(context).size.height,
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  const Text(
-                    'Saved',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              const Text(
+                'Saved',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Tab switcher
+              Center(
+                child: Container(
+                  width: 300,
+                  height: 44,
+                  padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECF0F9),
+                    borderRadius: BorderRadius.circular(300),
                   ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Tab switcher
-                  Center(
-                    child: Container(
-                      width: 300,
-                      height: 44,
-                      padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECF0F9),
-                        borderRadius: BorderRadius.circular(300),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _isSavedProperties = false;
-                                });
-                              },
-                              child: Container(
-                                height: 32,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                decoration: BoxDecoration(
-                                  gradient: !_isSavedProperties 
-                                      ? const LinearGradient(
-                                          begin: Alignment.centerLeft,
-                                          end: Alignment.centerRight,
-                                          colors: [
-                                            Color(0xFF426DC2),
-                                            Color(0xFF63ADDC),
-                                            Color(0xFF75CFEA),
-                                          ],
-                                          stops: [0.0, 1.0, 1.0],
-                                        )
-                                      : null,
-                                  borderRadius: BorderRadius.circular(300),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'Recently Viewed',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: !_isSavedProperties ? Colors.white : Colors.black,
-                                    ),
-                                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _isSavedProperties = false;
+                            });
+                          },
+                          child: Container(
+                            height: 32,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              gradient: !_isSavedProperties 
+                                  ? const LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      colors: [
+                                        Color(0xFF426DC2),
+                                        Color(0xFF63ADDC),
+                                        Color(0xFF75CFEA),
+                                      ],
+                                      stops: [0.0, 1.0, 1.0],
+                                    )
+                                  : null,
+                              borderRadius: BorderRadius.circular(300),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Recently Viewed',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: !_isSavedProperties ? Colors.white : Colors.black,
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _isSavedProperties = true;
-                                });
-                              },
-                              child: Container(
-                                height: 32,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                decoration: BoxDecoration(
-                                  gradient: _isSavedProperties 
-                                      ? const LinearGradient(
-                                          begin: Alignment.centerLeft,
-                                          end: Alignment.centerRight,
-                                          colors: [
-                                            Color(0xFF426DC2),
-                                            Color(0xFF63ADDC),
-                                            Color(0xFF75CFEA),
-                                          ],
-                                          stops: [0.0, 1.0, 1.0],
-                                        )
-                                      : null,
-                                  borderRadius: BorderRadius.circular(300),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'Saved Properties',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: _isSavedProperties ? Colors.white : Colors.black,
-                                    ),
-                                  ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _isSavedProperties = true;
+                            });
+                          },
+                          child: Container(
+                            height: 32,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              gradient: _isSavedProperties 
+                                  ? const LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      colors: [
+                                        Color(0xFF426DC2),
+                                        Color(0xFF63ADDC),
+                                        Color(0xFF75CFEA),
+                                      ],
+                                      stops: [0.0, 1.0, 1.0],
+                                    )
+                                  : null,
+                              borderRadius: BorderRadius.circular(300),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Saved Properties',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: _isSavedProperties ? Colors.white : Colors.black,
                                 ),
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Content based on selected tab
-                  Expanded(
-                    child: _isSavedProperties ? _buildSavedPropertiesContent() : _buildRecentlyViewedContent(),
-                  ),
-                ],
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Content based on selected tab
+              Expanded(
+                child: _isSavedProperties ? _buildSavedPropertiesContent() : _buildRecentlyViewedContent(),
+              ),
+            ],
               ),
             ),
           ),

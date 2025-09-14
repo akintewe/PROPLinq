@@ -383,6 +383,7 @@ class PropertyService {
     try {
       print('🏠 Fetching my properties from API...');
       print('🔗 Endpoint: ${ApiConstants.myProperties}');
+      print('🔗 Full URL: ${ApiConstants.apiBaseUrl}${ApiConstants.myProperties}');
       print('🔑 Using authentication: true');
       
       final response = await _apiService.get<Map<String, dynamic>>(

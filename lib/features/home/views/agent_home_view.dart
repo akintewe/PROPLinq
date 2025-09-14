@@ -33,6 +33,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
   String _selectedCategory = 'All';
+  int _currentPromoIndex = 0;
+  Timer? _promoTimer;
   
   // Filter state
   Map<String, dynamic> _activeFilters = {};
@@ -48,6 +50,14 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   List<PropertyModel> _properties = [];
   bool _isLoadingProperties = true;
 
+  // Promotional messages for rotating banner
+  final List<String> _promotionalMessages = [
+    "Welcome to Proplinq, Nigeria's trusted home & hotel marketplace!",
+    "Find your next home or hotel faster, safer, and easier with Proplinq.",
+    "Verified agents, hotels, and shortlets all in one place.",
+    "Start exploring now, your journey with Proplinq begins here!",
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +67,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     )..repeat();
     
     _featuredScrollController = ScrollController();
+    
+    // Start promotional message rotation
+    _startPromoMessageRotation();
     
     // Fetch user profile, properties, and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -283,6 +296,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   void dispose() {
     _animationController.dispose();
     _featuredScrollController.dispose();
+    _promoTimer?.cancel();
     super.dispose();
   }
 
@@ -318,6 +332,20 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         }
       }
     });
+  }
+
+  void _startPromoMessageRotation() {
+    _promoTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentPromoIndex = (_currentPromoIndex + 1) % _promotionalMessages.length;
+        });
+      }
+    });
+  }
+
+  String _getCurrentPromotionalMessage() {
+    return _promotionalMessages[_currentPromoIndex];
   }
 
   Future<void> _toggleFavorite(PropertyModel property) async {
@@ -1069,7 +1097,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                           Text(
                             _isLoadingProfile 
                                 ? 'Welcome User '
-                                : 'Welcome ${_currentUser?.fullName?.split(' ').first ?? 'User'} ',
+                                : 'Welcome ${_currentUser!.fullName!.split(' ').first} ',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -2033,11 +2061,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               offset: Offset(_animationController.value * -200, 0),
               child: Row(
                 children: List.generate(10, (index) => 
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'RENT-NOW, PAY LATER',
-                      style: TextStyle(
+                      _getCurrentPromotionalMessage(),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

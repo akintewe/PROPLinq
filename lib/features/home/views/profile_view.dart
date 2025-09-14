@@ -236,17 +236,38 @@ class _ProfileViewState extends State<ProfileView> {
     }
   }
 
+  /// Refresh all data (profile, KYC status, and properties)
+  Future<void> _refreshAllData() async {
+    print('🔄 Refreshing all profile data...');
+    
+    // Refresh user profile
+    await _fetchUserProfile();
+    
+    // Refresh KYC status
+    await _fetchKycStatus();
+    
+    // Refresh agent properties if user is an agent
+    if (widget.isAgent) {
+      await _fetchMyProperties();
+    }
+    
+    print('✅ Profile data refresh completed');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: RefreshIndicator(
+          onRefresh: _refreshAllData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(), // Enable pull-to-refresh
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // Header
               const Text(
                 'Profile',
@@ -291,7 +312,8 @@ class _ProfileViewState extends State<ProfileView> {
         ],
         
         const SizedBox(height: 24),
-              ],
+                ],
+              ),
             ),
           ),
         ),
