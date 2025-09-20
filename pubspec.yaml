@@ -76,13 +76,10 @@ dependencies:
   # URL launcher for opening external apps
   url_launcher: ^6.2.5
   
-  # 3D graphics and sensor support for 360° viewing
+  # 3D graphics support for 360° viewing
   vector_math: ^2.1.4
-  sensors_plus: ^4.0.2
-  
-  # 360° panoramic image viewer
-  panorama: ^0.4.1
   shimmer: ^3.0.0
+  panorama: ^0.4.1
 
 dev_dependencies:
   flutter_test:

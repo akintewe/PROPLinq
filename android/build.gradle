@@ -3,6 +3,15 @@ allprojects {
         google()
         mavenCentral()
     }
+    
+    // Fix motion_sensors plugin namespace issue
+    project.plugins.withId('com.android.library') {
+        if (project.name == 'motion_sensors') {
+            project.android {
+                namespace 'finaldev.motion_sensors'
+            }
+        }
+    }
 }
 
 rootProject.buildDir = "../build"
