@@ -261,13 +261,13 @@ class _ProfileViewState extends State<ProfileView> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshAllData,
-          child: SingleChildScrollView(
+        child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(), // Enable pull-to-refresh
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               // Header
               const Text(
                 'Profile',
@@ -312,7 +312,7 @@ class _ProfileViewState extends State<ProfileView> {
         ],
         
         const SizedBox(height: 24),
-                ],
+              ],
               ),
             ),
           ),

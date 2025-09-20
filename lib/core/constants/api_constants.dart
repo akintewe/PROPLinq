@@ -50,6 +50,10 @@ class ApiConstants {
   static const String addFavourite = '/favourite/add-favourite';
   static const String deleteFavourite = '/favourite/delete-favourite';
   
+  // Chat Endpoints
+  static const String chatWebhook = '/chat/webhook';
+  static const String getUserChats = '/get-user-chats';
+  
   // Headers
   static Map<String, String> get defaultHeaders => {
     'Accept': 'application/json',

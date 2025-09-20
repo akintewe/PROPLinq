@@ -278,6 +278,28 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     return agent?['whatsapp'] as String? ?? agent?['phone'] as String? ?? '';
   }
 
+  /// Get agent ID from property data
+  String _getAgentId(Map<String, dynamic> property) {
+    final user = property['user'] as Map<String, dynamic>?;
+    if (user != null && user['id'] != null) {
+      return user['id'].toString();
+    }
+    // Fallback to agent data if user data not available
+    final agent = property['agent'] as Map<String, dynamic>?;
+    return agent?['id']?.toString() ?? '';
+  }
+
+  /// Mark property as rented (for agents only)
+  void _markAsRented() {
+    // TODO: Implement mark as rented functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Mark as rented functionality coming soon!'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
   /// Get property images from property data, fallback to default images
   List<String> _getPropertyImages() {
     final property = widget.propertyData ?? _getDefaultProperty();
@@ -829,40 +851,40 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               if (widget.isHomeSeeker) ...[
                                 Container(
                                   width: double.infinity,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                      stops: [0.0, 1.0, 1.0],
-                                      colors: [
-                                        Color(0xFF426DC2),
-                                        Color(0xFF63ADDC),
-                                        Color(0xFF75CFEA),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.centerLeft,
+                                          end: Alignment.centerRight,
+                                          stops: [0.0, 1.0, 1.0],
+                                          colors: [
+                                            Color(0xFF426DC2),
+                                            Color(0xFF63ADDC),
+                                            Color(0xFF75CFEA),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
                                           builder: (context) => InAppChatView(
                                             agentData: property,
                                             propertyTitle: property['title'] as String,
                                           ),
+                                            ),
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(25),
+                                          ),
                                         ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                    ),
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
@@ -881,11 +903,11 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                           ),
                                         ),
                                       ],
+                                      ),
                                     ),
-                                  ),
-                                ),
-                                
-                                const SizedBox(height: 16),
+                              ),
+                              
+                              const SizedBox(height: 16),
                               ],
                               
                               Container(
@@ -896,7 +918,29 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                   borderRadius: BorderRadius.circular(25),
                                 ),
                                 child: ElevatedButton(
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    if (widget.isHomeSeeker) {
+                                      // For home seekers, open chat screen
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => InAppChatView(
+                                            agentData: {
+                                              'id': _getAgentId(property),
+                                              'name': _getAgentName(property),
+                                              'phone': _getAgentPhone(property),
+                                              'whatsapp': _getAgentWhatsApp(property),
+                                              'email': _getAgentEmail(property),
+                                            },
+                                            propertyTitle: property['title'] ?? 'Property',
+                                            propertyId: property['id']?.toString(),
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      // For agents, mark as rented (existing functionality)
+                                      _markAsRented();
+                                    }
+                                  },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
                                     shadowColor: Colors.transparent,

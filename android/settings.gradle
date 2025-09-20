@@ -22,4 +22,13 @@ plugins {
     id "org.jetbrains.kotlin.android" version "1.8.22" apply false
 }
 
+// Force all subprojects to use compatible Kotlin version
+gradle.settingsEvaluated {
+    gradle.allprojects {
+        project.plugins.withId('org.jetbrains.kotlin.android') {
+            project.ext.set('kotlin_version', '1.8.22')
+        }
+    }
+}
+
 include ":app"

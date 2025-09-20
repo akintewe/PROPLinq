@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/chat_service.dart';
 
 class InAppChatView extends StatefulWidget {
   final Map<String, dynamic> agentData;
   final String propertyTitle;
+  final String? propertyId;
   
   const InAppChatView({
     super.key,
     required this.agentData,
     required this.propertyTitle,
+    this.propertyId,
   });
 
   @override
@@ -18,23 +22,54 @@ class _InAppChatViewState extends State<InAppChatView> {
   final TextEditingController _messageController = TextEditingController();
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
+  final ChatService _chatService = ChatService();
+  bool _isLoadingChats = true;
 
   @override
   void initState() {
     super.initState();
-    _addWelcomeMessage();
+    _loadChatHistory();
   }
 
-  void _addWelcomeMessage() {
-    setState(() {
-      _messages.add(ChatMessage(
-        text: "Hi! I'm interested in the ${widget.propertyTitle} property. Could you please provide more details?",
-        isFromUser: true,
-        timestamp: DateTime.now(),
-      ));
-    });
-    
-    // Auto-scroll to bottom
+  Future<void> _loadChatHistory() async {
+    try {
+      final agentId = widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
+      final chatHistory = await _chatService.getChatHistory(
+        agentId: agentId ?? '',
+        propertyId: widget.propertyId ?? '',
+      );
+      
+      setState(() {
+        _messages.clear();
+        // Convert API chat history to ChatMessage objects
+        for (final chat in chatHistory) {
+          _messages.add(ChatMessage(
+            text: chat['message'] ?? '',
+            isFromUser: chat['sender_id'] == chat['user_id'], // Assuming sender_id indicates if it's from user
+            timestamp: DateTime.tryParse(chat['timestamp'] ?? '') ?? DateTime.now(),
+          ));
+        }
+        
+        // If no chat history, add welcome message
+        if (_messages.isEmpty) {
+          _addWelcomeMessage();
+        }
+        
+        _isLoadingChats = false;
+      });
+      
+      _scrollToBottom();
+    } catch (e) {
+      print('❌ Error loading chat history: $e');
+      setState(() {
+        _messages.clear();
+        _addWelcomeMessage();
+        _isLoadingChats = false;
+      });
+    }
+  }
+
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -46,12 +81,27 @@ class _InAppChatViewState extends State<InAppChatView> {
     });
   }
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
-    
+  void _addWelcomeMessage() {
     setState(() {
       _messages.add(ChatMessage(
-        text: _messageController.text.trim(),
+        text: "Hi! I'm interested in the ${widget.propertyTitle} property. Could you please provide more details?",
+        isFromUser: true,
+        timestamp: DateTime.now(),
+      ));
+    });
+    
+    _scrollToBottom();
+  }
+
+  void _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+    
+    final messageText = _messageController.text.trim();
+    
+    // Add message to UI immediately
+    setState(() {
+      _messages.add(ChatMessage(
+        text: messageText,
         isFromUser: true,
         timestamp: DateTime.now(),
       ));
@@ -68,6 +118,27 @@ class _InAppChatViewState extends State<InAppChatView> {
         );
       }
     });
+    
+    // Send message via ChatService
+    final agentId = widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
+    final success = await _chatService.sendInAppMessage(
+      message: messageText,
+      recipientId: agentId ?? '',
+      propertyId: widget.propertyId ?? '',
+    );
+    
+    if (success) {
+      print('✅ Message sent successfully via webhook');
+    } else {
+      print('❌ Failed to send message via webhook');
+      // Show error to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to send message. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _openWhatsApp() {
@@ -284,15 +355,21 @@ class _InAppChatViewState extends State<InAppChatView> {
           
           // Chat Messages
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessageBubble(message);
-              },
-            ),
+            child: _isLoadingChats
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF426DC2),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      return _buildMessageBubble(message);
+                    },
+                  ),
           ),
           
           // Message Input
