@@ -52,10 +52,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   // Promotional messages for rotating banner
   final List<String> _promotionalMessages = [
-    "Welcome to Proplinq, Nigeria's trusted home & hotel marketplace!",
-    "Find your next home or hotel faster, safer, and easier with Proplinq.",
-    "Verified agents, hotels, and shortlets all in one place.",
-    "Start exploring now, your journey with Proplinq begins here!",
+    "GET FREE PROMOTION",
   ];
 
   @override

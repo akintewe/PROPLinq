@@ -867,11 +867,17 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                       ),
                                       child: ElevatedButton(
                                         onPressed: () {
+                                          print('🚀 MESSAGE AGENT: Opening chat with property data: $property');
+                                          print('🚀 MESSAGE AGENT: Property keys: ${property.keys.toList()}');
+                                          print('🚀 MESSAGE AGENT: Property ID: ${property['id']}');
+                                          print('🚀 MESSAGE AGENT: Property Title: ${property['title']}');
+                                          
                                           Navigator.of(context).push(
                                             MaterialPageRoute(
                                           builder: (context) => InAppChatView(
                                             agentData: property,
                                             propertyTitle: property['title'] as String,
+                                            propertyId: property['id']?.toString(),
                                           ),
                                             ),
                                           );
@@ -921,16 +927,14 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                   onPressed: () {
                                     if (widget.isHomeSeeker) {
                                       // For home seekers, open chat screen
+                                      print('🚀 Opening chat with property data: $property');
+                                      print('🚀 Property ID: ${property['id']}');
+                                      print('🚀 Property Title: ${property['title']}');
+                                      
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
                                           builder: (context) => InAppChatView(
-                                            agentData: {
-                                              'id': _getAgentId(property),
-                                              'name': _getAgentName(property),
-                                              'phone': _getAgentPhone(property),
-                                              'whatsapp': _getAgentWhatsApp(property),
-                                              'email': _getAgentEmail(property),
-                                            },
+                                            agentData: property, // Pass the full property data
                                             propertyTitle: property['title'] ?? 'Property',
                                             propertyId: property['id']?.toString(),
                                           ),

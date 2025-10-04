@@ -420,6 +420,39 @@ class _SavedViewState extends State<SavedView> {
                   ),
                   child: Stack(
                     children: [
+                      // Verification badge
+                      if (property.user?.verificationStatus == 'verified')
+                        Positioned(
+                          top: 16,
+                          left: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.verified,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Verified Agent',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      
                       // Favorite button (filled heart)
                       Positioned(
                         top: 16,
@@ -528,6 +561,44 @@ class _SavedViewState extends State<SavedView> {
                           ),
                         ),
                       ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Contact agent button
+                    SizedBox(
+                      width: double.infinity,
+                      child: GradientButton(
+                        text: 'Contact agent',
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => PropertyDetailsView(
+                              propertyData: {
+                                'badges': [property.user?.verificationStatus ?? 'Unverified'],
+                                'title': property.title,
+                                'location': property.location,
+                                'rating': '(5.0)',
+                                'price': property.price,
+                                'type': property.type,
+                                'category': property.category,
+                                'description': property.description,
+                                'features': property.features,
+                                'imageUrl': property.imageUrl,
+                                'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null,
+                                'user': property.user?.toJson(),
+                                'agent': {
+                                  'name': property.user?.fullName ?? 'Agent',
+                                  'title': 'Agent',
+                                  'phone': property.user?.phoneNumber ?? '',
+                                  'email': property.user?.email ?? '',
+                                  'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
+                                },
+                              },
+                              isHomeSeeker: true,
+                            )),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),

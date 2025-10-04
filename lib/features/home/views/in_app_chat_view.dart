@@ -28,30 +28,54 @@ class _InAppChatViewState extends State<InAppChatView> {
   @override
   void initState() {
     super.initState();
+    print('🎯 InAppChatView: initState called');
+    print('🎯 InAppChatView: Agent data: ${widget.agentData}');
+    print('🎯 InAppChatView: Property ID: ${widget.propertyId}');
+    print('🎯 InAppChatView: Property Title: ${widget.propertyTitle}');
     _loadChatHistory();
   }
 
   Future<void> _loadChatHistory() async {
     try {
-      final agentId = widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
+      print('🔄 Loading chat history...');
+      print('🔄 Agent data: ${widget.agentData}');
+      print('🔄 Property ID: ${widget.propertyId}');
+      
+      // Extract agent ID from user data
+      final user = widget.agentData['user'] as Map<String, dynamic>?;
+      final agentId = user?['id']?.toString() ?? widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
+      print('🔄 Extracted agent ID: $agentId');
+      
       final chatHistory = await _chatService.getChatHistory(
         agentId: agentId ?? '',
         propertyId: widget.propertyId ?? '',
       );
       
+      print('🔄 Chat history result: ${chatHistory.length} messages');
+      print('🔄 Chat history data: $chatHistory');
+      
       setState(() {
         _messages.clear();
+        
         // Convert API chat history to ChatMessage objects
         for (final chat in chatHistory) {
+          print('🔄 Processing chat: $chat');
+          final payload = chat['payload'] as Map<String, dynamic>?;
+          final senderId = chat['sender_identifier']?.toString() ?? payload?['user_id']?.toString();
+          final currentUserId = payload?['user_id']?.toString();
+          
           _messages.add(ChatMessage(
-            text: chat['message'] ?? '',
-            isFromUser: chat['sender_id'] == chat['user_id'], // Assuming sender_id indicates if it's from user
-            timestamp: DateTime.tryParse(chat['timestamp'] ?? '') ?? DateTime.now(),
+            text: chat['message'] ?? payload?['message'] ?? '',
+            isFromUser: senderId == currentUserId,
+            timestamp: DateTime.tryParse(chat['created_at'] ?? payload?['timestamp'] ?? '') ?? DateTime.now(),
           ));
         }
         
+        print('🔄 Final messages count: ${_messages.length}');
+        
         // If no chat history, add welcome message
         if (_messages.isEmpty) {
+          print('🔄 No chat history found, adding welcome message');
           _addWelcomeMessage();
         }
         
@@ -120,7 +144,8 @@ class _InAppChatViewState extends State<InAppChatView> {
     });
     
     // Send message via ChatService
-    final agentId = widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
+    final user = widget.agentData['user'] as Map<String, dynamic>?;
+    final agentId = user?['id']?.toString() ?? widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
     final success = await _chatService.sendInAppMessage(
       message: messageText,
       recipientId: agentId ?? '',
