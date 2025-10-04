@@ -10,6 +10,7 @@ import '../models/register_request.dart';
 import '../services/auth_service.dart';
 import 'login_view.dart';
 import 'email_verification_view.dart';
+import 'option_selection_view.dart';
 import '../../home/views/tenant_home_view.dart';
 import '../../home/views/agent_home_view.dart';
 
@@ -145,9 +146,15 @@ class _SignUpViewState extends State<SignUpView> {
       }
 
       if (response.success && response.data != null) {
-        // Registration successful - navigate to login
-        _showSuccessMessage('Registration successful! Please log in with your credentials.');
-        _navigateToLogin();
+        // Registration successful - check if it's a home seeker
+        if (_isHomeSeeker) {
+          // Navigate to option selection screen for home seekers
+          _navigateToOptionSelection();
+        } else {
+          // For agents, navigate to login screen
+          _showSuccessMessage('Registration successful! Please log in with your credentials.');
+          _navigateToLogin();
+        }
       } else {
         // Registration failed
         _showErrorMessage(response.message ?? 'Registration failed. Please try again.');
@@ -323,6 +330,18 @@ class _SignUpViewState extends State<SignUpView> {
   void _navigateToLogin() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const LoginView()),
+    );
+  }
+
+  void _navigateToOptionSelection() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => OptionSelectionView(
+          fullName: _fullNameController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+        ),
+      ),
     );
   }
 

@@ -429,6 +429,27 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     );
   }
 
+  String _getUserRoleDisplay() {
+    if (_currentUser?.userType == null) return 'User';
+    
+    switch (_currentUser!.userType) {
+      case 'home_seeker':
+        return 'Home seeker';
+      case 'agent':
+        return 'Agent';
+      case 'realtor':
+        return 'Realtor';
+      case 'hotel':
+        return 'Hotel';
+      case 'apartment':
+        return 'Apartment';
+      default:
+        return _currentUser!.userType.replaceAll('_', ' ').split(' ').map((word) => 
+          word[0].toUpperCase() + word.substring(1).toLowerCase()
+        ).join(' ');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -800,9 +821,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       Text(
                         _isLoadingProfile 
                             ? 'Loading...'
-                            : _currentUser?.userType == 'home_seeker' 
-                                ? 'Home seeker' 
-                                : _currentUser?.userType?.replaceAll('_', ' ').toLowerCase() ?? 'User',
+                            : _getUserRoleDisplay(),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
@@ -948,7 +967,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'RENT-NOW, PAY LATER',
+                      'GET FREE PROMOTION',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
