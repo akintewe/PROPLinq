@@ -371,6 +371,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     final isHotel = normalizedType == 'hotel';
     final isShortlet = normalizedType == 'shortlet';
     
+    // Debug: Print property data to see what's available
+    print('🏠 PropertyDetailsView: Property data keys: ${property.keys.toList()}');
+    print('🏠 PropertyDetailsView: Property ID: ${property['id']}');
+    
     // Get actual property images
     final propertyImages = _getPropertyImages();
     

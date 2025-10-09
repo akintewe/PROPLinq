@@ -339,6 +339,7 @@ class HomeView extends BaseView<HomeViewModel> {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => PropertyDetailsView(
               propertyData: {
+                'id': property.id,
                 'badges': ['Verified Agent'],
                 'title': property.title,
                 'location': property.location,
