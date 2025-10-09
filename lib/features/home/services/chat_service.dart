@@ -11,23 +11,36 @@ class ChatService {
   final AuthService _authService = AuthService();
   final StorageService _storageService = StorageService();
 
-  // Send message via webhook
+  // Send message via new chat endpoint
   Future<bool> sendMessage({
     required String message,
-    required String userId,
-    required String platform,
-    String? timestamp,
+    required String senderId,
+    required String receiverId,
+    required String propertyId,
+    String? file,
   }) async {
     try {
+      final currentUser = await _authService.getCurrentUser();
       print('📤 Sending chat message: $message');
+      print('📤 From: $senderId To: $receiverId Property: $propertyId');
+      print('📤 Current authenticated user ID: ${currentUser?.id}');
+      print('📤 Sender ID being sent: $senderId');
+      print('📤 Are they the same? ${currentUser?.id.toString() == senderId}');
       
       final body = {
+        'sender_id': int.parse(senderId),
+        'receiver_id': int.parse(receiverId),
         'message': message,
-        'user_id': userId,
-        'timestamp': timestamp ?? DateTime.now().toIso8601String(),
-        'platform': platform,
-        'X-Chat-Signature': 'your-secret-token-here', // Add signature to body
+        'property_id': int.parse(propertyId),
+        'sent_at': DateTime.now().toIso8601String(),
       };
+      
+      // Add file if provided
+      if (file != null && file.isNotEmpty) {
+        body['file'] = file;
+      }
+
+      print('📤 Chat request body: $body');
 
       final response = await _apiService.post(
         ApiConstants.chatWebhook,
@@ -36,6 +49,7 @@ class ChatService {
       );
 
       print('📤 Chat webhook response: ${response.statusCode}');
+      print('📤 Chat webhook data: ${response.data}');
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       print('❌ Error sending chat message: $e');
@@ -43,7 +57,67 @@ class ChatService {
     }
   }
 
-  // Get user chats
+  // Get conversation with a specific user (receiver_id)
+  Future<List<Map<String, dynamic>>> getConversation(String receiverId) async {
+    try {
+      final token = await _storageService.getToken();
+      final currentUser = await _authService.getCurrentUser();
+      
+      print('📥 Fetching conversation with receiver: $receiverId');
+      print('📥 Current user ID (from auth): ${currentUser?.id}');
+      print('📥 Current user email: ${currentUser?.email}');
+      print('📥 Full token: $token');
+      print('📥 Full URL: ${ApiConstants.apiBaseUrl}/chats/conversation/$receiverId');
+      
+      // Use Dio directly to get raw response
+      final dio = Dio();
+      
+      final response = await dio.get(
+        '${ApiConstants.apiBaseUrl}/chats/conversation/$receiverId',
+        options: Options(
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+
+      print('📥 Get conversation response: ${response.statusCode}');
+      print('📥 Raw response data: ${response.data}');
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        print('📥 Parsing conversation data: $data');
+        
+        if (data is Map<String, dynamic> && data.containsKey('data')) {
+          final chatData = data['data'] as List<dynamic>?;
+          print('📥 Found conversation with ${chatData?.length ?? 0} messages');
+          if (chatData != null && chatData.isNotEmpty) {
+            print('📥 First message: ${chatData.first}');
+          }
+          return List<Map<String, dynamic>>.from(chatData ?? []);
+        }
+        print('📥 No data key found in conversation response');
+        return [];
+      }
+      
+      return [];
+    } catch (e) {
+      print('❌ Error fetching conversation: $e');
+      print('❌ Full error details: $e');
+      
+      // If it's a 404, it means no conversation exists yet - this is normal
+      if (e.toString().contains('404')) {
+        print('📥 No conversation found (404) - this is normal for new conversations');
+        return [];
+      }
+      
+      return [];
+    }
+  }
+
+  // Get user chats (legacy method - keeping for compatibility)
   Future<List<Map<String, dynamic>>> getUserChats() async {
     try {
       print('📥 Fetching user chats...');
@@ -90,11 +164,12 @@ class ChatService {
     }
   }
 
-  // Send in-app message (simulates sending via webhook)
+  // Send in-app message
   Future<bool> sendInAppMessage({
     required String message,
     required String recipientId,
     required String propertyId,
+    String? file,
   }) async {
     try {
       final currentUser = await _authService.getCurrentUser();
@@ -105,15 +180,12 @@ class ChatService {
 
       print('📤 Sending in-app message to $recipientId about property $propertyId');
       
-      // For in-app messages, we can either:
-      // 1. Send via webhook with platform: "in_app"
-      // 2. Store locally and sync later
-      // 3. Use a different endpoint for in-app messages
-      
       return await sendMessage(
         message: message,
-        userId: currentUser.id.toString(),
-        platform: 'in_app',
+        senderId: currentUser.id.toString(),
+        receiverId: recipientId,
+        propertyId: propertyId,
+        file: file,
       );
     } catch (e) {
       print('❌ Error sending in-app message: $e');
@@ -121,7 +193,7 @@ class ChatService {
     }
   }
 
-  // Get chat history for a specific property/agent
+  // Get chat history for a specific agent (receiver_id)
   Future<List<Map<String, dynamic>>> getChatHistory({
     required String agentId,
     required String propertyId,
@@ -129,34 +201,24 @@ class ChatService {
     try {
       print('📥 Fetching chat history for agent $agentId, property $propertyId');
       
-      final allChats = await getUserChats();
-      print('📥 All chats received: ${allChats.length} total chats');
-      print('📥 All chats data: $allChats');
+      // Use the new conversation endpoint with receiver_id
+      final conversation = await getConversation(agentId);
+      print('📥 Conversation received: ${conversation.length} messages');
+      print('📥 Conversation data: $conversation');
       
-      // If no chats at all, return empty list
-      if (allChats.isEmpty) {
-        print('📥 No chats found in API response');
-        return [];
-      }
-      
-      // Filter chats for this specific agent and property
-      final filteredChats = allChats.where((chat) {
-        // Extract agent_id and property_id from the payload
-        final payload = chat['payload'] as Map<String, dynamic>?;
-        final chatAgentId = payload?['agent_id']?.toString();
-        final chatPropertyId = payload?['property_id']?.toString();
+      // Filter by property_id if needed (since conversation is already filtered by receiver_id)
+      final filteredChats = conversation.where((chat) {
+        final chatPropertyId = chat['property_id']?.toString();
+        print('📥 Checking chat - Property: $chatPropertyId');
+        print('📥 Looking for - Property: $propertyId');
         
-        print('📥 Checking chat - Agent: $chatAgentId, Property: $chatPropertyId');
-        print('📥 Looking for - Agent: $agentId, Property: $propertyId');
-        
-        // For now, show all chats since backend is not saving agent_id and property_id properly
-        // TODO: Backend needs to save agent_id and property_id in the payload
-        if (chatAgentId == null && chatPropertyId == null) {
-          print('📥 Chat has no agent_id/property_id, showing all chats for now');
-          return true; // Show all chats until backend is fixed
+        // If no property_id in chat, show all messages for this agent
+        if (chatPropertyId == null || chatPropertyId.isEmpty) {
+          print('📥 Chat has no property_id, showing all messages for this agent');
+          return true;
         }
         
-        return chatAgentId == agentId && chatPropertyId == propertyId;
+        return chatPropertyId == propertyId;
       }).toList();
       
       print('📥 Filtered chats: ${filteredChats.length} messages');

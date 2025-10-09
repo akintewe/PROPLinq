@@ -750,6 +750,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   final property = _getFilteredSearchResults()[index];
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+                      'id': property.id,
                       'badges': [property.user?.verificationStatus ?? 'Unverified'],
                       'title': property.title,
                       'location': property.location,
@@ -1300,6 +1301,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+                      'id': property.id,
                       'badges': [property.user?.verificationStatus ?? 'Unverified'],
                       'title': property.title,
                       'location': property.location,
@@ -1389,6 +1391,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+                      'id': property.id,
                       'badges': [property.user?.verificationStatus ?? 'Unverified'],
                       'title': property.title,
                       'location': property.location,

@@ -359,6 +359,7 @@ class _SavedViewState extends State<SavedView> {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'id': property.id,
             'badges': [property.user?.verificationStatus ?? 'Unverified'],
             'title': property.title,
             'location': property.location,
@@ -378,7 +379,7 @@ class _SavedViewState extends State<SavedView> {
               'email': property.user?.email ?? '',
               'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
             },
-          })),
+          }, isHomeSeeker: true)),
         );
       },
       child: Container(
@@ -574,6 +575,7 @@ class _SavedViewState extends State<SavedView> {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => PropertyDetailsView(
                               propertyData: {
+                                'id': property.id,
                                 'badges': [property.user?.verificationStatus ?? 'Unverified'],
                                 'title': property.title,
                                 'location': property.location,

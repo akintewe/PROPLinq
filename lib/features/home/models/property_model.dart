@@ -107,7 +107,16 @@ class PropertyModel {
       final images = json['images'] as List<dynamic>;
       print('🖼️ PropertyModel: Found ${images.length} images in API data');
       final firstImage = images.first as Map<String, dynamic>;
-      imageUrl = firstImage['full_url'] as String?;
+      // Try both 'full_url' and 'image_url' fields
+      String? rawImageUrl = firstImage['full_url'] as String? ?? firstImage['image_url'] as String?;
+      if (rawImageUrl != null) {
+        // If it's a relative path, construct the full URL
+        if (rawImageUrl.startsWith('property-images/') || rawImageUrl.startsWith('uploads/')) {
+          imageUrl = 'https://proapi.proplinq.com/storage/$rawImageUrl';
+        } else {
+          imageUrl = rawImageUrl;
+        }
+      }
       print('✅ PropertyModel: Extracted imageUrl: $imageUrl');
     } else {
       print('❌ PropertyModel: No images found in API data');

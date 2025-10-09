@@ -1238,6 +1238,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // Then navigate to property details with actual API data
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'id': property.id,
             'badges': [property.user?.verificationStatus ?? 'Unverified'],
             'title': property.title,
             'location': property.location,
@@ -1741,6 +1742,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // Then navigate to property details
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'id': property['id'],
             'badges': [property['badges']?.first ?? 'Unverified'],
             'title': property['title'],
             'location': property['location'],

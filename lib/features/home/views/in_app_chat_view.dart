@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/chat_service.dart';
+import '../../auth/services/auth_service.dart';
 
 class InAppChatView extends StatefulWidget {
   final Map<String, dynamic> agentData;
@@ -23,6 +24,7 @@ class _InAppChatViewState extends State<InAppChatView> {
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   final ChatService _chatService = ChatService();
+  final AuthService _authService = AuthService();
   bool _isLoadingChats = true;
 
   @override
@@ -54,20 +56,28 @@ class _InAppChatViewState extends State<InAppChatView> {
       print('🔄 Chat history result: ${chatHistory.length} messages');
       print('🔄 Chat history data: $chatHistory');
       
+      // Get current user ID once for all messages
+      final currentUser = await _authService.getCurrentUser();
+      final currentUserId = currentUser?.id.toString();
+      
       setState(() {
         _messages.clear();
         
         // Convert API chat history to ChatMessage objects
         for (final chat in chatHistory) {
           print('🔄 Processing chat: $chat');
-          final payload = chat['payload'] as Map<String, dynamic>?;
-          final senderId = chat['sender_identifier']?.toString() ?? payload?['user_id']?.toString();
-          final currentUserId = payload?['user_id']?.toString();
+          
+          // Extract sender_id and message data from the new API format
+          final senderId = chat['sender_id']?.toString();
+          final message = chat['message'] ?? '';
+          final sentAt = chat['sent_at'] ?? chat['created_at'] ?? '';
+          
+          print('🔄 Chat - Sender: $senderId, Current User: $currentUserId');
           
           _messages.add(ChatMessage(
-            text: chat['message'] ?? payload?['message'] ?? '',
+            text: message,
             isFromUser: senderId == currentUserId,
-            timestamp: DateTime.tryParse(chat['created_at'] ?? payload?['timestamp'] ?? '') ?? DateTime.now(),
+            timestamp: DateTime.tryParse(sentAt) ?? DateTime.now(),
           ));
         }
         
