@@ -6,6 +6,7 @@ import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
 import 'saved_view.dart';
+import 'messages_view.dart';
 import 'profile_view.dart';
 import 'settings_view.dart';
 import '../../auth/services/auth_service.dart';
@@ -475,6 +476,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                 });
               },
             ),
+            // Messages Tab
+            const MessagesView(isAgent: false),
             // Profile Tab
             const ProfileView(isAgent: false),
             // Settings Tab
@@ -2212,8 +2215,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         children: [
           _buildNavItem(0, 'Home', 'assets/icons/homeselected.svg', 'assets/icons/homeunselected.svg'),
           _buildNavItem(1, 'Saved', 'assets/icons/heartselected.svg', 'assets/icons/heartunselected.svg'),
-          _buildNavItem(2, 'Profile', 'assets/icons/userselected.svg', 'assets/icons/userunselected.svg'),
-          _buildNavItem(3, 'Settings', 'assets/icons/settingselected.svg', 'assets/icons/settingunselected.svg'),
+          _buildNavItem(2, 'Messages', 'assets/icons/tabler_message (1).svg', 'assets/icons/tabler_message.svg'),
+          _buildNavItem(3, 'Profile', 'assets/icons/userselected.svg', 'assets/icons/userunselected.svg'),
+          _buildNavItem(4, 'Settings', 'assets/icons/settingselected.svg', 'assets/icons/settingunselected.svg'),
         ],
       ),
     );
@@ -2244,6 +2248,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                   break;
                 case 'Saved':
                   fallbackIcon = isSelected ? Icons.favorite : Icons.favorite_border;
+                  break;
+                case 'Messages':
+                  fallbackIcon = isSelected ? Icons.message : Icons.message_outlined;
                   break;
                 case 'Profile':
                   fallbackIcon = isSelected ? Icons.person : Icons.person_outline;
