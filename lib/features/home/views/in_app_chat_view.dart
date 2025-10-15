@@ -36,6 +36,8 @@ class _InAppChatViewState extends State<InAppChatView> {
   final ImagePicker _imagePicker = ImagePicker();
   String? _selectedFilePath;
   String? _selectedFileType;
+  String? _currentUserProfileImage;
+  String? _currentUserName;
 
   @override
   void initState() {
@@ -47,6 +49,7 @@ class _InAppChatViewState extends State<InAppChatView> {
     
     _loadChatHistory();
     _loadPropertyDetails();
+    _loadCurrentUserProfile();
     _startWhatsAppTimer();
     _markMessagesAsRead(); // Mark messages as read when chat is opened
   }
@@ -545,6 +548,23 @@ class _InAppChatViewState extends State<InAppChatView> {
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  Future<void> _loadCurrentUserProfile() async {
+    try {
+      print('👤 Loading current user profile...');
+      final currentUser = await _authService.getCurrentUser();
+      if (currentUser != null) {
+        setState(() {
+          _currentUserProfileImage = currentUser.profilePicture;
+          _currentUserName = currentUser.fullName;
+        });
+        print('👤 Current user profile image: $_currentUserProfileImage');
+        print('👤 Current user name: $_currentUserName');
+      }
+    } catch (e) {
+      print('❌ Error loading current user profile: $e');
+    }
   }
 
   void _markMessagesAsRead() {
@@ -1297,6 +1317,76 @@ class _InAppChatViewState extends State<InAppChatView> {
     );
   }
 
+  String? _getCurrentUserName() {
+    return _currentUserName;
+  }
+
+  String? _getOtherPersonProfileImage() {
+    final user = widget.agentData['user'] as Map<String, dynamic>?;
+    return user?['profile_image_url'] as String?;
+  }
+
+  String? _getOtherPersonName() {
+    final user = widget.agentData['user'] as Map<String, dynamic>?;
+    return user?['full_name'] as String?;
+  }
+
+  Widget _buildProfileAvatar({required bool isCurrentUser, required String? profileImageUrl, required String? userName}) {
+    final size = 32.0;
+    
+    if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+      // Show actual profile image
+      return Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+        ),
+        child: ClipOval(
+          child: Image.network(
+            profileImageUrl,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback to initials if image fails to load
+              return _buildInitialsAvatar(size, userName);
+            },
+          ),
+        ),
+      );
+    } else {
+      // Fallback to initials if no profile image
+      return _buildInitialsAvatar(size, userName);
+    }
+  }
+
+  Widget _buildInitialsAvatar(double size, String? userName) {
+    String initial = 'U';
+    if (userName != null && userName.isNotEmpty) {
+      initial = userName[0].toUpperCase();
+    }
+    
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: Color(0xFF426DC2),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(ChatMessage message) {
     // Message alignment logic:
     // - isFromUser = true: Message sent by authenticated user → Right side (blue)
@@ -1309,18 +1399,10 @@ class _InAppChatViewState extends State<InAppChatView> {
             : MainAxisAlignment.start,
         children: [
           if (!message.isFromUser) ...[
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFF426DC2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person,
-                color: Colors.white,
-                size: 16,
-              ),
+            _buildProfileAvatar(
+              isCurrentUser: false,
+              profileImageUrl: _getOtherPersonProfileImage(),
+              userName: _getOtherPersonName(),
             ),
             const SizedBox(width: 8),
           ],
@@ -1467,18 +1549,10 @@ class _InAppChatViewState extends State<InAppChatView> {
           ),
           if (message.isFromUser) ...[
             const SizedBox(width: 8),
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFF426DC2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person,
-                color: Colors.white,
-                size: 16,
-              ),
+            _buildProfileAvatar(
+              isCurrentUser: true,
+              profileImageUrl: _currentUserProfileImage,
+              userName: _getCurrentUserName(),
             ),
           ],
         ],

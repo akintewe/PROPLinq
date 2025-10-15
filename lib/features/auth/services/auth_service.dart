@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/storage_service.dart';
@@ -6,7 +7,6 @@ import '../models/auth_response.dart';
 import '../models/register_request.dart';
 import '../models/user_model.dart';
 import '../models/kyc_status_response.dart';
-import '../models/login_request.dart';
 import '../models/agent_kyc_request.dart';
 import '../models/user_kyc_request.dart';
 
@@ -29,7 +29,24 @@ class AuthService {
     // Save token and user data if registration successful
     if (response.success && response.data != null) {
       await _storageService.saveToken(response.data!.token);
-      await _storageService.saveUserData(response.data!.user.toJson());
+      
+      // Fetch complete profile data to get profile image URL
+      try {
+        print('📸 Fetching complete profile data after registration...');
+        final profileResponse = await getProfile();
+        if (profileResponse.success && profileResponse.data != null) {
+          print('📸 Complete profile data fetched successfully');
+          print('📸 Profile image URL: ${profileResponse.data!.profilePicture}');
+          await _storageService.saveUserData(profileResponse.data!.toJson());
+        } else {
+          print('📸 Failed to fetch complete profile, using registration data');
+          await _storageService.saveUserData(response.data!.user.toJson());
+        }
+      } catch (e) {
+        print('📸 Error fetching complete profile, using registration data: $e');
+        await _storageService.saveUserData(response.data!.user.toJson());
+      }
+      
       await _storageService.saveUserType(response.data!.user.userType);
     }
 
@@ -53,7 +70,24 @@ class AuthService {
     // Save token and user data if login successful
     if (response.success && response.data != null) {
       await _storageService.saveToken(response.data!.token);
-      await _storageService.saveUserData(response.data!.user.toJson());
+      
+      // Fetch complete profile data to get profile image URL
+      try {
+        print('📸 Fetching complete profile data after login...');
+        final profileResponse = await getProfile();
+        if (profileResponse.success && profileResponse.data != null) {
+          print('📸 Complete profile data fetched successfully');
+          print('📸 Profile image URL: ${profileResponse.data!.profilePicture}');
+          await _storageService.saveUserData(profileResponse.data!.toJson());
+        } else {
+          print('📸 Failed to fetch complete profile, using login data');
+          await _storageService.saveUserData(response.data!.user.toJson());
+        }
+      } catch (e) {
+        print('📸 Error fetching complete profile, using login data: $e');
+        await _storageService.saveUserData(response.data!.user.toJson());
+      }
+      
       await _storageService.saveUserType(response.data!.user.userType);
     }
 
@@ -183,6 +217,96 @@ class AuthService {
   // Check if user is logged in
   Future<bool> isLoggedIn() async {
     return await _storageService.isLoggedIn();
+  }
+
+  // Upload profile image
+  Future<ApiResponse<Map<String, dynamic>>> uploadProfileImage(File imageFile) async {
+    try {
+      print('📸 Uploading profile image...');
+      
+      // Create FormData for multipart upload
+      final dio = Dio();
+      final token = await _storageService.getToken();
+      
+      final formData = FormData.fromMap({
+        'profile_image': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: 'profile_image.jpg',
+        ),
+      });
+      
+      print('📸 Uploading to: ${ApiConstants.apiBaseUrl}${ApiConstants.uploadProfileImage}');
+      
+      final response = await dio.post(
+        '${ApiConstants.apiBaseUrl}${ApiConstants.uploadProfileImage}',
+        data: formData,
+        options: Options(
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      
+      print('📸 Profile image upload response: ${response.statusCode}');
+      print('📸 Profile image upload data: ${response.data}');
+      
+      if (response.statusCode == 200) {
+        final responseData = response.data as Map<String, dynamic>;
+        
+        // Update local user data with new profile image URL
+        if (responseData['data'] != null && responseData['data']['profile_image_url'] != null) {
+          final currentUser = await getCurrentUser();
+          if (currentUser != null) {
+            final updatedUser = UserModel(
+              id: currentUser.id,
+              fullName: currentUser.fullName,
+              email: currentUser.email,
+              userType: currentUser.userType,
+              phoneNumber: currentUser.phoneNumber,
+              location: currentUser.location,
+              agencyName: currentUser.agencyName,
+              agentType: currentUser.agentType,
+              whatsappNumber: currentUser.whatsappNumber,
+              emailVerified: currentUser.emailVerified,
+              profilePicture: responseData['data']['profile_image_url'],
+              emailVerifiedAt: currentUser.emailVerifiedAt,
+              phoneVerifiedAt: currentUser.phoneVerifiedAt,
+              kycStatus: currentUser.kycStatus,
+              kycData: currentUser.kycData,
+              createdAt: currentUser.createdAt,
+              updatedAt: currentUser.updatedAt,
+            );
+            
+            // Save updated user data
+            await _storageService.saveUserData(updatedUser.toJson());
+            print('📸 Updated local user data with new profile image URL: ${responseData['data']['profile_image_url']}');
+          }
+        }
+        
+        return ApiResponse<Map<String, dynamic>>(
+          success: true,
+          statusCode: response.statusCode,
+          message: responseData['message'] ?? 'Profile image uploaded successfully',
+          data: responseData,
+        );
+      } else {
+        return ApiResponse<Map<String, dynamic>>(
+          success: false,
+          statusCode: response.statusCode,
+          message: 'Failed to upload profile image',
+          data: response.data,
+        );
+      }
+    } catch (e) {
+      print('❌ Error uploading profile image: $e');
+      return ApiResponse<Map<String, dynamic>>(
+        success: false,
+        statusCode: 500,
+        message: 'Error uploading profile image: $e',
+        data: null,
+      );
+    }
   }
 
   // Get current user data from storage

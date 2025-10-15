@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'property_listing_view.dart';
 import 'property_details_view.dart';
 import 'subscription_view.dart';
@@ -25,8 +27,11 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> {
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
+  final ImagePicker _imagePicker = ImagePicker();
+  
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
+  bool _isUploadingImage = false;
   KycStatusResponse? _kycStatus;
   bool _isLoadingKycStatus = true;
   List<PropertyModel> _myProperties = [];
@@ -254,6 +259,207 @@ class _ProfileViewState extends State<ProfileView> {
     print('✅ Profile data refresh completed');
   }
 
+  /// Show image picker options (camera or gallery)
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF0F2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Title
+              const Text(
+                'Change Profile Picture',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Image options
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildImageOption(
+                    icon: Icons.camera_alt,
+                    label: 'Camera',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImageFromCamera();
+                    },
+                  ),
+                  _buildImageOption(
+                    icon: Icons.photo_library,
+                    label: 'Gallery',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImageFromGallery();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildImageOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: const Color(0xFF426DC2).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF426DC2),
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Pick image from camera
+  void _pickImageFromCamera() async {
+    try {
+      print('📸 Taking photo with camera...');
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+      
+      if (image != null) {
+        print('📸 Photo taken: ${image.path}');
+        await _uploadProfileImage(File(image.path));
+      } else {
+        print('📸 No photo taken');
+      }
+    } catch (e) {
+      print('❌ Error taking photo: $e');
+      _showErrorMessage('Failed to take photo');
+    }
+  }
+
+  /// Pick image from gallery
+  void _pickImageFromGallery() async {
+    try {
+      print('📸 Picking image from gallery...');
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+      
+      if (image != null) {
+        print('📸 Image selected: ${image.path}');
+        await _uploadProfileImage(File(image.path));
+      } else {
+        print('📸 No image selected');
+      }
+    } catch (e) {
+      print('❌ Error picking image from gallery: $e');
+      _showErrorMessage('Failed to pick image from gallery');
+    }
+  }
+
+  /// Upload profile image to server
+  Future<void> _uploadProfileImage(File imageFile) async {
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      print('📸 Uploading profile image...');
+      final response = await _authService.uploadProfileImage(imageFile);
+      
+      if (response.success) {
+        print('✅ Profile image uploaded successfully');
+        
+        // Refresh user profile to get updated data
+        await _fetchUserProfile();
+        
+        _showSuccessMessage('Profile picture updated successfully!');
+      } else {
+        print('❌ Failed to upload profile image: ${response.message}');
+        _showErrorMessage(response.message ?? 'Failed to upload profile image');
+      }
+    } catch (e) {
+      print('❌ Error uploading profile image: $e');
+      _showErrorMessage('Failed to upload profile image');
+    } finally {
+      setState(() {
+        _isUploadingImage = false;
+      });
+    }
+  }
+
+  /// Show error message
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  /// Show success message
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -337,39 +543,91 @@ class _ProfileViewState extends State<ProfileView> {
                 child: Column(
                   children: [
               // Profile Picture with camera icon
-              Stack(
+              GestureDetector(
+                onTap: _isUploadingImage ? null : _showImagePickerOptions,
+                child: Stack(
                 children: [
                   Container(
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      image: const DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'),
-                        fit: BoxFit.cover,
+                        color: const Color(0xFF426DC2),
                       ),
-                    ),
-                    child: _isLoadingProfile 
+                      child: _isLoadingProfile || _isUploadingImage
                         ? Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.black.withOpacity(0.3),
                             ),
-                            child: const Center(
-                              child: CircularProgressIndicator(
+                              child: Center(
+                                child: _isUploadingImage
+                                    ? const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      )
+                                    : const CircularProgressIndicator(
                                 strokeWidth: 2,
                                 color: Colors.white,
                               ),
                             ),
                           )
-                        : null,
+                          : _currentUser?.profilePicture != null && _currentUser!.profilePicture!.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.network(
+                                    _currentUser!.profilePicture!,
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 120,
+                                        height: 120,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF426DC2),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            _currentUser?.fullName.isNotEmpty == true
+                                                ? _currentUser!.fullName[0].toUpperCase()
+                                                : 'U',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 48,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                )
+                              : Container(
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF426DC2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _currentUser?.fullName.isNotEmpty == true
+                                          ? _currentUser!.fullName[0].toUpperCase()
+                                          : 'U',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                   ),
                   Positioned(
                     bottom: 8,
                     right: 8,
                     child: Container(
-                      width: 28,
-                      height: 28,
+                        width: 32,
+                        height: 32,
                       decoration: BoxDecoration(
                             color: Colors.white,
                         shape: BoxShape.circle,
@@ -381,14 +639,15 @@ class _ProfileViewState extends State<ProfileView> {
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.camera_alt_outlined,
-                        size: 16,
+                        child: Icon(
+                          _isUploadingImage ? Icons.upload : Icons.camera_alt_outlined,
+                          size: 18,
                         color: Colors.black,
                       ),
                     ),
                   ),
                 ],
+                ),
               ),
               
               const SizedBox(height: 20),

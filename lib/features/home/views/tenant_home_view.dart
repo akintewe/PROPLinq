@@ -788,15 +788,59 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      image: const DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'),
-                        fit: BoxFit.cover,
-                      ),
+                      color: const Color(0xFF426DC2),
                       border: Border.all(
                         color: const Color(0xFFECF0F9),
                         width: 2,
                       ),
                     ),
+                    child: _currentUser?.profilePicture != null && _currentUser!.profilePicture!.isNotEmpty
+                        ? ClipOval(
+                            child: Image.network(
+                              _currentUser!.profilePicture!,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF426DC2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _currentUser != null && _currentUser!.fullName.isNotEmpty
+                                          ? _currentUser!.fullName[0].toUpperCase()
+                                          : 'H',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF426DC2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                _currentUser != null && _currentUser!.fullName.isNotEmpty
+                                    ? _currentUser!.fullName[0].toUpperCase()
+                                    : 'H',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 12),
                   // Welcome text
@@ -808,7 +852,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                           Text(
                             _isLoadingProfile 
                                 ? 'Welcome User '
-                                : 'Welcome ${_currentUser?.fullName?.split(' ').first ?? 'User'} ',
+                                : 'Welcome ${_currentUser != null && _currentUser!.fullName.isNotEmpty ? _currentUser!.fullName.split(' ').first : 'User'} ',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,

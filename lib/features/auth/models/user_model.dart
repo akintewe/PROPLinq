@@ -49,7 +49,7 @@ class UserModel {
       agentType: json['agent_type'],
       whatsappNumber: json['whatsapp_number'],
       emailVerified: json['email_verified'],
-      profilePicture: json['profile_picture'],
+      profilePicture: json['profile_image_url'] ?? json['profile_picture'],
       emailVerifiedAt: json['email_verified_at'] != null 
           ? DateTime.tryParse(json['email_verified_at']) 
           : null,
