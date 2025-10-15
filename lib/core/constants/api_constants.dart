@@ -21,6 +21,7 @@ class ApiConstants {
   static const String profile = '/user';
   static const String updateProfile = '/profile/update';
   static const String changePassword = '/change-password';
+  static const String uploadProfileImage = '/user/profile-image';
   
   // Property Endpoints
   static const String properties = '/properties';

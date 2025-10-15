@@ -63,8 +63,14 @@ class _MessagesViewState extends State<MessagesView> {
         final sentAt = chat['sent_at'] ?? chat['updated_at'] ?? chat['created_at'] ?? '';
         final receivedAt = chat['received_at'] as String?;
         
+        // Extract user information from the new API structure
+        final user = chat['user'] as Map<String, dynamic>?;
+        final userName = user?['name'] as String?;
+        final userProfileImage = user?['profile_image_url'] as String?;
+        
         print('📥 Processing chat - Sender: $senderId, Receiver: $receiverId, Property: $propertyId');
         print('📥 Chat - Message: $message, Received at: $receivedAt');
+        print('📥 Chat - User: $userName, Profile Image: $userProfileImage');
         
         // Determine the other person in the conversation
         String otherPersonId;
@@ -100,6 +106,8 @@ class _MessagesViewState extends State<MessagesView> {
             'unread_count': isUnread ? 1 : 0, // WhatsApp style: 1 if any unread, 0 if all read
             'last_message_time': DateTime.tryParse(sentAt) ?? DateTime.now(),
             'has_unread': isUnread,
+            'user_name': userName,
+            'user_profile_image': userProfileImage,
           };
         } else {
           // Update with latest message if this one is newer
@@ -125,6 +133,10 @@ class _MessagesViewState extends State<MessagesView> {
                   return isUnread ? 1 : 0;
                 case 'has_unread':
                   return isUnread;
+                case 'user_name':
+                  return userName;
+                case 'user_profile_image':
+                  return userProfileImage;
                 default:
                   return value;
               }
@@ -220,10 +232,15 @@ class _MessagesViewState extends State<MessagesView> {
   }
 
   String _getConversationName(Map<String, dynamic> conversation) {
-    // For now, we'll use a placeholder name since we don't have user details
-    // In a real implementation, you'd need to fetch user details by ID
+    // Use the actual user name from the conversation data
+    final userName = conversation['user_name'] as String?;
+    if (userName != null && userName.isNotEmpty) {
+      return userName;
+    }
+    
+    // Fallback to placeholder if no name available
     final otherPersonId = conversation['other_person_id']?.toString() ?? '';
-    return 'User $otherPersonId'; // Placeholder until we get user details
+    return 'User $otherPersonId';
   }
 
   String _getLastMessage(Map<String, dynamic> conversation) {
@@ -232,6 +249,54 @@ class _MessagesViewState extends State<MessagesView> {
 
   bool _hasUnreadMessages(Map<String, dynamic> conversation) {
     return conversation['has_unread'] == true;
+  }
+
+  Widget _buildConversationAvatar(Map<String, dynamic> conversation) {
+    final profileImageUrl = conversation['user_profile_image'] as String?;
+    final userName = conversation['user_name'] as String?;
+    
+    if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+      // Show actual profile image
+      return ClipOval(
+        child: Image.network(
+          profileImageUrl,
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback to initials if image fails to load
+            return _buildInitialsAvatar(userName);
+          },
+        ),
+      );
+    } else {
+      // Fallback to initials if no profile image
+      return _buildInitialsAvatar(userName);
+    }
+  }
+
+  Widget _buildInitialsAvatar(String? userName) {
+    String initial = 'U';
+    if (userName != null && userName.isNotEmpty) {
+      initial = userName[0].toUpperCase();
+    }
+    
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF426DC2),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 
   void _openChat(Map<String, dynamic> conversation) {
@@ -243,12 +308,16 @@ class _MessagesViewState extends State<MessagesView> {
     // Mark conversation as read when opened
     _markConversationAsRead(conversation);
     
-    // Create a minimal agent data structure for the chat screen
+    // Create agent data structure for the chat screen with user information
+    final userName = conversation['user_name'] as String?;
+    final userProfileImage = conversation['user_profile_image'] as String?;
+    
     final agentData = {
       'id': otherPersonId,
       'user': {
         'id': otherPersonId,
-        'full_name': _getConversationName(conversation),
+        'full_name': userName ?? _getConversationName(conversation),
+        'profile_image_url': userProfileImage,
       },
     };
     
@@ -420,19 +489,14 @@ class _MessagesViewState extends State<MessagesView> {
                                   child: Row(
                                     children: [
                                       // Profile Picture
-                                      CircleAvatar(
-                                        radius: 24,
-                                        backgroundColor: const Color(0xFF426DC2),
-                                        child: Text(
-                                          _getConversationName(conversation)
-                                              .substring(0, 1)
-                                              .toUpperCase(),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: const Color(0xFF426DC2),
                                         ),
+                                        child: _buildConversationAvatar(conversation),
                                       ),
                                       
                                       const SizedBox(width: 12),
