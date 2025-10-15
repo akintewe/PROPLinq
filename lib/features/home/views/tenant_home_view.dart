@@ -1383,16 +1383,16 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       right: 16,
                       child: GestureDetector(
                         onTap: () => _toggleFavorite(property),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            shape: BoxShape.circle,
-                          ),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          shape: BoxShape.circle,
+                        ),
                           child: Icon(
                             property.isFavorite ? Icons.favorite : Icons.favorite_border,
-                            size: 18,
+                          size: 18,
                             color: property.isFavorite ? Colors.red : Colors.black,
                           ),
                         ),
@@ -1611,16 +1611,16 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         right: 16,
                         child: GestureDetector(
                           onTap: () => _toggleFavorite(property),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              shape: BoxShape.circle,
-                            ),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
                             child: Icon(
                               property.isFavorite ? Icons.favorite : Icons.favorite_border,
-                              size: 18,
+                            size: 18,
                               color: property.isFavorite ? Colors.red : const Color(0xFF868686),
                             ),
                           ),
@@ -1719,9 +1719,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF426DC2),
+                                  color: Color(0xFF426DC2),
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ],

@@ -55,6 +55,9 @@ dependencies:
   
   # File picker for document uploads
   file_picker: ^8.0.0+1
+  
+  # Image picker for camera and gallery
+  image_picker: ^1.0.7
 
   # HTTP client for API calls
   http: ^1.1.0

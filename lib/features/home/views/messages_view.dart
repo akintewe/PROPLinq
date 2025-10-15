@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
+import '../../auth/services/auth_service.dart';
+import 'in_app_chat_view.dart';
 
 class MessagesView extends StatefulWidget {
   final bool isAgent;
@@ -15,6 +17,7 @@ class MessagesView extends StatefulWidget {
 
 class _MessagesViewState extends State<MessagesView> {
   final ChatService _chatService = ChatService();
+  final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _conversations = [];
   List<Map<String, dynamic>> _filteredConversations = [];
@@ -34,53 +37,144 @@ class _MessagesViewState extends State<MessagesView> {
   }
 
   Future<void> _loadConversations() async {
-    // No delay - load immediately
-    setState(() {
-      _conversations = [
-        {
-          'id': 1,
-          'sender': {'full_name': 'Erlan Sadewa'},
-          'receiver': {'full_name': 'You'},
-          'message': 'Aight, noted',
-          'sent_at': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
-          'unread_count': 1,
-        },
-        {
-          'id': 2,
-          'sender': {'full_name': 'Sarah Johnson'},
-          'receiver': {'full_name': 'You'},
-          'message': 'Thanks for your interest in the property',
-          'sent_at': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-          'unread_count': 0,
-        },
-        {
-          'id': 3,
-          'sender': {'full_name': 'Michael Chen'},
-          'receiver': {'full_name': 'You'},
-          'message': 'The apartment is still available',
-          'sent_at': DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
-          'unread_count': 2,
-        },
-        {
-          'id': 4,
-          'sender': {'full_name': 'Emma Wilson'},
-          'receiver': {'full_name': 'You'},
-          'message': 'Would you like to schedule a viewing?',
-          'sent_at': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
-          'unread_count': 0,
-        },
-        {
-          'id': 5,
-          'sender': {'full_name': 'David Brown'},
-          'receiver': {'full_name': 'You'},
-          'message': 'The price is negotiable',
-          'sent_at': DateTime.now().subtract(const Duration(days: 5)).toIso8601String(),
-          'unread_count': 1,
-        },
-      ];
-      _filteredConversations = _conversations;
-      _isLoading = false;
-    });
+    try {
+      print('📥 Loading conversations from API...');
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final chatData = await _chatService.getUserChats();
+      print('📥 Received ${chatData.length} conversations from API');
+      print('📥 Chat data: $chatData');
+      
+      // Get current user to determine who is sender vs receiver
+      final currentUser = await _authService.getCurrentUser();
+      final currentUserId = currentUser?.id.toString();
+      print('📥 Current user ID: $currentUserId');
+      
+      // Group conversations by receiver_id (for home seekers) or sender_id (for agents)
+      Map<String, Map<String, dynamic>> conversationMap = {};
+      
+      for (final chat in chatData) {
+        final senderId = chat['sender_id']?.toString();
+        final receiverId = chat['receiver_id']?.toString();
+        final propertyId = chat['property_id']?.toString();
+        final message = chat['message'] ?? '';
+        final sentAt = chat['sent_at'] ?? chat['updated_at'] ?? chat['created_at'] ?? '';
+        final receivedAt = chat['received_at'] as String?;
+        
+        print('📥 Processing chat - Sender: $senderId, Receiver: $receiverId, Property: $propertyId');
+        print('📥 Chat - Message: $message, Received at: $receivedAt');
+        
+        // Determine the other person in the conversation
+        String otherPersonId;
+        String conversationKey;
+        
+        if (widget.isAgent) {
+          // For agents, group by sender_id (the home seeker who contacted them)
+          otherPersonId = senderId ?? '';
+          conversationKey = senderId ?? '';
+        } else {
+          // For home seekers, group by receiver_id (the agent they contacted)
+          otherPersonId = receiverId ?? '';
+          conversationKey = receiverId ?? '';
+        }
+        
+        if (conversationKey.isEmpty) continue;
+        
+        // Determine if this message is unread
+        // Unread = received_at is null AND message is NOT from current user
+        final isUnread = receivedAt == null && senderId != currentUserId;
+        print('📥 Chat - Is unread: $isUnread (receivedAt: $receivedAt, senderId: $senderId, currentUser: $currentUserId)');
+        
+        // Create or update conversation entry
+        if (!conversationMap.containsKey(conversationKey)) {
+          conversationMap[conversationKey] = {
+            'id': conversationKey,
+            'other_person_id': otherPersonId,
+            'property_id': propertyId,
+            'message': message,
+            'sent_at': sentAt,
+            'received_at': receivedAt,
+            'sender_id': senderId,
+            'unread_count': isUnread ? 1 : 0, // WhatsApp style: 1 if any unread, 0 if all read
+            'last_message_time': DateTime.tryParse(sentAt) ?? DateTime.now(),
+            'has_unread': isUnread,
+          };
+        } else {
+          // Update with latest message if this one is newer
+          final existingTime = conversationMap[conversationKey]!['last_message_time'] as DateTime;
+          final currentTime = DateTime.tryParse(sentAt) ?? DateTime.now();
+          
+          if (currentTime.isAfter(existingTime)) {
+            // This is the latest message - update conversation with this message's data
+            conversationMap[conversationKey]!.updateAll((key, value) {
+              switch (key) {
+                case 'message':
+                  return message;
+                case 'sent_at':
+                  return sentAt;
+                case 'received_at':
+                  return receivedAt;
+                case 'sender_id':
+                  return senderId;
+                case 'last_message_time':
+                  return currentTime;
+                case 'unread_count':
+                  // WhatsApp style: Show 1 if latest message is unread, 0 if read
+                  return isUnread ? 1 : 0;
+                case 'has_unread':
+                  return isUnread;
+                default:
+                  return value;
+              }
+            });
+          } else {
+            // This is an older message - check if it's unread and update has_unread flag
+            if (isUnread) {
+              conversationMap[conversationKey]!['has_unread'] = true;
+              // Keep unread_count as 1 if there are any unread messages (WhatsApp style)
+              conversationMap[conversationKey]!['unread_count'] = 1;
+            }
+          }
+        }
+      }
+      
+      // Convert map to list and sort by last message time (newest conversations first)
+      final conversations = conversationMap.values.toList();
+      conversations.sort((a, b) {
+        final aTime = a['last_message_time'] as DateTime;
+        final bTime = b['last_message_time'] as DateTime;
+        return bTime.compareTo(aTime); // Most recent conversations at the top
+      });
+      
+      print('📥 Processed ${conversations.length} unique conversations');
+      print('📥 Conversations sorted by sent_at (newest first)');
+      
+      // Debug: Print conversation timestamps and unread status to verify sorting
+      for (int i = 0; i < conversations.length; i++) {
+        final conv = conversations[i];
+        final time = conv['last_message_time'] as DateTime;
+        final message = conv['message']?.toString() ?? '';
+        final unreadCount = conv['unread_count'] as int;
+        final hasUnread = conv['has_unread'] as bool;
+        print('📥 Conversation $i: $time - ${message.length > 20 ? "${message.substring(0, 20)}..." : message} - Unread: $unreadCount (has_unread: $hasUnread)');
+      }
+      
+      setState(() {
+        _conversations = conversations;
+        _filteredConversations = conversations;
+        _isLoading = false;
+      });
+      
+    } catch (e) {
+      print('❌ Error loading conversations: $e');
+      setState(() {
+        _conversations = [];
+        _filteredConversations = [];
+        _isLoading = false;
+      });
+    }
   }
 
   void _filterConversations() {
@@ -90,13 +184,13 @@ class _MessagesViewState extends State<MessagesView> {
         _filteredConversations = _conversations;
       } else {
         _filteredConversations = _conversations.where((conversation) {
-          final senderName = conversation['sender']?['full_name']?.toString().toLowerCase() ?? '';
-          final receiverName = conversation['receiver']?['full_name']?.toString().toLowerCase() ?? '';
+          final conversationName = _getConversationName(conversation).toLowerCase();
           final message = conversation['message']?.toString().toLowerCase() ?? '';
+          final propertyId = conversation['property_id']?.toString().toLowerCase() ?? '';
           
-          return senderName.contains(query) || 
-                 receiverName.contains(query) || 
-                 message.contains(query);
+          return conversationName.contains(query) || 
+                 message.contains(query) ||
+                 propertyId.contains(query);
         }).toList();
       }
     });
@@ -126,15 +220,74 @@ class _MessagesViewState extends State<MessagesView> {
   }
 
   String _getConversationName(Map<String, dynamic> conversation) {
-    return conversation['sender']?['full_name'] ?? 'Unknown';
+    // For now, we'll use a placeholder name since we don't have user details
+    // In a real implementation, you'd need to fetch user details by ID
+    final otherPersonId = conversation['other_person_id']?.toString() ?? '';
+    return 'User $otherPersonId'; // Placeholder until we get user details
   }
 
   String _getLastMessage(Map<String, dynamic> conversation) {
     return conversation['message'] ?? '';
   }
 
-  int _getUnreadCount(Map<String, dynamic> conversation) {
-    return conversation['unread_count'] ?? 0;
+  bool _hasUnreadMessages(Map<String, dynamic> conversation) {
+    return conversation['has_unread'] == true;
+  }
+
+  void _openChat(Map<String, dynamic> conversation) {
+    final otherPersonId = conversation['other_person_id']?.toString() ?? '';
+    final propertyId = conversation['property_id']?.toString() ?? '';
+    
+    print('🚀 Opening chat with user: $otherPersonId, property: $propertyId');
+    
+    // Mark conversation as read when opened
+    _markConversationAsRead(conversation);
+    
+    // Create a minimal agent data structure for the chat screen
+    final agentData = {
+      'id': otherPersonId,
+      'user': {
+        'id': otherPersonId,
+        'full_name': _getConversationName(conversation),
+      },
+    };
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => InAppChatView(
+          agentData: agentData,
+          propertyTitle: 'Property $propertyId', // Placeholder title
+          propertyId: propertyId,
+        ),
+      ),
+    );
+  }
+
+  void _markConversationAsRead(Map<String, dynamic> conversation) {
+    // Mark this conversation as read by updating the local state
+    setState(() {
+      final conversationKey = conversation['id']?.toString();
+      if (conversationKey != null) {
+        // Find and update the conversation in both lists
+        for (int i = 0; i < _conversations.length; i++) {
+          if (_conversations[i]['id'] == conversationKey) {
+            _conversations[i]['unread_count'] = 0;
+            _conversations[i]['has_unread'] = false;
+            break;
+          }
+        }
+        
+        for (int i = 0; i < _filteredConversations.length; i++) {
+          if (_filteredConversations[i]['id'] == conversationKey) {
+            _filteredConversations[i]['unread_count'] = 0;
+            _filteredConversations[i]['has_unread'] = false;
+            break;
+          }
+        }
+      }
+    });
+    
+    print('✅ Marked conversation ${conversation['id']} as read');
   }
 
   @override
@@ -246,7 +399,7 @@ class _MessagesViewState extends State<MessagesView> {
                           itemCount: _filteredConversations.length,
                           itemBuilder: (context, index) {
                             final conversation = _filteredConversations[index];
-                            final unreadCount = _getUnreadCount(conversation);
+                            final hasUnread = _hasUnreadMessages(conversation);
                             
                             return Container(
                               decoration: BoxDecoration(
@@ -258,10 +411,7 @@ class _MessagesViewState extends State<MessagesView> {
                                 ),
                               ),
                               child: InkWell(
-                                onTap: () {
-                                  // Navigate to chat conversation
-                                  // This would need to be implemented
-                                },
+                                onTap: () => _openChat(conversation),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -299,20 +449,38 @@ class _MessagesViewState extends State<MessagesView> {
                                                 Expanded(
                                                   child: Text(
                                                     _getConversationName(conversation),
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 16,
-                                                      fontWeight: FontWeight.w600,
+                                                      fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w600,
                                                       color: Colors.black,
                                                     ),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
-                                                Text(
-                                                  _formatDate(conversation['sent_at']),
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: Color(0xFF868686),
-                                                  ),
+                                                // Date with blue dot for unread messages
+                                                Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      _formatDate(conversation['sent_at']),
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: hasUnread ? const Color(0xFF426DC2) : const Color(0xFF868686),
+                                                        fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                                                      ),
+                                                    ),
+                                                    if (hasUnread) ...[
+                                                      const SizedBox(width: 6),
+                                                      Container(
+                                                        width: 8,
+                                                        height: 8,
+                                                        decoration: const BoxDecoration(
+                                                          color: Color(0xFF426DC2),
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
                                                 ),
                                               ],
                                             ),
@@ -326,32 +494,24 @@ class _MessagesViewState extends State<MessagesView> {
                                                 Expanded(
                                                   child: Text(
                                                     _getLastMessage(conversation),
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 14,
-                                                      color: Color(0xFF868686),
+                                                      color: hasUnread ? const Color(0xFF426DC2) : const Color(0xFF868686),
+                                                      fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
                                                     ),
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
-                                                if (unreadCount > 0) ...[
+                                                // WhatsApp style: Only show blue dot for unread, no count number
+                                                if (hasUnread) ...[
                                                   const SizedBox(width: 8),
                                                   Container(
-                                                    width: 20,
-                                                    height: 20,
+                                                    width: 8,
+                                                    height: 8,
                                                     decoration: const BoxDecoration(
                                                       color: Color(0xFF426DC2),
                                                       shape: BoxShape.circle,
-                                                    ),
-                                                    child: Center(
-                                                      child: Text(
-                                                        unreadCount.toString(),
-                                                        style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 12,
-                                                          fontWeight: FontWeight.w600,
-                                                        ),
-                                                      ),
                                                     ),
                                                   ),
                                                 ],
