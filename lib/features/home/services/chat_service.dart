@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:proplinq/core/constants/api_constants.dart';
 import 'package:proplinq/core/services/api_service.dart';
@@ -258,6 +257,69 @@ class ChatService {
     } catch (e) {
       print('❌ Error getting unread message count: $e');
       return 0;
+    }
+  }
+
+  // Get property details by ID
+  Future<Map<String, dynamic>?> getPropertyDetails(String propertyId) async {
+    try {
+      print('🏠 Fetching property details for ID: $propertyId');
+      print('🏠 API URL: ${ApiConstants.apiBaseUrl}/properties/$propertyId');
+      
+      final dio = Dio();
+      final token = await _storageService.getToken();
+      print('🏠 Using token: ${token != null ? "Yes" : "No"}');
+      
+      final response = await dio.get(
+        '${ApiConstants.apiBaseUrl}/properties/$propertyId',
+        options: Options(
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+
+      print('🏠 Property details response status: ${response.statusCode}');
+      print('🏠 Property details response headers: ${response.headers}');
+      print('🏠 Property details data: ${response.data}');
+      print('🏠 Property details data type: ${response.data.runtimeType}');
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        print('🏠 Property details received successfully');
+        
+        // Handle different response formats
+        if (data is Map<String, dynamic>) {
+          // Direct object response
+          if (data.containsKey('data')) {
+            final propertyData = data['data'] as Map<String, dynamic>?;
+            print('🏠 Found property data in response.data: $propertyData');
+            return propertyData;
+          } else {
+            print('🏠 Using direct response data: $data');
+            return data;
+          }
+        } else if (data is List && data.isNotEmpty) {
+          // Array response - take first item
+          print('🏠 Array response, taking first item: ${data.first}');
+          return data.first as Map<String, dynamic>?;
+        } else {
+          print('🏠 Unexpected response format: $data');
+          return null;
+        }
+      }
+      
+      print('🏠 Non-200 response: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      print('❌ Error fetching property details: $e');
+      print('❌ Error type: ${e.runtimeType}');
+      if (e.toString().contains('404')) {
+        print('🏠 Property not found (404) - this is normal for non-existent properties');
+      }
+      return null;
     }
   }
 }
