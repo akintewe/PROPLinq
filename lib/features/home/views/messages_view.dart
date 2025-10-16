@@ -56,8 +56,6 @@ class _MessagesViewState extends State<MessagesView> {
       Map<String, Map<String, dynamic>> conversationMap = {};
       
       for (final chat in chatData) {
-        final senderId = chat['sender_id']?.toString();
-        final receiverId = chat['receiver_id']?.toString();
         final propertyId = chat['property_id']?.toString();
         final message = chat['message'] ?? '';
         final sentAt = chat['sent_at'] ?? chat['updated_at'] ?? chat['created_at'] ?? '';
@@ -65,33 +63,23 @@ class _MessagesViewState extends State<MessagesView> {
         
         // Extract user information from the new API structure
         final user = chat['user'] as Map<String, dynamic>?;
+        final otherPersonId = user?['id']?.toString() ?? '';
         final userName = user?['name'] as String?;
         final userProfileImage = user?['profile_image_url'] as String?;
         
-        print('📥 Processing chat - Sender: $senderId, Receiver: $receiverId, Property: $propertyId');
+        print('📥 Processing chat - Other Person ID: $otherPersonId, Property: $propertyId');
         print('📥 Chat - Message: $message, Received at: $receivedAt');
         print('📥 Chat - User: $userName, Profile Image: $userProfileImage');
         
-        // Determine the other person in the conversation
-        String otherPersonId;
-        String conversationKey;
-        
-        if (widget.isAgent) {
-          // For agents, group by sender_id (the home seeker who contacted them)
-          otherPersonId = senderId ?? '';
-          conversationKey = senderId ?? '';
-        } else {
-          // For home seekers, group by receiver_id (the agent they contacted)
-          otherPersonId = receiverId ?? '';
-          conversationKey = receiverId ?? '';
-        }
+        // Use the other person's ID as the conversation key
+        String conversationKey = otherPersonId;
         
         if (conversationKey.isEmpty) continue;
         
         // Determine if this message is unread
-        // Unread = received_at is null AND message is NOT from current user
-        final isUnread = receivedAt == null && senderId != currentUserId;
-        print('📥 Chat - Is unread: $isUnread (receivedAt: $receivedAt, senderId: $senderId, currentUser: $currentUserId)');
+        // Unread = received_at is null (meaning the other person hasn't read it yet)
+        final isUnread = receivedAt == null;
+        print('📥 Chat - Is unread: $isUnread (receivedAt: $receivedAt)');
         
         // Create or update conversation entry
         if (!conversationMap.containsKey(conversationKey)) {
@@ -102,7 +90,6 @@ class _MessagesViewState extends State<MessagesView> {
             'message': message,
             'sent_at': sentAt,
             'received_at': receivedAt,
-            'sender_id': senderId,
             'unread_count': isUnread ? 1 : 0, // WhatsApp style: 1 if any unread, 0 if all read
             'last_message_time': DateTime.tryParse(sentAt) ?? DateTime.now(),
             'has_unread': isUnread,
@@ -124,8 +111,6 @@ class _MessagesViewState extends State<MessagesView> {
                   return sentAt;
                 case 'received_at':
                   return receivedAt;
-                case 'sender_id':
-                  return senderId;
                 case 'last_message_time':
                   return currentTime;
                 case 'unread_count':

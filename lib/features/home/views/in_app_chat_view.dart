@@ -89,7 +89,8 @@ class _InAppChatViewState extends State<InAppChatView> {
           final message = chat['message'] ?? '';
           // Use updated_at for sorting as it reflects the latest activity
           final sentAt = chat['updated_at'] ?? chat['sent_at'] ?? chat['created_at'] ?? '';
-          final filePath = chat['file'] as String?;
+          // Handle both 'file' and 'file_url' fields from API response
+          final filePath = chat['file_url'] as String? ?? chat['file'] as String?;
           final receivedAt = chat['received_at'] as String?;
           
           print('🔄 Chat - Sender: $senderId, Current User: $currentUserId');
@@ -270,6 +271,8 @@ class _InAppChatViewState extends State<InAppChatView> {
     // Send message via ChatService (file path sent to backend but not displayed)
     final user = widget.agentData['user'] as Map<String, dynamic>?;
     final agentId = user?['id']?.toString() ?? widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
+    print('📤 Sending message with file: $_selectedFilePath');
+    
     final success = await _chatService.sendInAppMessage(
       message: messageText.isEmpty ? '📎 File attachment' : messageText,
       recipientId: agentId ?? '',
@@ -1387,6 +1390,11 @@ class _InAppChatViewState extends State<InAppChatView> {
     );
   }
 
+  bool _isUrl(String? path) {
+    if (path == null || path.isEmpty) return false;
+    return path.startsWith('http://') || path.startsWith('https://');
+  }
+
   Widget _buildMessageBubble(ChatMessage message) {
     // Message alignment logic:
     // - isFromUser = true: Message sent by authenticated user → Right side (blue)
@@ -1425,27 +1433,49 @@ class _InAppChatViewState extends State<InAppChatView> {
                   if (message.filePath != null && message.fileType == 'image') ...[
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(message.filePath!),
-                        width: 200,
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(12),
+                      child: _isUrl(message.filePath)
+                          ? Image.network(
+                              message.filePath!,
+                              width: 200,
+                              height: 200,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 200,
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.image,
+                                    color: Colors.grey,
+                                    size: 50,
+                                  ),
+                                );
+                              },
+                            )
+                          : Image.file(
+                              File(message.filePath!),
+                              width: 200,
+                              height: 200,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 200,
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.image,
+                                    color: Colors.grey,
+                                    size: 50,
+                                  ),
+                                );
+                              },
                             ),
-                            child: const Icon(
-                              Icons.image,
-                              color: Colors.grey,
-                              size: 50,
-                            ),
-                          );
-                        },
-                      ),
                     ),
                     if (message.text.isNotEmpty) const SizedBox(height: 8),
                   ],
