@@ -37,6 +37,7 @@ class ChatService {
       // Add file if provided
       if (file != null && file.isNotEmpty) {
         body['file'] = file;
+        print('📤 File path being sent: $file');
       }
 
       print('📤 Chat request body: $body');
