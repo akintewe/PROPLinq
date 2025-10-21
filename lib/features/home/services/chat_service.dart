@@ -26,33 +26,78 @@ class ChatService {
       print('📤 Sender ID being sent: $senderId');
       print('📤 Are they the same? ${currentUser?.id.toString() == senderId}');
       
-      final body = {
-        'sender_id': int.parse(senderId),
-        'receiver_id': int.parse(receiverId),
-        'message': message,
-        'property_id': int.parse(propertyId),
-        'sent_at': DateTime.now().toIso8601String(),
-      };
+      final token = await _storageService.getToken();
       
-      // Add file if provided
+      // If file is provided, use form-data
       if (file != null && file.isNotEmpty) {
-        body['file'] = file;
         print('📤 File path being sent: $file');
+        print('📤 Sending as form-data with file path as string');
+        
+        final dio = Dio();
+        final formData = FormData.fromMap({
+          'sender_id': senderId, // Send as string, not int
+          'receiver_id': receiverId, // Send as string, not int
+          'message': message,
+          'property_id': propertyId, // Send as string, not int
+          'sent_at': DateTime.now().toIso8601String(),
+          'file': file, // Send file path as string
+        });
+
+        print('📤 Form data: ${formData.fields}');
+        print('📤 File field: ${formData.files}');
+
+        final response = await dio.post(
+          '${ApiConstants.apiBaseUrl}${ApiConstants.chatWebhook}',
+          data: formData,
+          options: Options(
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          ),
+        );
+
+        print('📤 Chat webhook response: ${response.statusCode}');
+        print('📤 Chat webhook data: ${response.data}');
+        return response.statusCode == 200 || response.statusCode == 201;
+      } else {
+        // No file, send as regular JSON
+        print('📤 Sending as JSON without file');
+        
+        final body = {
+          'sender_id': int.parse(senderId),
+          'receiver_id': int.parse(receiverId),
+          'message': message,
+          'property_id': int.parse(propertyId),
+          'sent_at': DateTime.now().toIso8601String(),
+        };
+
+        print('📤 Chat request body: $body');
+
+        final response = await _apiService.post(
+          ApiConstants.chatWebhook,
+          body: body,
+          requiresAuth: true, // This will add the Bearer token
+        );
+
+        print('📤 Chat webhook response: ${response.statusCode}');
+        print('📤 Chat webhook data: ${response.data}');
+        return response.statusCode == 200 || response.statusCode == 201;
       }
-
-      print('📤 Chat request body: $body');
-
-      final response = await _apiService.post(
-        ApiConstants.chatWebhook,
-        body: body,
-        requiresAuth: true, // This will add the Bearer token
-      );
-
-      print('📤 Chat webhook response: ${response.statusCode}');
-      print('📤 Chat webhook data: ${response.data}');
-      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       print('❌ Error sending chat message: $e');
+      
+      // Print more detailed error information
+      if (e is DioException) {
+        print('❌ DioException details:');
+        print('  - Type: ${e.type}');
+        print('  - Message: ${e.message}');
+        print('  - Response: ${e.response?.data}');
+        print('  - Status Code: ${e.response?.statusCode}');
+        print('  - Request Path: ${e.requestOptions.path}');
+        print('  - Request Data: ${e.requestOptions.data}');
+      }
+      
       return false;
     }
   }
