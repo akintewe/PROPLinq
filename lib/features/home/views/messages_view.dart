@@ -289,6 +289,7 @@ class _MessagesViewState extends State<MessagesView> {
     final propertyId = conversation['property_id']?.toString() ?? '';
     
     print('🚀 Opening chat with user: $otherPersonId, property: $propertyId');
+    print('🚀 Conversation data: $conversation');
     
     // Mark conversation as read when opened
     _markConversationAsRead(conversation);
@@ -297,12 +298,45 @@ class _MessagesViewState extends State<MessagesView> {
     final userName = conversation['user_name'] as String?;
     final userProfileImage = conversation['user_profile_image'] as String?;
     
+    // Try to extract phone number from conversation data
+    String? phoneNumber;
+    String? email;
+    
+    // Check if conversation has user data with phone number
+    if (conversation.containsKey('user_data')) {
+      final userData = conversation['user_data'] as Map<String, dynamic>?;
+      phoneNumber = userData?['phone_number'] as String?;
+      email = userData?['email'] as String?;
+    }
+    
+    // If no user_data, check if we have sender/receiver data
+    if (phoneNumber == null && conversation.containsKey('sender')) {
+      final sender = conversation['sender'] as Map<String, dynamic>?;
+      if (sender?['id']?.toString() == otherPersonId) {
+        phoneNumber = sender?['phone_number'] as String?;
+        email = sender?['email'] as String?;
+      }
+    }
+    
+    if (phoneNumber == null && conversation.containsKey('receiver')) {
+      final receiver = conversation['receiver'] as Map<String, dynamic>?;
+      if (receiver?['id']?.toString() == otherPersonId) {
+        phoneNumber = receiver?['phone_number'] as String?;
+        email = receiver?['email'] as String?;
+      }
+    }
+    
+    print('🚀 Extracted phone number: $phoneNumber');
+    print('🚀 Extracted email: $email');
+    
     final agentData = {
       'id': otherPersonId,
       'user': {
         'id': otherPersonId,
         'full_name': userName ?? _getConversationName(conversation),
         'profile_image_url': userProfileImage,
+        'phone_number': phoneNumber,
+        'email': email,
       },
     };
     

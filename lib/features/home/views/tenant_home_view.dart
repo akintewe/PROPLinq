@@ -41,6 +41,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   List<PropertyModel> _properties = [];
+  List<PropertyModel> _selectedProperties = [];
   bool _isLoadingProperties = true;
 
   @override
@@ -397,15 +398,43 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SearchBottomSheet(
+        properties: _properties,
         onLocationSelected: (location) {
+          print('🏠 onLocationSelected called with: $location');
           setState(() {
             _isShowingSearchResults = true;
             _selectedLocation = location;
             _selectedCategory = 'All';
           });
+          print('🏠 Location set to: $_selectedLocation');
+        },
+        onPropertiesSelected: (properties) {
+          print('🏠 onPropertiesSelected called with ${properties.length} properties');
+          setState(() {
+            _isShowingSearchResults = true;
+            // Don't clear location - it should be set by onLocationSelected
+            _selectedCategory = 'All';
+            // Store selected properties for display
+            _selectedProperties = properties;
+          });
+          print('🏠 Properties set, _selectedProperties.length: ${_selectedProperties.length}');
+          print('🏠 _isShowingSearchResults: $_isShowingSearchResults');
+          
+          // Force UI rebuild by calling _getFilteredProperties to verify state
+          final filteredProps = _getFilteredProperties();
+          print('🏠 After setState, _getFilteredProperties returns ${filteredProps.length} properties');
         },
       ),
     );
+  }
+
+  void _clearSearchResults() {
+    setState(() {
+      _isShowingSearchResults = false;
+      _selectedLocation = '';
+      _selectedCategory = 'All';
+      _selectedProperties = [];
+    });
   }
 
   void _goBackToHome() {
@@ -650,14 +679,25 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         
         // Search Results List
         Expanded(
-          child: ListView.separated(
+          child: () {
+            final filteredResults = _getFilteredSearchResults();
+            print('🏠 Tenant Search results - filteredResults.length: ${filteredResults.length}');
+            print('🏠 Tenant Search results - _selectedLocation: $_selectedLocation');
+            print('🏠 Tenant Search results - _selectedCategory: $_selectedCategory');
+            print('🏠 Tenant Search results - _isShowingSearchResults: $_isShowingSearchResults');
+            
+            return filteredResults.isEmpty
+                ? _buildNoPropertiesFound()
+                : ListView.separated(
+                    key: ValueKey('tenant_search_results_${filteredResults.length}_${_selectedCategory}'),
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            itemCount: _getFilteredSearchResults().length,
+                    itemCount: filteredResults.length,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
-              return _buildSearchPropertyCard(_getFilteredSearchResults()[index]);
+                      return _buildSearchPropertyCard(filteredResults[index]);
             },
-          ),
+                  );
+          }(),
         ),
       ],
     );
@@ -749,8 +789,55 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   List<Map<String, dynamic>> _getFilteredSearchResults() {
+    print('🔍 Tenant _getFilteredSearchResults called:');
+    print('🔍 Tenant _selectedProperties.length: ${_selectedProperties.length}');
+    print('🔍 Tenant _selectedCategory: $_selectedCategory');
+    print('🔍 Tenant _isShowingSearchResults: $_isShowingSearchResults');
+    
+    // Use the same filtering logic as _getFilteredProperties
+    List<PropertyModel> propertiesToFilter;
+    
+    // If showing search results, use selected properties as base (even if empty)
+    if (_isShowingSearchResults) {
+      print('🔍 Tenant Search results using selected properties as base: ${_selectedProperties.length} properties');
+      propertiesToFilter = _selectedProperties; // Use selected properties even if empty
+    } else {
+      // Otherwise, use all properties
+      print('🔍 Tenant Search results using all properties as base: ${_properties.length} properties');
+      propertiesToFilter = _properties;
+    }
+    
+    // Apply category filtering to the base properties
+    List<PropertyModel> filteredProperties;
+    if (_selectedCategory == 'All') {
+      print('🔍 Tenant Search results no category filter, returning ${propertiesToFilter.length} properties');
+      filteredProperties = propertiesToFilter;
+    } else {
+      filteredProperties = propertiesToFilter.where((property) {
+        final propertyType = property.type.toLowerCase();
+        final propertyCategory = property.category.toLowerCase();
+        final categoryFilter = _selectedCategory.toLowerCase();
+        
+        print('🏠 Tenant Search results filtering property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
+        
+        // Updated mapping logic based on actual API data
+        if (categoryFilter == 'hotels') {
+          // Match by type or category
+          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
+        } else if (categoryFilter == 'real estate') {
+          // Match apartments and other real estate
+          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
+        } else if (categoryFilter == 'shortlets') {
+          // Match shortlets
+          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
+        }
+        return true;
+      }).toList();
+      print('🔍 Tenant Search results final filtered properties: ${filteredProperties.length} properties');
+    }
+    
     // Convert PropertyModel to Map format for compatibility with existing UI
-    final allProperties = _properties.map((property) => {
+    final mapProperties = filteredProperties.map((property) => {
       'badges': ['Verified Agent'], // Default badge
       'title': property.title,
       'location': property.location,
@@ -761,12 +848,56 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       'image': property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'
     }).toList();
 
-    if (_selectedCategory == 'All') {
-      return allProperties;
+    print('🔍 Tenant Search results returning ${mapProperties.length} map properties');
+    return mapProperties;
+  }
+
+  List<PropertyModel> _getFilteredProperties() {
+    print('🔍 _getFilteredProperties called:');
+    print('🔍 _isShowingSearchResults: $_isShowingSearchResults');
+    print('🔍 _selectedProperties.length: ${_selectedProperties.length}');
+    print('🔍 _selectedCategory: $_selectedCategory');
+    print('🔍 _properties.length: ${_properties.length}');
+    
+    List<PropertyModel> propertiesToFilter;
+    
+    // If showing search results, use selected properties as base
+    if (_isShowingSearchResults && _selectedProperties.isNotEmpty) {
+      print('🔍 Using search results as base: ${_selectedProperties.length} properties');
+      propertiesToFilter = _selectedProperties;
     } else {
-      return allProperties.where((property) => 
-        property['category'] == _selectedCategory
-      ).toList();
+      // Otherwise, use all properties
+      print('🔍 Using all properties as base: ${_properties.length} properties');
+      propertiesToFilter = _properties;
+    }
+    
+    // Apply category filtering to the base properties
+    if (_selectedCategory == 'All') {
+      print('🔍 No category filter, returning ${propertiesToFilter.length} properties');
+      return propertiesToFilter;
+    } else {
+      final filtered = propertiesToFilter.where((property) {
+        final propertyType = property.type.toLowerCase();
+        final propertyCategory = property.category.toLowerCase();
+        final categoryFilter = _selectedCategory.toLowerCase();
+        
+        print('🏠 Filtering property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
+        
+        // Updated mapping logic based on actual API data
+        if (categoryFilter == 'hotels') {
+          // Match by type or category
+          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
+        } else if (categoryFilter == 'real estate') {
+          // Match apartments and other real estate
+          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
+        } else if (categoryFilter == 'shortlets') {
+          // Match shortlets
+          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
+        }
+        return true;
+      }).toList();
+      print('🔍 Final filtered properties: ${filtered.length} properties');
+      return filtered;
     }
   }
 
@@ -839,8 +970,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                          ),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   // Welcome text
@@ -868,7 +999,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       Text(
                         _isLoadingProfile 
                             ? 'Loading...'
-                            : _getUserRoleDisplay(),
+                            : _isShowingSearchResults && _selectedLocation.isNotEmpty
+                                ? _selectedLocation
+                                : _getUserRoleDisplay(),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
@@ -1118,13 +1251,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildCategoryButton('All', true),
+                _buildCategoryButton('All', _selectedCategory == 'All'),
                 const SizedBox(width: 12),
-                _buildCategoryButton('Real Estate', false),
+                _buildCategoryButton('Real Estate', _selectedCategory == 'Real Estate'),
                 const SizedBox(width: 12),
-                _buildCategoryButton('Hotels', false),
+                _buildCategoryButton('Hotels', _selectedCategory == 'Hotels'),
                 const SizedBox(width: 12),
-                _buildCategoryButton('Shortlets', false),
+                _buildCategoryButton('Shortlets', _selectedCategory == 'Shortlets'),
               ],
             ),
           ),
@@ -1132,18 +1265,26 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           const SizedBox(height: 24),
           
           // Property list
-          ListView.separated(
+            _isLoadingProperties 
+              ? ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _isLoadingProperties ? 3 : _properties.length,
+                  itemCount: 3,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              if (_isLoadingProperties) {
-                return _buildShimmerPropertyItem();
-              }
-              return _buildPropertyListItem(index);
-            },
-          ),
+                  itemBuilder: (context, index) => _buildShimmerPropertyItem(),
+                )
+            : () {
+                final filteredProperties = _getFilteredProperties();
+                return filteredProperties.isEmpty
+                    ? _buildNoPropertiesFound()
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredProperties.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) => _buildPropertyListItem(index, filteredProperties),
+                      );
+              }(),
         ],
       ),
     );
@@ -1269,7 +1410,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       );
     }
 
-    // Get property at index, or use first property if index is out of bounds
+    // Get property at index from all properties (Featured Houses should always show all)
     final propertyIndex = index < _properties.length ? index : 0;
     final property = _properties[propertyIndex];
     
@@ -1296,7 +1437,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'description': property.description,
             'features': property.features, // Pass actual features from API
             'imageUrl': property.imageUrl, // Pass actual image URL from API
-            'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+            'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
+            'property360_images': property.property360Images, // Pass 360 images from API
+            'video_url': property.videoUrl, // Pass video URL from API
             'user': property.user?.toJson(), // Pass actual user data from API
             'agent': {
               'name': property.user?.fullName ?? 'Agent',
@@ -1453,7 +1596,14 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   Widget _buildCategoryButton(String title, bool isSelected) {
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedCategory = title;
+        });
+        print('🏠 Category selected: $title');
+      },
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: isSelected
@@ -1470,7 +1620,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             : null,
         color: isSelected ? null : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(24),
-       
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1528,10 +1677,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           ),
         ],
       ),
+      ),
     );
   }
 
-  Widget _buildPropertyListItem(int index) {
+  Widget _buildPropertyListItem(int index, List<PropertyModel> filteredProperties) {
     // Show loading if properties are still loading
     if (_isLoadingProperties) {
       return Container(
@@ -1566,9 +1716,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       );
     }
 
-    // Get property at index, or use first property if index is out of bounds
-    final propertyIndex = index < _properties.length ? index : 0;
-    final property = _properties[propertyIndex];
+    // Get property at index from filtered properties
+    final propertyIndex = index < filteredProperties.length ? index : 0;
+    final property = filteredProperties[propertyIndex];
     
     return GestureDetector(
       onTap: () async {
@@ -1591,7 +1741,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'description': property.description,
             'features': property.features, // Pass actual features from API
             'imageUrl': property.imageUrl, // Pass actual image URL from API
-            'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+            'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
+            'property360_images': property.property360Images, // Pass 360 images from API
+            'video_url': property.videoUrl, // Pass video URL from API
             'user': property.user?.toJson(), // Pass actual user data from API
             'agent': {
               'name': property.user?.fullName ?? 'Agent',
@@ -2322,6 +2474,68 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                   ? const Color(0xFF426DC2)  
                   : const Color(0xFFB0B5BB),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoPropertiesFound() {
+    // Debug logging
+    print('😔 Tenant Building no properties found message');
+    print('😔 Tenant _isShowingSearchResults: $_isShowingSearchResults');
+    print('😔 Tenant _selectedLocation: $_selectedLocation');
+    print('😔 Tenant _selectedCategory: $_selectedCategory');
+    
+    return Container(
+      width: double.infinity,
+      height: 200,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFEFF0F2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            '😔',
+            style: TextStyle(
+              fontSize: 48,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              _isShowingSearchResults && _selectedLocation.isNotEmpty
+                  ? (_selectedCategory != 'All' 
+                      ? 'No ${_selectedCategory.toLowerCase()} properties found in $_selectedLocation'
+                      : 'No properties found in $_selectedLocation')
+                  : (_selectedCategory != 'All'
+                      ? 'No ${_selectedCategory.toLowerCase()} properties found'
+                      : 'No properties found in this category'),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isShowingSearchResults && _selectedLocation.isNotEmpty
+                ? 'Try selecting a different category or location'
+                : 'Try selecting a different category',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

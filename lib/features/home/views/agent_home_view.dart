@@ -49,6 +49,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   List<PropertyModel> _properties = [];
+  List<PropertyModel> _selectedProperties = [];
   bool _isLoadingProperties = true;
 
   // Promotional messages for rotating banner
@@ -398,15 +399,43 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SearchBottomSheet(
+        properties: _properties,
         onLocationSelected: (location) {
+          print('🏠 Agent onLocationSelected called with: $location');
           setState(() {
             _isShowingSearchResults = true;
             _selectedLocation = location;
             _selectedCategory = 'All';
           });
+          print('🏠 Agent Location set to: $_selectedLocation');
+        },
+        onPropertiesSelected: (properties) {
+          print('🏠 Agent onPropertiesSelected called with ${properties.length} properties');
+          setState(() {
+            _isShowingSearchResults = true;
+            // Don't clear location - it should be set by onLocationSelected
+            _selectedCategory = 'All';
+            // Store selected properties for display
+            _selectedProperties = properties;
+          });
+          print('🏠 Agent Properties set, _selectedProperties.length: ${_selectedProperties.length}');
+          print('🏠 Agent _isShowingSearchResults: $_isShowingSearchResults');
+          
+          // Force UI rebuild by calling _getFilteredProperties to verify state
+          final filteredProps = _getFilteredProperties();
+          print('🏠 Agent After setState, _getFilteredProperties returns ${filteredProps.length} properties');
         },
       ),
     );
+  }
+
+  void _clearSearchResults() {
+    setState(() {
+      _isShowingSearchResults = false;
+      _selectedLocation = '';
+      _selectedCategory = 'All';
+      _selectedProperties = [];
+    });
   }
 
   void _goBackToHome() {
@@ -450,6 +479,55 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
            (filters['location'] != null && filters['location'].toString().isNotEmpty);
   }
   
+  List<PropertyModel> _getFilteredProperties() {
+    print('🔍 Agent _getFilteredProperties called:');
+    print('🔍 Agent _isShowingSearchResults: $_isShowingSearchResults');
+    print('🔍 Agent _selectedProperties.length: ${_selectedProperties.length}');
+    print('🔍 Agent _selectedCategory: $_selectedCategory');
+    print('🔍 Agent _properties.length: ${_properties.length}');
+    
+    List<PropertyModel> propertiesToFilter;
+    
+    // If showing search results, use selected properties as base
+    if (_isShowingSearchResults && _selectedProperties.isNotEmpty) {
+      print('🔍 Agent Using search results as base: ${_selectedProperties.length} properties');
+      propertiesToFilter = _selectedProperties;
+    } else {
+      // Otherwise, use all properties
+      print('🔍 Agent Using all properties as base: ${_properties.length} properties');
+      propertiesToFilter = _properties;
+    }
+    
+    // Apply category filtering to the base properties
+    if (_selectedCategory == 'All') {
+      print('🔍 Agent No category filter, returning ${propertiesToFilter.length} properties');
+      return propertiesToFilter;
+    } else {
+      final filtered = propertiesToFilter.where((property) {
+        final propertyType = property.type.toLowerCase();
+        final propertyCategory = property.category.toLowerCase();
+        final categoryFilter = _selectedCategory.toLowerCase();
+        
+        print('🏠 Agent Filtering property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
+        
+        // Updated mapping logic based on actual API data
+        if (categoryFilter == 'hotels') {
+          // Match by type or category
+          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
+        } else if (categoryFilter == 'real estate') {
+          // Match apartments and other real estate
+          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
+        } else if (categoryFilter == 'shortlets') {
+          // Match shortlets
+          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
+        }
+        return true;
+      }).toList();
+      print('🔍 Agent Final filtered properties: ${filtered.length} properties');
+      return filtered;
+    }
+  }
+
   List<PropertyModel> _applyFilters(Map<String, dynamic> filters) {
     List<PropertyModel> filtered = List.from(_properties);
     
@@ -743,14 +821,24 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         
         // Search Results List
         Expanded(
-          child: ListView.separated(
+          child: () {
+            final filteredResults = _getFilteredSearchResults();
+            print('🏠 Search results - filteredResults.length: ${filteredResults.length}');
+            print('🏠 Search results - _selectedLocation: $_selectedLocation');
+            print('🏠 Search results - _selectedCategory: $_selectedCategory');
+            print('🏠 Search results - _isShowingSearchResults: $_isShowingSearchResults');
+            
+            return filteredResults.isEmpty
+                ? _buildNoPropertiesFound()
+                : ListView.separated(
+                    key: ValueKey('search_results_${filteredResults.length}_${_selectedCategory}'),
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            itemCount: _getFilteredSearchResults().length,
+                    itemCount: filteredResults.length,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () {
-                  final property = _getFilteredSearchResults()[index];
+                  final property = filteredResults[index];
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
                       'id': property.id,
@@ -764,7 +852,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'period': property.category,
                       'features': property.features, // Pass features from API
                       'imageUrl': property.imageUrl, // Pass image URL from search data
-                      'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+                      'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
+                      'property360_images': property.property360Images, // Pass 360 images from API
+                      'video_url': property.videoUrl, // Pass video URL from API
                       'description': property.type == 'Hotel' 
                           ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property.location}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                           : 'Step into luxury with this fully furnished ${property.type.toLowerCase()} located in the heart of ${property.location}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
@@ -778,10 +868,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     })),
                   );
                 },
-                child: _buildSearchPropertyCard(_getFilteredSearchResults()[index]),
+                child: _buildSearchPropertyCard(filteredResults[index]),
               );
             },
-          ),
+          );
+          }(),
         ),
       ],
     );
@@ -873,12 +964,50 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   }
 
   List<PropertyModel> _getFilteredSearchResults() {
-    if (_selectedCategory == 'All') {
-      return _properties;
+    print('🔍 Agent _getFilteredSearchResults called:');
+    print('🔍 Agent _selectedProperties.length: ${_selectedProperties.length}');
+    print('🔍 Agent _selectedCategory: $_selectedCategory');
+    
+    // Use the same filtering logic as _getFilteredProperties
+    List<PropertyModel> propertiesToFilter;
+    
+    // If showing search results, use selected properties as base (even if empty)
+    if (_isShowingSearchResults) {
+      print('🔍 Agent Search results using selected properties as base: ${_selectedProperties.length} properties');
+      propertiesToFilter = _selectedProperties; // Use selected properties even if empty
     } else {
-      return _properties.where((property) => 
-        property.category == _selectedCategory
-      ).toList();
+      // Otherwise, use all properties
+      print('🔍 Agent Search results using all properties as base: ${_properties.length} properties');
+      propertiesToFilter = _properties;
+    }
+    
+    // Apply category filtering to the base properties
+    if (_selectedCategory == 'All') {
+      print('🔍 Agent Search results no category filter, returning ${propertiesToFilter.length} properties');
+      return propertiesToFilter;
+    } else {
+      final filtered = propertiesToFilter.where((property) {
+        final propertyType = property.type.toLowerCase();
+        final propertyCategory = property.category.toLowerCase();
+        final categoryFilter = _selectedCategory.toLowerCase();
+        
+        print('🏠 Agent Search results filtering property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
+        
+        // Updated mapping logic based on actual API data
+        if (categoryFilter == 'hotels') {
+          // Match by type or category
+          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
+        } else if (categoryFilter == 'real estate') {
+          // Match apartments and other real estate
+          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
+        } else if (categoryFilter == 'shortlets') {
+          // Match shortlets
+          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
+        }
+        return true;
+        }).toList();
+      print('🔍 Agent Search results final filtered properties: ${filtered.length} properties');
+      return filtered;
     }
   }
 
@@ -942,10 +1071,15 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                           color: Colors.white.withValues(alpha: 0.9),
                           shape: BoxShape.circle,
                         ),
-                          child: Icon(
-                            property.isFavorite ? Icons.favorite : Icons.favorite_border,
-                          size: 18,
-                            color: property.isFavorite ? Colors.red : const Color(0xFF868686),
+                          child: Builder(
+                            builder: (context) {
+                              print('❤️ Heart Icon Debug - Property: ${property.title}, isFavorite: ${property.isFavorite}');
+                              return Icon(
+                                property.isFavorite ? Icons.favorite : Icons.favorite_border,
+                              size: 18,
+                                color: property.isFavorite ? Colors.red : const Color(0xFF868686),
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -1129,8 +1263,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                          ),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   // Welcome text
@@ -1158,6 +1292,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       Text(
                         _isLoadingProfile 
                             ? 'Loading...'
+                            : _isShowingSearchResults && _selectedLocation.isNotEmpty
+                                ? _selectedLocation
                             : _currentUser?.agentType?.replaceAll('_', ' ') ?? 
                               (_currentUser?.userType == 'agent' ? 'Agent' : 'User'),
                         style: const TextStyle(
@@ -1359,7 +1495,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'description': property.description,
                       'features': property.features, // Pass actual features from API
                       'imageUrl': property.imageUrl, // Pass actual image URL from API
-                      'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+                      'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
+                      'property360_images': property.property360Images, // Pass 360 images from API
+                      'video_url': property.videoUrl, // Pass video URL from API
                       'user': property.user?.toJson(), // Pass actual user data from API
                       'agent': {
                         'name': property.user?.fullName ?? 'Agent',
@@ -1402,13 +1540,13 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildCategoryButton('All', true),
+                _buildCategoryButton('All', _selectedCategory == 'All'),
                 const SizedBox(width: 12),
-                _buildCategoryButton('Real Estate', false),
+                _buildCategoryButton('Real Estate', _selectedCategory == 'Real Estate'),
                 const SizedBox(width: 12),
-                _buildCategoryButton('Hotels', false),
+                _buildCategoryButton('Hotels', _selectedCategory == 'Hotels'),
                 const SizedBox(width: 12),
-                _buildCategoryButton('Shortlets', false),
+                _buildCategoryButton('Shortlets', _selectedCategory == 'Shortlets'),
               ],
             ),
           ),
@@ -1416,55 +1554,29 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           const SizedBox(height: 24),
           
           // Property list
-          ListView.separated(
+          _isLoadingProperties 
+            ? ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _isLoadingProperties ? 3 : _properties.length,
+                itemCount: 3,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              if (_isLoadingProperties) {
-                return _buildShimmerPropertyItem();
-              }
-              return GestureDetector(
-                onTap: () async {
-                  final property = _properties[index];
-                  // Test property details endpoint first
-                  await _testPropertyDetails(property.id);
-                  
-                  // Then navigate to property details
-                  // DEBUG: Check what imageUrl we're passing
-                  print('🚀 NAVIGATION DEBUG: property.imageUrl = ${property.imageUrl}');
-                  print('🚀 NAVIGATION DEBUG: property.title = ${property.title}');
-                  
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-                      'id': property.id,
-                      'badges': [property.user?.verificationStatus ?? 'Unverified'],
-                      'title': property.title,
-                      'location': property.location,
-                      'rating': '(5.0)',
-                      'price': property.price,
-                      'type': property.type,
-                      'category': property.category,
-                      'description': property.description,
-                      'features': property.features, // Pass actual features from API
-                      'imageUrl': property.imageUrl, // Pass actual image URL from API
-                      'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
-                      'user': property.user?.toJson(), // Pass actual user data from API
-                      'agent': {
-                        'name': property.user?.fullName ?? 'Agent',
-                        'title': 'Agent',
-                        'phone': property.user?.phoneNumber ?? '',
-                        'email': property.user?.email ?? '',
-                        'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
-                      },
-                    })),
-                  );
-                },
-                child: _buildPropertyListItem(index),
-              );
-            },
-          ),
+                itemBuilder: (context, index) => _buildShimmerPropertyItem(),
+              )
+            : () {
+                final filteredProperties = _getFilteredProperties();
+                print('🏠 Agent Building ListView with ${filteredProperties.length} properties');
+                print('🏠 Agent _isShowingSearchResults: $_isShowingSearchResults');
+                return filteredProperties.isEmpty
+                    ? _buildNoPropertiesFound()
+                    : ListView.separated(
+                        key: ValueKey('properties_${filteredProperties.length}_${_isShowingSearchResults}'),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredProperties.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) => _buildPropertyListItem(index, filteredProperties),
+                      );
+              }(),
         ],
       ),
     );
@@ -1590,7 +1702,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       );
     }
 
-    // Get property at index, or use first property if index is out of bounds
+    // Get property at index from all properties (Featured Houses should always show all)
     final propertyIndex = index < _properties.length ? index : 0;
     final property = _properties[propertyIndex];
     
@@ -1612,7 +1724,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             'description': property.description,
             'features': property.features, // Pass actual features from API
             'imageUrl': property.imageUrl, // Pass actual image URL from API
-            'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+            'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
+                      'property360_images': property.property360Images, // Pass 360 images from API
+                      'video_url': property.videoUrl, // Pass video URL from API
             'user': property.user?.toJson(), // Pass actual user data from API
             'agent': {
               'name': property.user?.fullName ?? 'Agent',
@@ -1752,7 +1866,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                         child: Icon(
                           property.isFavorite ? Icons.favorite : Icons.favorite_border,
                         size: 18,
-                          color: property.isFavorite ? Colors.red : Colors.black,
+                          color: property.isFavorite ? Colors.red : const Color(0xFF868686),
                         ),
                       ),
                     ),
@@ -1767,7 +1881,14 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   }
 
   Widget _buildCategoryButton(String title, bool isSelected) {
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedCategory = title;
+        });
+        print('🏠 Agent Category selected: $title');
+      },
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: isSelected
@@ -1784,7 +1905,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             : null,
         color: isSelected ? null : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(24),
-        
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1842,10 +1962,13 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           ),
         ],
       ),
+      ),
     );
   }
 
-  Widget _buildPropertyListItem(int index) {
+  Widget _buildPropertyListItem(int index, List<PropertyModel> filteredProperties) {
+    print('🏠 Agent _buildPropertyListItem called with index: $index, properties: ${filteredProperties.length}');
+    
     // Show loading if properties are still loading
     if (_isLoadingProperties) {
       return Container(
@@ -1880,9 +2003,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       );
     }
 
-    // Get property at index, or use first property if index is out of bounds
-    final propertyIndex = index < _properties.length ? index : 0;
-    final property = _properties[propertyIndex];
+    // Get property at index from filtered properties
+    final propertyIndex = index < filteredProperties.length ? index : 0;
+    final property = filteredProperties[propertyIndex];
+    print('🏠 Agent Building property item: ${property.title} - ${property.location}');
     
     return GestureDetector(
               onTap: () {
@@ -1898,7 +2022,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               'description': property.description,
               'features': property.features, // Pass actual features from API
               'imageUrl': property.imageUrl, // Pass actual image URL from API
-              'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+              'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
+                      'property360_images': property.property360Images, // Pass 360 images from API
+                      'video_url': property.videoUrl, // Pass video URL from API
               'user': property.user?.toJson(), // Pass actual user data from API
               'agent': {
                 'name': property.user?.fullName ?? 'Agent',
@@ -2562,7 +2688,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                                 'description': property.description,
                                 'features': property.features,
                                 'imageUrl': property.imageUrl, // Pass actual image URL from API
-                                'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+                                'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
+                      'property360_images': property.property360Images, // Pass 360 images from API
+                      'video_url': property.videoUrl, // Pass video URL from API
                                 'user': property.user?.toJson(), // Pass actual user data from API
                                 'agent': {
                                   'name': property.user?.fullName ?? 'Agent',
@@ -2790,6 +2918,68 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildNoPropertiesFound() {
+    // Debug logging
+    print('😔 Building no properties found message');
+    print('😔 _isShowingSearchResults: $_isShowingSearchResults');
+    print('😔 _selectedLocation: $_selectedLocation');
+    print('😔 _selectedCategory: $_selectedCategory');
+    
+    return Container(
+      width: double.infinity,
+      height: 200,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFEFF0F2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            '😔',
+            style: TextStyle(
+              fontSize: 48,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              _isShowingSearchResults && _selectedLocation.isNotEmpty
+                  ? (_selectedCategory != 'All' 
+                      ? 'No ${_selectedCategory.toLowerCase()} properties found in $_selectedLocation'
+                      : 'No properties found in $_selectedLocation')
+                  : (_selectedCategory != 'All'
+                      ? 'No ${_selectedCategory.toLowerCase()} properties found'
+                      : 'No properties found in this category'),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isShowingSearchResults && _selectedLocation.isNotEmpty
+                ? 'Try selecting a different category or location'
+                : 'Try selecting a different category',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

@@ -87,6 +87,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   
   // File upload state
   List<File> _selectedImages = [];
+  List<File> _selected360Images = [];
   File? _selectedVideo;
   
   final List<Map<String, dynamic>> _hotelAmenities = [
@@ -928,7 +929,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Upload hotel images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''}',
+          'Upload hotel images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''} (Max 10 images)',
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -954,29 +955,36 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Upload images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''}',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
+        // Section 1: Regular Property Images
+        _buildMediaSection(
+          title: 'Property Images',
+          subtitle: 'Upload photos of your property (bedrooms, living areas, exterior, etc.)',
+          count: _selectedImages.length,
+          maxCount: 10,
+          type: 'images',
         ),
-        const SizedBox(height: 12),
-        _buildFileUploadArea('images'),
         
-        const SizedBox(height: 32),
+        const SizedBox(height: 40),
         
-        const Text(
-          'Upload property video or 360 degree view',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
+        // Section 2: 360 Panorama Images
+        _buildMediaSection(
+          title: '360° Panorama Images',
+          subtitle: 'Upload 360-degree panoramic images for virtual tour',
+          count: _selected360Images.length,
+          maxCount: 5,
+          type: '360_images',
         ),
-        const SizedBox(height: 12),
-        _buildFileUploadArea('video'),
+        
+        const SizedBox(height: 40),
+        
+        // Section 3: Property Video
+        _buildMediaSection(
+          title: 'Property Video',
+          subtitle: 'Upload a video showcasing your property (optional)',
+          count: _selectedVideo != null ? 1 : 0,
+          maxCount: 1,
+          type: 'video',
+        ),
         
         const SizedBox(height: 40),
         
@@ -990,10 +998,75 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     );
   }
 
+  Widget _buildMediaSection({
+    required String title,
+    required String subtitle,
+    required int count,
+    required int maxCount,
+    required String type,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: count > 0 ? const Color(0xFF426DC2) : const Color(0xFFE5E5E5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$count/$maxCount',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: count > 0 ? Colors.white : const Color(0xFF666666),
+                ),
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // File Upload Area
+        _buildFileUploadArea(type),
+      ],
+    );
+  }
+
   Widget _buildFileUploadArea(String type) {
     final hasFiles = type == 'images' || type == 'hotel_images' 
         ? _selectedImages.isNotEmpty 
-        : _selectedVideo != null;
+        : type == '360_images'
+            ? _selected360Images.isNotEmpty
+            : _selectedVideo != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1017,7 +1090,9 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                 Text(
                   type == 'images' || type == 'hotel_images'
                       ? 'Selected Images (${_selectedImages.length})'
-                      : 'Selected Video',
+                      : type == '360_images'
+                          ? 'Selected 360° Images (${_selected360Images.length})'
+                          : 'Selected Video',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -1064,6 +1139,119 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                       ),
                     );
                   }).toList(),
+                  
+                  // Add More Images button for images
+                  if ((type == 'images' || type == 'hotel_images') && _selectedImages.length < 10) ...[
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () => _pickFile(type),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0xFF426DC2),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.add,
+                              size: 16,
+                              color: Color(0xFF426DC2),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Add More Images (${10 - _selectedImages.length} remaining)',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF426DC2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ] else if (type == '360_images') ...[
+                  ..._selected360Images.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final file = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.threesixty,
+                            size: 16,
+                            color: Color(0xFF426DC2),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              file.path.split('/').last,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selected360Images.removeAt(index);
+                              });
+                            },
+                            child: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  
+                  // Add More 360 Images button
+                  if (_selected360Images.length < 5) ...[
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () => _pickFile(type),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0xFF426DC2),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.add,
+                              size: 16,
+                              color: Color(0xFF426DC2),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Add More 360° Images (${5 - _selected360Images.length} remaining)',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF426DC2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ] else if (_selectedVideo != null) ...[
                   Row(
                     children: [
@@ -1114,9 +1302,11 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         radius: const Radius.circular(12),
         child: Container(
           width: double.infinity,
-          height: 140,
+          height: 150,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SvgPicture.asset(
                 'assets/icons/cloud-add.svg',
@@ -1132,38 +1322,46 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                 },
               ),
               
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               
-              const Text(
-                'Choose a file or drag & drop it here',
-                style: TextStyle(
+              Text(
+                (type == 'images' || type == 'hotel_images') 
+                    ? 'Choose multiple images'
+                    : type == '360_images'
+                        ? 'Choose multiple 360° images'
+                        : 'Choose a file',
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: Colors.black,
                 ),
+                textAlign: TextAlign.center,
               ),
               
               const SizedBox(height: 4),
               
               Text(
                 type == 'hotel_images'
-                    ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
+                    ? 'JPEG, PNG formats'
                     : type == 'images' 
-                        ? 'JPEG, PNG, PDF, and MP4 formats, up to 50MB'
-                        : 'JPEG, PNG, PDF, and MP4 formats, up to 50MB',
+                        ? 'JPEG, PNG formats'
+                        : type == '360_images'
+                            ? 'JPEG, PNG formats (360° images)'
+                            : 'MP4, MOV, AVI formats',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
                   color: Color(0xFF666666),
                 ),
+                textAlign: TextAlign.center,
               ),
               
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               
               GestureDetector(
                 onTap: () => _pickFile(type),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: const Color.fromRGBO(176, 181, 187, 1),
@@ -1171,9 +1369,13 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                     ),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text(
-                    'Browse File',
-                    style: TextStyle(
+                  child: Text(
+                    (type == 'images' || type == 'hotel_images') 
+                        ? 'Browse Images'
+                        : type == '360_images'
+                            ? 'Browse 360° Images'
+                            : 'Browse Video',
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: Color.fromRGBO(84, 87, 92, 1),
@@ -1194,19 +1396,50 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: (fileType == 'images' || fileType == 'hotel_images')
+        allowedExtensions: (fileType == 'images' || fileType == 'hotel_images' || fileType == '360_images')
             ? ['jpg', 'jpeg', 'png']
             : ['mp4', 'mov', 'avi'],
-        allowMultiple: (fileType == 'images' || fileType == 'hotel_images'),
+        allowMultiple: (fileType == 'images' || fileType == 'hotel_images' || fileType == '360_images'),
       );
 
       if (result != null && result.files.isNotEmpty) {
         setState(() {
           if (fileType == 'images' || fileType == 'hotel_images') {
+            // Check if adding these files would exceed the limit
+            final totalImages = _selectedImages.length + result.files.length;
+            if (totalImages > 10) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Maximum 10 images allowed. Please select fewer images.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+            
             // Add images to the list
             for (var file in result.files) {
               if (file.path != null) {
                 _selectedImages.add(File(file.path!));
+              }
+            }
+          } else if (fileType == '360_images') {
+            // Check if adding these files would exceed the limit
+            final total360Images = _selected360Images.length + result.files.length;
+            if (total360Images > 5) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Maximum 5 360° images allowed. Please select fewer images.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+            
+            // Add 360 images to the list
+            for (var file in result.files) {
+              if (file.path != null) {
+                _selected360Images.add(File(file.path!));
               }
             }
           } else if (fileType == 'video') {
@@ -1331,6 +1564,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         parking: _parkingStatus,
         features: features,
         images: _selectedImages,
+        images360: _selected360Images,
+        video: _selectedVideo,
       );
 
       // Close loading dialog

@@ -350,7 +350,9 @@ class HomeView extends BaseView<HomeViewModel> {
                 'description': property.description,
                 'features': property.features, // Pass actual features from API
                 'imageUrl': property.imageUrl, // Pass actual image URL from API
-                'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null, // Pass image in API format
+                'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
+                'property360_images': property.property360Images, // Pass 360 images from API
+                'video_url': property.videoUrl, // Pass video URL from API
                 'agent': {
                   'name': 'James Mark',
                   'title': 'Agent',

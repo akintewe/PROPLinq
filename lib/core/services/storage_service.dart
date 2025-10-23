@@ -11,6 +11,7 @@ class StorageService {
   static const String _userKey = 'user_data';
   static const String _isLoggedInKey = 'is_logged_in';
   static const String _userTypeKey = 'user_type';
+  static const String _biometricEnabledKey = 'biometric_enabled';
 
   // Token management
   Future<void> saveToken(String token) async {
@@ -72,6 +73,22 @@ class StorageService {
     return prefs.getBool(_isLoggedInKey) ?? false;
   }
 
+  // Biometric authentication management
+  Future<void> setBiometricEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_biometricEnabledKey, enabled);
+  }
+
+  Future<bool> isBiometricEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_biometricEnabledKey) ?? false;
+  }
+
+  Future<void> removeBiometricEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_biometricEnabledKey);
+  }
+
   // Clear all stored data
   Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
@@ -79,6 +96,7 @@ class StorageService {
     await prefs.remove(_userKey);
     await prefs.remove(_isLoggedInKey);
     await prefs.remove(_userTypeKey);
+    await prefs.remove(_biometricEnabledKey);
   }
 
   // Generic storage methods

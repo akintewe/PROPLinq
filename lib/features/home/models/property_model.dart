@@ -9,6 +9,9 @@ class PropertyModel {
   final String category;
   final String location;
   final String? imageUrl;
+  final List<Map<String, dynamic>>? images;
+  final List<Map<String, dynamic>>? property360Images;
+  final String? videoUrl;
   final int? bedrooms;
   final int? bathrooms;
   final double? area;
@@ -26,6 +29,9 @@ class PropertyModel {
     required this.category,
     required this.location,
     this.imageUrl,
+    this.images,
+    this.property360Images,
+    this.videoUrl,
     this.bedrooms,
     this.bathrooms,
     this.area,
@@ -45,6 +51,9 @@ class PropertyModel {
     String? category,
     String? location,
     String? imageUrl,
+    List<Map<String, dynamic>>? images,
+    List<Map<String, dynamic>>? property360Images,
+    String? videoUrl,
     int? bedrooms,
     int? bathrooms,
     double? area,
@@ -62,6 +71,9 @@ class PropertyModel {
       category: category ?? this.category,
       location: location ?? this.location,
       imageUrl: imageUrl ?? this.imageUrl,
+      images: images ?? this.images,
+      property360Images: property360Images ?? this.property360Images,
+      videoUrl: videoUrl ?? this.videoUrl,
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       area: area ?? this.area,
@@ -83,11 +95,14 @@ class PropertyModel {
       'category': category,
       'location': location,
       'image_url': imageUrl,
+      'images': images,
+      'property360_images': property360Images,
+      'video_url': videoUrl,
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
       'area': area,
       'features': features,
-      'is_favorite': isFavorite,
+      'isLiked': isFavorite,
       'user': user?.toJson(),
     };
   }
@@ -101,13 +116,28 @@ class PropertyModel {
       features = featuresList.map((feature) => feature.toString()).toList();
     }
     
-    // Parse image URL from images array
+    // Parse images array
     String? imageUrl;
+    List<Map<String, dynamic>>? images;
     if (json['images'] != null && json['images'] is List && (json['images'] as List).isNotEmpty) {
-      final images = json['images'] as List<dynamic>;
-      print('🖼️ PropertyModel: Found ${images.length} images in API data');
-      final firstImage = images.first as Map<String, dynamic>;
-      // Try both 'full_url' and 'image_url' fields
+      final imagesList = json['images'] as List<dynamic>;
+      print('🖼️ PropertyModel: Found ${imagesList.length} images in API data');
+      
+      // Store all images
+      images = imagesList.map((image) {
+        final imageMap = image as Map<String, dynamic>;
+        // Ensure full URLs are properly formatted
+        if (imageMap['full_url'] != null) {
+          final rawUrl = imageMap['full_url'] as String;
+          if (rawUrl.startsWith('property-images/') || rawUrl.startsWith('uploads/')) {
+            imageMap['full_url'] = 'https://proapi.proplinq.com/storage/$rawUrl';
+          }
+        }
+        return imageMap;
+      }).toList();
+      
+      // Set the first image as the primary imageUrl for backward compatibility
+      final firstImage = images.first;
       String? rawImageUrl = firstImage['full_url'] as String? ?? firstImage['image_url'] as String?;
       if (rawImageUrl != null) {
         // If it's a relative path, construct the full URL
@@ -118,8 +148,84 @@ class PropertyModel {
         }
       }
       print('✅ PropertyModel: Extracted imageUrl: $imageUrl');
+      print('✅ PropertyModel: Stored ${images.length} images');
     } else {
       print('❌ PropertyModel: No images found in API data');
+    }
+    
+    // Parse property360_images array
+    List<Map<String, dynamic>>? property360Images;
+    if (json['property360_images'] != null && json['property360_images'] is List && (json['property360_images'] as List).isNotEmpty) {
+      final property360ImagesList = json['property360_images'] as List<dynamic>;
+      print('🖼️ PropertyModel: Found ${property360ImagesList.length} 360 images in API data');
+      
+      // Store all 360 images
+      property360Images = property360ImagesList.map((image) {
+        final imageMap = image as Map<String, dynamic>;
+        // Ensure full URLs are properly formatted
+        if (imageMap['full_url'] != null) {
+          final rawUrl = imageMap['full_url'] as String;
+          if (rawUrl.startsWith('property-360-images/') || rawUrl.startsWith('uploads/')) {
+            imageMap['full_url'] = 'https://proapi.proplinq.com/storage/$rawUrl';
+          }
+        }
+        return imageMap;
+      }).toList();
+      
+      print('✅ PropertyModel: Stored ${property360Images.length} 360 images');
+    } else if (json['property_360_images_full_urls'] != null && json['property_360_images_full_urls'] is List && (json['property_360_images_full_urls'] as List).isNotEmpty) {
+      // Handle alternative field structure
+      final property360ImagesList = json['property_360_images_full_urls'] as List<dynamic>;
+      print('🖼️ PropertyModel: Found ${property360ImagesList.length} 360 images in property_360_images_full_urls');
+      
+      // Store all 360 images with proper structure
+      property360Images = property360ImagesList.map((image) {
+        final imageMap = image as Map<String, dynamic>;
+        // Convert the alternative structure to match our expected format
+        return {
+          'id': imageMap['id'],
+          'property_id': imageMap['id'], // Use id as property_id if not present
+          'full_url': imageMap['url'], // Map 'url' to 'full_url'
+          'is_featured': false,
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+      }).toList();
+      
+      print('✅ PropertyModel: Stored ${property360Images.length} 360 images from property_360_images_full_urls');
+    } else {
+      // Check if 360 images are stored in the regular images array
+      if (images != null && images.isNotEmpty) {
+        final image360List = <Map<String, dynamic>>[];
+        for (final image in images) {
+          final imageMap = image;
+          final fullUrl = imageMap['full_url'] as String?;
+          
+          // Check if this is a 360 image based on the URL path
+          if (fullUrl != null && fullUrl.contains('property-360-images/')) {
+            print('🖼️ PropertyModel: Found 360 image in regular images: $fullUrl');
+            image360List.add(imageMap);
+          }
+        }
+        
+        if (image360List.isNotEmpty) {
+          property360Images = image360List;
+          print('✅ PropertyModel: Stored ${property360Images.length} 360 images from regular images array');
+        } else {
+          print('❌ PropertyModel: No 360 images found in API data');
+        }
+      } else {
+        print('❌ PropertyModel: No 360 images found in API data');
+      }
+    }
+    
+    // Parse video URL
+    String? videoUrl;
+    if (json['video_url'] != null && json['video_url'].toString().isNotEmpty) {
+      videoUrl = json['video_url'] as String;
+      print('🎥 PropertyModel: Found video URL: $videoUrl');
+    } else {
+      print('❌ PropertyModel: No video URL found in API data');
     }
     
     // Parse user data
@@ -139,11 +245,14 @@ class PropertyModel {
       category: json['category'] as String,
       location: json['location'] as String,
       imageUrl: imageUrl,
+      images: images,
+      property360Images: property360Images,
+      videoUrl: videoUrl,
       bedrooms: json['bedrooms'] as int?,
       bathrooms: json['bathrooms'] as int?,
       area: json['area'] != null ? (json['area'] as num).toDouble() : null,
       features: features,
-      isFavorite: json['is_favorite'] as bool? ?? false,
+      isFavorite: json['isLiked'] as bool? ?? false,
       user: user,
     );
   }
@@ -193,6 +302,7 @@ class PropertyUser {
   final String? agencyName;
   final String? agentType;
   final String? whatsappNumber;
+  final String? profileImageFullUrl;
   final PropertyKyc? kyc;
 
   const PropertyUser({
@@ -204,6 +314,7 @@ class PropertyUser {
     this.agencyName,
     this.agentType,
     this.whatsappNumber,
+    this.profileImageFullUrl,
     this.kyc,
   });
 
@@ -218,6 +329,7 @@ class PropertyUser {
       agencyName: json['agency_name'] as String?,
       agentType: json['agent_type'] as String?,
       whatsappNumber: json['whatsapp_number'] as String?,
+      profileImageFullUrl: json['profile_image_full_url'] as String?,
       kyc: json['kyc'] != null ? PropertyKyc.fromJson(json['kyc'] as Map<String, dynamic>) : null,
     );
   }
@@ -263,6 +375,7 @@ class PropertyUser {
       'agency_name': agencyName,
       'agent_type': agentType,
       'whatsapp_number': whatsappNumber,
+      'profile_image_full_url': profileImageFullUrl,
       'kyc': kyc?.toJson(),
     };
   }
