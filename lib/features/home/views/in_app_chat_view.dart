@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/chat_service.dart';
 import '../../auth/services/auth_service.dart';
 
@@ -72,6 +73,40 @@ class _InAppChatViewState extends State<InAppChatView> {
       
       print('🔄 Chat history result: ${chatHistory.length} messages');
       print('🔄 Chat history data: $chatHistory');
+      
+      // Extract phone number from chat history if not already available
+      String? phoneNumber;
+      String? email;
+      
+      for (final chat in chatHistory) {
+        // Check sender data
+        final sender = chat['sender'] as Map<String, dynamic>?;
+        if (sender?['id']?.toString() == agentId) {
+          phoneNumber = sender?['phone_number'] as String?;
+          email = sender?['email'] as String?;
+          break;
+        }
+        
+        // Check receiver data
+        final receiver = chat['receiver'] as Map<String, dynamic>?;
+        if (receiver?['id']?.toString() == agentId) {
+          phoneNumber = receiver?['phone_number'] as String?;
+          email = receiver?['email'] as String?;
+          break;
+        }
+      }
+      
+      print('🔄 Extracted phone number from chat history: $phoneNumber');
+      print('🔄 Extracted email from chat history: $email');
+      
+      // Update agent data with phone number if found
+      if (phoneNumber != null || email != null) {
+        setState(() {
+          widget.agentData['user']['phone_number'] = phoneNumber;
+          widget.agentData['user']['email'] = email;
+        });
+        print('🔄 Updated agent data with phone number: $phoneNumber');
+      }
       
       // Get current user ID once for all messages
       final currentUser = await _authService.getCurrentUser();
@@ -300,23 +335,41 @@ class _InAppChatViewState extends State<InAppChatView> {
     }
   }
 
-  void _openWhatsApp() {
+  void _openWhatsApp() async {
     final phoneNumber = _getAgentWhatsApp();
     if (phoneNumber.isNotEmpty) {
       final whatsappUrl = "https://wa.me/$phoneNumber?text=Hi! I'm interested in the ${widget.propertyTitle} property.";
       
-      // In a real app, you would use url_launcher here
       print('🔗 Opening WhatsApp with: $whatsappUrl');
       
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Opening WhatsApp...'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      try {
+        // Try to launch WhatsApp
+        final Uri whatsappUri = Uri.parse(whatsappUrl);
+        if (await canLaunchUrl(whatsappUri)) {
+          await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+          print('✅ WhatsApp launched successfully');
+        } else {
+          print('❌ Cannot launch WhatsApp URL');
+          _showErrorSnackBar('WhatsApp is not installed or cannot be opened');
+        }
+      } catch (e) {
+        print('❌ Error launching WhatsApp: $e');
+        _showErrorSnackBar('Failed to open WhatsApp. Please try again.');
+      }
+    } else {
+      print('❌ No WhatsApp number found for agent');
+      _showErrorSnackBar('Agent WhatsApp number not available');
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   void _attachFile() {
@@ -590,24 +643,40 @@ class _InAppChatViewState extends State<InAppChatView> {
   }
 
   String _getAgentWhatsApp() {
+    print('🔍 _getAgentWhatsApp: Getting WhatsApp number from agent data...');
+    print('🔍 _getAgentWhatsApp: Agent data keys: ${widget.agentData.keys.toList()}');
+    
     // Extract WhatsApp number from agent data
     final user = widget.agentData['user'] as Map<String, dynamic>?;
+    print('🔍 _getAgentWhatsApp: User data: $user');
+    
     if (user != null && user['whatsapp_number'] != null) {
-      return user['whatsapp_number'].toString().replaceAll(RegExp(r'[^\d]'), '');
+      final whatsappNumber = user['whatsapp_number'].toString().replaceAll(RegExp(r'[^\d]'), '');
+      print('🔍 _getAgentWhatsApp: Found whatsapp_number: $whatsappNumber');
+      return whatsappNumber;
     }
     if (user != null && user['phone_number'] != null) {
-      return user['phone_number'].toString().replaceAll(RegExp(r'[^\d]'), '');
+      final phoneNumber = user['phone_number'].toString().replaceAll(RegExp(r'[^\d]'), '');
+      print('🔍 _getAgentWhatsApp: Found phone_number: $phoneNumber');
+      return phoneNumber;
     }
     
     // Fallback to agent data
     final agent = widget.agentData['agent'] as Map<String, dynamic>?;
+    print('🔍 _getAgentWhatsApp: Agent data: $agent');
+    
     if (agent != null && agent['whatsapp'] != null) {
-      return agent['whatsapp'].toString().replaceAll(RegExp(r'[^\d]'), '');
+      final whatsappNumber = agent['whatsapp'].toString().replaceAll(RegExp(r'[^\d]'), '');
+      print('🔍 _getAgentWhatsApp: Found agent whatsapp: $whatsappNumber');
+      return whatsappNumber;
     }
     if (agent != null && agent['phone'] != null) {
-      return agent['phone'].toString().replaceAll(RegExp(r'[^\d]'), '');
+      final phoneNumber = agent['phone'].toString().replaceAll(RegExp(r'[^\d]'), '');
+      print('🔍 _getAgentWhatsApp: Found agent phone: $phoneNumber');
+      return phoneNumber;
     }
     
+    print('🔍 _getAgentWhatsApp: No WhatsApp or phone number found');
     return '';
   }
 

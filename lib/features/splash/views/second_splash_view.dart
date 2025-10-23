@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../core/services/storage_service.dart';
+import '../../../core/services/biometric_service.dart';
 import '../../onboarding/views/onboarding_view.dart';
+import '../../auth/views/login_view.dart';
+import '../../auth/views/biometric_login_view.dart';
 
 class SecondSplashView extends StatefulWidget {
   const SecondSplashView({super.key});
@@ -9,16 +13,48 @@ class SecondSplashView extends StatefulWidget {
 }
 
 class _SecondSplashViewState extends State<SecondSplashView> {
+  final StorageService _storageService = StorageService();
+  final BiometricService _biometricService = BiometricService();
+
   @override
   void initState() {
     super.initState();
     
-    // Navigate to onboarding after 6 seconds to let GIF play well
+    // Check authentication status after 6 seconds to let GIF play well
     Future.delayed(const Duration(seconds: 6), () {
       if (mounted) {
-        _navigateToOnboarding();
+        _checkAuthenticationStatus();
       }
     });
+  }
+
+  Future<void> _checkAuthenticationStatus() async {
+    try {
+      // Check if user is logged in
+      final isLoggedIn = await _storageService.isLoggedIn();
+      final token = await _storageService.getToken();
+      
+      if (isLoggedIn && token != null) {
+        // User is logged in, check if biometric is enabled
+        final isBiometricEnabled = await _storageService.isBiometricEnabled();
+        final isBiometricAvailable = await _biometricService.isBiometricAvailable();
+        
+        if (isBiometricEnabled && isBiometricAvailable) {
+          // Navigate to biometric login
+          _navigateToBiometricLogin();
+        } else {
+          // Navigate to regular login
+          _navigateToLogin();
+        }
+      } else {
+        // User is not logged in, navigate to onboarding
+        _navigateToOnboarding();
+      }
+    } catch (e) {
+      print('❌ Error checking authentication status: $e');
+      // On error, navigate to onboarding
+      _navigateToOnboarding();
+    }
   }
 
   void _navigateToOnboarding() {
@@ -26,6 +62,32 @@ class _SecondSplashViewState extends State<SecondSplashView> {
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             const OnboardingView(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
+  void _navigateToLogin() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const LoginView(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
+  void _navigateToBiometricLogin() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const BiometricLoginView(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },

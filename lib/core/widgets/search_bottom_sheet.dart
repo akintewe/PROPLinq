@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/location_service.dart';
+import '../services/property_search_service.dart';
+import '../../features/home/models/property_model.dart';
+import '../../features/home/views/property_details_view.dart';
 
 class SearchBottomSheet extends StatefulWidget {
   final String? initialQuery;
   final Function(String)? onLocationSelected;
+  final Function(List<PropertyModel>)? onPropertiesSelected;
+  final List<PropertyModel> properties;
 
   const SearchBottomSheet({
     super.key,
     this.initialQuery,
     this.onLocationSelected,
+    this.onPropertiesSelected,
+    required this.properties,
   });
 
   @override
@@ -18,48 +26,77 @@ class SearchBottomSheet extends StatefulWidget {
 class _SearchBottomSheetState extends State<SearchBottomSheet> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-
-  final List<Map<String, dynamic>> _locations = [
-    {
-      'title': 'Near You',
-      'subtitle': 'Find properties or hotels around you',
-      'icon': 'assets/icons/duo-icons_location.svg',
-      'iconColor': Color(0xFF426DC2),
-      'isNearYou': true,
-    },
-    {
-      'title': 'Lekki, Lagos',
-      'subtitle': 'Near you',
-      'icon': 'assets/icons/emojione-monotone_houses.svg',
-      'iconColor': Color(0xFF63ADDC),
-    },
-    {
-      'title': 'Ikorodu, Lagos',
-      'subtitle': 'Near you',
-      'icon': 'assets/icons/emojione-monotone_houses.svg',
-      'iconColor': Color(0xFFE91E63),
-    },
-    {
-      'title': 'Ikeja, Lagos',
-      'subtitle': 'Near you',
-      'icon': 'assets/icons/emojione-monotone_houses.svg',
-      'iconColor': Color(0xFF4CAF50),
-    },
-    {
-      'title': 'Surulere, Lagos',
-      'subtitle': 'Near you',
-      'icon': 'assets/icons/emojione-monotone_houses.svg',
-      'iconColor': Color(0xFFFF9800),
-    },
-  ];
+  
+  List<Map<String, dynamic>> _locations = [];
+  List<PropertyModel> _searchResults = [];
+  bool _isSearching = false;
+  bool _isLoadingLocation = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _searchController.text = widget.initialQuery ?? '';
+    _loadNearbyLocations();
     // Auto-focus the search field when bottom sheet opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
+    });
+  }
+
+  /// Load nearby locations based on user's current location
+  Future<void> _loadNearbyLocations() async {
+    try {
+      setState(() {
+        _isLoadingLocation = true;
+      });
+
+      final position = await LocationService.instance.getCurrentLocation();
+      if (position != null) {
+        final nearbyAreas = await LocationService.instance.getNearbyAreas(position);
+        setState(() {
+          _locations = nearbyAreas;
+          _isLoadingLocation = false;
+        });
+      } else {
+        // Fallback to default areas
+        setState(() {
+          _locations = LocationService.instance.getDefaultNearbyAreas();
+          _isLoadingLocation = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading nearby locations: $e');
+      setState(() {
+        _locations = LocationService.instance.getDefaultNearbyAreas();
+        _isLoadingLocation = false;
+      });
+    }
+  }
+
+  /// Search properties based on the query
+  void _searchProperties(String query) {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _searchQuery = query;
+    });
+
+    // Perform search
+    final results = PropertySearchService.instance.searchPropertiesByName(
+      widget.properties,
+      query,
+    );
+
+    setState(() {
+      _searchResults = results;
     });
   }
 
@@ -144,35 +181,276 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
                 ),
               ),
               onChanged: (value) {
-                // Handle search query changes
+                _searchProperties(value);
               },
             ),
           ),
           
           const SizedBox(height: 24),
           
-          // Location suggestions
+          // Content area - shows search results or location suggestions
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              itemCount: _locations.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final location = _locations[index];
-                return _buildLocationItem(location);
-              },
-            ),
+            child: _isSearching 
+              ? _buildSearchResults()
+              : _buildLocationSuggestions(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLocationItem(Map<String, dynamic> location) {
+  /// Build search results
+  Widget _buildSearchResults() {
+    if (_searchResults.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                '🔍',
+                style: TextStyle(fontSize: 48),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No properties found for "$_searchQuery"',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Try searching with different keywords',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF868686),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: _searchResults.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final property = _searchResults[index];
+        return _buildPropertyCard(property);
+      },
+    );
+  }
+
+  /// Build location suggestions
+  Widget _buildLocationSuggestions() {
+    if (_isLoadingLocation) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF426DC2),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: _locations.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final location = _locations[index];
+        return _buildLocationItem(location);
+      },
+    );
+  }
+
+  /// Build property card for search results
+  Widget _buildPropertyCard(PropertyModel property) {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).pop();
+        // Navigate to property details screen
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PropertyDetailsView(
+              propertyData: {
+                'id': property.id,
+                'badges': [property.user?.verificationStatus ?? 'Unverified'],
+                'title': property.title,
+                'location': property.location,
+                'rating': '(5.0)',
+                'price': property.price,
+                'type': property.type,
+                'category': property.category,
+                'description': property.description,
+                'features': property.features,
+                'imageUrl': property.imageUrl,
+                'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null,
+                'user': property.user?.toJson(),
+                'agent': {
+                  'name': property.user?.fullName ?? 'Agent',
+                  'title': 'Agent',
+                  'phone': property.user?.phoneNumber ?? '',
+                  'email': property.user?.email ?? '',
+                  'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
+                },
+              },
+              isHomeSeeker: true,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFEFF0F2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Property image
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFFF8F9FA),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: property.imageUrl != null
+                    ? Image.network(
+                        property.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.home,
+                            color: Color(0xFF426DC2),
+                            size: 30,
+                          );
+                        },
+                      )
+                    : const Icon(
+                        Icons.home,
+                        color: Color(0xFF426DC2),
+                        size: 30,
+                      ),
+              ),
+            ),
+            
+            const SizedBox(width: 16),
+            
+            // Property details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    property.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    property.location,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF868686),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        property.price,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF426DC2),
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF426DC2).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          property.type.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF426DC2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationItem(Map<String, dynamic> location) {
+    return GestureDetector(
+      onTap: () async {
+        Navigator.of(context).pop();
+        
+        print('📍 Location tapped: ${location['title']}');
+        print('📍 Location query: ${location['locationQuery']}');
+        
+        // First, set the location name
         widget.onLocationSelected?.call(location['title']);
+        print('📍 Location selected callback called with: ${location['title']}');
+        
+        // Then filter properties by location
+        List<PropertyModel> filteredProperties;
+        
+        // Check if this is "Near You" location
+        if (location['locationQuery'] == 'near me' || location['isNearYou'] == true) {
+          print('📍 Filtering properties by distance for "Near You"');
+          // Use location service to filter by distance
+          filteredProperties = await LocationService.instance.filterPropertiesByDistance(
+            widget.properties,
+            10.0, // 10km radius
+          );
+        } else {
+          print('📍 Filtering properties by specific location: ${location['locationQuery'] ?? location['title']}');
+          print('📍 Total properties to filter: ${widget.properties.length}');
+          // Use regular location search for specific locations
+          filteredProperties = PropertySearchService.instance.searchPropertiesByLocation(
+            widget.properties,
+            location['locationQuery'] ?? location['title'],
+          );
+        }
+        print('📍 Filtered properties count: ${filteredProperties.length}');
+        for (var prop in filteredProperties) {
+          print('📍 Filtered property: ${prop.title} - ${prop.location}');
+        }
+        widget.onPropertiesSelected?.call(filteredProperties);
+        print('📍 Properties selected callback called with ${filteredProperties.length} properties');
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -251,6 +529,8 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
     BuildContext context, {
     String? initialQuery,
     Function(String)? onLocationSelected,
+    Function(List<PropertyModel>)? onPropertiesSelected,
+    required List<PropertyModel> properties,
   }) {
     showModalBottomSheet(
       context: context,
@@ -259,6 +539,8 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
       builder: (context) => SearchBottomSheet(
         initialQuery: initialQuery,
         onLocationSelected: onLocationSelected,
+        onPropertiesSelected: onPropertiesSelected,
+        properties: properties,
       ),
     );
   }

@@ -278,16 +278,28 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     return agent?['whatsapp'] as String? ?? agent?['phone'] as String? ?? '';
   }
 
-  /// Get agent ID from property data
-  String _getAgentId(Map<String, dynamic> property) {
+  /// Get agent profile image from property data
+  String? _getAgentProfileImage(Map<String, dynamic> property) {
+    print('🖼️ PropertyDetailsView: Getting agent profile image...');
+    print('🖼️ PropertyDetailsView: Property keys: ${property.keys.toList()}');
+    
     final user = property['user'] as Map<String, dynamic>?;
-    if (user != null && user['id'] != null) {
-      return user['id'].toString();
+    print('🖼️ PropertyDetailsView: User data: $user');
+    
+    if (user != null && user['profile_image_full_url'] != null) {
+      final profileImageUrl = user['profile_image_full_url'] as String;
+      print('🖼️ PropertyDetailsView: Found profile image URL: $profileImageUrl');
+      return profileImageUrl;
     }
+    
+    print('🖼️ PropertyDetailsView: No profile image found in user data');
+    
     // Fallback to agent data if user data not available
     final agent = property['agent'] as Map<String, dynamic>?;
-    return agent?['id']?.toString() ?? '';
+    print('🖼️ PropertyDetailsView: Agent data: $agent');
+    return agent?['profile_image'] as String?;
   }
+
 
   /// Mark property as rented (for agents only)
   void _markAsRented() {
@@ -300,6 +312,111 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     );
   }
 
+  /// Get 360 panorama images from property data
+  List<String> _getProperty360Images() {
+    final property = widget.propertyData ?? _getDefaultProperty();
+    
+    print('🖼️ DEBUG: Getting 360 images...');
+    print('🖼️ Property data keys: ${property.keys.toList()}');
+    print('🖼️ Property360 images value: ${property['property360_images']}');
+    print('🖼️ Property360 images type: ${property['property360_images']?.runtimeType}');
+    
+    // Check if property has property360_images array
+    if (property['property360_images'] != null && property['property360_images'] is List) {
+      final images = property['property360_images'] as List<dynamic>;
+      print('🖼️ Found 360 images array with ${images.length} items');
+      
+      if (images.isNotEmpty) {
+        final imageUrls = images.map((image) {
+          print('🖼️ Processing 360 image item: $image');
+          
+          if (image is Map<String, dynamic> && image['full_url'] != null) {
+            print('✅ Extracting 360 full_url: ${image['full_url']}');
+            return image['full_url'].toString();
+          }
+          print('❌ Invalid 360 image format');
+          return '';
+        }).where((url) => url.isNotEmpty).toList();
+        
+        print('🖼️ Final 360 image URLs count: ${imageUrls.length}');
+        print('🖼️ Final 360 image URLs: $imageUrls');
+        return imageUrls;
+      }
+    }
+    
+    // Check alternative field: property_360_images_full_urls
+    if (property['property_360_images_full_urls'] != null && property['property_360_images_full_urls'] is List) {
+      final images = property['property_360_images_full_urls'] as List<dynamic>;
+      print('🖼️ Found property_360_images_full_urls array with ${images.length} items');
+      
+      if (images.isNotEmpty) {
+        final imageUrls = images.map((image) {
+          print('🖼️ Processing 360 image item: $image');
+          
+          if (image is Map<String, dynamic> && image['url'] != null) {
+            print('✅ Extracting 360 url: ${image['url']}');
+            return image['url'].toString();
+          }
+          print('❌ Invalid 360 image format');
+          return '';
+        }).where((url) => url.isNotEmpty).toList();
+        
+        print('🖼️ Final 360 image URLs count: ${imageUrls.length}');
+        print('🖼️ Final 360 image URLs: $imageUrls');
+        return imageUrls;
+      }
+    }
+    
+    // Check regular images array for 360 images (based on URL path)
+    if (property['images'] != null && property['images'] is List) {
+      final images = property['images'] as List<dynamic>;
+      print('🖼️ Checking regular images array for 360 images...');
+      print('🖼️ Found ${images.length} regular images');
+      
+      final imageUrls = <String>[];
+      for (final image in images) {
+        if (image is Map<String, dynamic> && image['full_url'] != null) {
+          final url = image['full_url'].toString();
+          print('🖼️ Checking image URL: $url');
+          
+          // Check if this is a 360 image based on the URL path
+          if (url.contains('property-360-images/')) {
+            print('✅ Found 360 image in regular images: $url');
+            imageUrls.add(url);
+          } else {
+            print('❌ Regular image (not 360): $url');
+          }
+        }
+      }
+      
+      if (imageUrls.isNotEmpty) {
+        print('🖼️ Final 360 image URLs count: ${imageUrls.length}');
+        print('🖼️ Final 360 image URLs: $imageUrls');
+        return imageUrls;
+      }
+    }
+    
+    print('❌ No 360 images found');
+    return [];
+  }
+
+  /// Get video URL from property data
+  String? _getPropertyVideo() {
+    final property = widget.propertyData ?? _getDefaultProperty();
+    
+    print('🎥 DEBUG: Getting video URL...');
+    print('🎥 Property video_url value: ${property['video_url']}');
+    
+    final videoUrl = property['video_url'] as String?;
+    if (videoUrl != null && videoUrl.isNotEmpty) {
+      print('✅ Found video URL: $videoUrl');
+      return videoUrl;
+    }
+    
+    print('❌ No video found');
+    return null;
+  }
+
   /// Get property images from property data, fallback to default images
   List<String> _getPropertyImages() {
     final property = widget.propertyData ?? _getDefaultProperty();
@@ -308,20 +425,18 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     print('🖼️ Property data keys: ${property.keys.toList()}');
     print('🖼️ Property imageUrl value: ${property['imageUrl']}');
     print('🖼️ Property images value: ${property['images']}');
+    print('🖼️ Property images type: ${property['images']?.runtimeType}');
     
-    // Check if property has imageUrl (from PropertyModel)
-    if (property['imageUrl'] != null && property['imageUrl'].toString().isNotEmpty) {
-      print('✅ Found imageUrl: ${property['imageUrl']}');
-      // If we have a real property image, use it as the primary image
-      return [property['imageUrl'].toString()];
-    }
-    
-    // Check if property has multiple images array
+    // Check if property has multiple images array first (prioritize multiple images)
     if (property['images'] != null && property['images'] is List) {
       final images = property['images'] as List<dynamic>;
-      print('🖼️ Found images array with ${images.length} items: $images');
+      print('🖼️ Found images array with ${images.length} items');
+      
       if (images.isNotEmpty) {
         final imageUrls = images.map((image) {
+          print('🖼️ Processing image item: $image');
+          print('🖼️ Image item type: ${image.runtimeType}');
+          
           if (image is Map<String, dynamic> && image['full_url'] != null) {
             print('✅ Extracting full_url: ${image['full_url']}');
             return image['full_url'].toString();
@@ -332,9 +447,18 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
           print('❌ Invalid image format, using fallback');
           return _fallbackImages.first;
         }).toList();
+        
+        print('🖼️ Final image URLs count: ${imageUrls.length}');
         print('🖼️ Final image URLs: $imageUrls');
         return imageUrls;
       }
+    }
+    
+    // Check if property has imageUrl (fallback for single image)
+    if (property['imageUrl'] != null && property['imageUrl'].toString().isNotEmpty) {
+      print('✅ Found imageUrl fallback: ${property['imageUrl']}');
+      // If we have a real property image, use it as the primary image
+      return [property['imageUrl'].toString()];
     }
     
     print('❌ No images found, using fallback images');
@@ -377,6 +501,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     
     // Get actual property images
     final propertyImages = _getPropertyImages();
+    final property360Images = _getProperty360Images();
     
     // Debug logging
     print('🏠 Property Details Debug:');
@@ -385,6 +510,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     print('Is Hotel: $isHotel');
     print('Is Shortlet: $isShortlet');
     print('Property Images: $propertyImages');
+    print('Property 360 Images: $property360Images');
     print('Property Data Keys: ${property.keys.toList()}');
     
     final isForSale = (property['badges'] as List<String>?)?.contains('For sale') ?? false;
@@ -663,11 +789,23 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                   height: 48,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    image: const DecorationImage(
-                                      image: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'),
-                                      fit: BoxFit.cover,
-                                    ),
+                                    image: _getAgentProfileImage(property) != null
+                                        ? DecorationImage(
+                                            image: NetworkImage(_getAgentProfileImage(property)!),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                    color: _getAgentProfileImage(property) == null 
+                                        ? Colors.grey[300] 
+                                        : null,
                                   ),
+                                  child: _getAgentProfileImage(property) == null
+                                      ? const Icon(
+                                          Icons.person,
+                                          color: Colors.grey,
+                                          size: 24,
+                                        )
+                                      : null,
                                 ),
                                 
                                 const SizedBox(width: 12),
@@ -1050,8 +1188,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                             const SizedBox(height: 40),
                           ],
                           
-                          // Virtual Tour - only show for non-hotel properties
-                          if (!isHotel) ...[
+                          // Virtual Tour - only show for non-hotel properties and if 360 images are available
+                          if (!isHotel && property360Images.isNotEmpty) ...[
                           const Text(
                             'Virtual Tour',
                             style: TextStyle(
@@ -1071,6 +1209,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                 MaterialPageRoute(
                                   builder: (context) => VirtualTour360View(
                                     title: 'Virtual Tour - ${property['title'] as String? ?? 'Property'}',
+                                    property360Images: property360Images,
                                   ),
                                 ),
                               );
@@ -1080,10 +1219,15 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               width: double.infinity,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(16),
-                                image: const DecorationImage(
-                                  image: AssetImage('assets/images/3af693f3bf0406d67cddf98a62526eba4c273542.jpg'), // High-resolution 360° apartment image
-                                  fit: BoxFit.cover,
-                                ),
+                                image: property360Images.isNotEmpty 
+                                    ? DecorationImage(
+                                        image: NetworkImage(property360Images.first),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : const DecorationImage(
+                                        image: AssetImage('assets/images/3af693f3bf0406d67cddf98a62526eba4c273542.jpg'), // Fallback 360° apartment image
+                                        fit: BoxFit.cover,
+                                      ),
                               ),
                               child: Stack(
                                 children: [
@@ -1181,6 +1325,75 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
                                         ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 40),
+                          ],
+                          
+                          // Video Section - show if video is available
+                          if (_getPropertyVideo() != null) ...[
+                          const Text(
+                            'Property Video',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 20),
+                          
+                          // Video player
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: Colors.black,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Stack(
+                                children: [
+                                  // Video thumbnail/placeholder
+                                  Container(
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    color: Colors.grey[900],
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.play_circle_filled,
+                                        color: Colors.white,
+                                        size: 60,
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  // Video URL overlay (for debugging)
+                                  Positioned(
+                                    bottom: 8,
+                                    left: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.7),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        'Video Available',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        textAlign: TextAlign.center,
                                       ),
                                     ),
                                   ),
