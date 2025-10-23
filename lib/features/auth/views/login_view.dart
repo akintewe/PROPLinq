@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:proplinq/core/constants/app_colors.dart';
-import 'package:proplinq/core/constants/app_typography.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../../../core/services/biometric_service.dart';
+import '../../../core/services/storage_service.dart';
 import '../services/auth_service.dart';
 import 'forgot_password_view.dart';
 import 'sign_up_view.dart';
+import 'biometric_login_view.dart';
 import '../../home/views/tenant_home_view.dart';
 import '../../home/views/agent_home_view.dart';
 
@@ -23,12 +24,31 @@ class _LoginViewState extends State<LoginView> {
   final FocusNode _focusNodeEmail = FocusNode();
   final FocusNode _focusNodePassword = FocusNode();
   
-  bool _isPasswordVisible = false;
   bool _hasError = false;
   String _errorMessage = '';
   bool _isLoading = false;
+  bool _isBiometricAvailable = false;
+  bool _isBiometricEnabled = false;
   
   final AuthService _authService = AuthService();
+  final BiometricService _biometricService = BiometricService();
+  final StorageService _storageService = StorageService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final isAvailable = await _biometricService.isBiometricAvailable();
+    final isEnabled = await _storageService.isBiometricEnabled();
+    
+    setState(() {
+      _isBiometricAvailable = isAvailable;
+      _isBiometricEnabled = isEnabled;
+    });
+  }
 
   @override
   void dispose() {
@@ -86,6 +106,15 @@ class _LoginViewState extends State<LoginView> {
       if (response.success && response.data != null) {
         // Login successful
         _showSuccessMessage('Login successful! Welcome back, ${response.data!.user.fullName}!');
+        
+        // Enable biometric authentication if available
+        if (_isBiometricAvailable) {
+          await _storageService.setBiometricEnabled(true);
+          setState(() {
+            _isBiometricEnabled = true;
+          });
+        }
+        
         _navigateToHome(response.data!.user.userType);
       } else {
         // Login failed
@@ -215,10 +244,45 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
+  Future<void> _authenticateWithBiometric() async {
+    if (!_isBiometricAvailable) {
+      _showErrorMessage('Biometric authentication is not available on this device.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final bool authenticated = await _biometricService.authenticate(
+        reason: 'Authenticate to access your PropLinq account',
+      );
+
+      if (authenticated) {
+        // Navigate to biometric login screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const BiometricLoginView(),
+          ),
+        );
+      } else {
+        _showErrorMessage('Biometric authentication failed. Please try again.');
+      }
+    } catch (e) {
+      _showErrorMessage('Biometric authentication error: ${e.toString()}');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -258,6 +322,11 @@ class _LoginViewState extends State<LoginView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
               const SizedBox(height: 20),
               
               // Title and subtitle
@@ -334,7 +403,43 @@ class _LoginViewState extends State<LoginView> {
                 onPressed: _isLoading ? null : _signIn,
               ),
               
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              
+              // Biometric login button (only show if biometric is available and enabled)
+              if (_isBiometricAvailable && _isBiometricEnabled) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _authenticateWithBiometric,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF426DC2),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100),
+                        side: const BorderSide(
+                          color: Color(0xFF426DC2),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.fingerprint,
+                      size: 20,
+                    ),
+                    label: const Text(
+                      'Use Biometric',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ] else
+                const SizedBox(height: 24),
               
               // Or divider with lines
               Row(
@@ -476,9 +581,13 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               
-              const Spacer(),
+              const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
               
-              // Sign up text
+              // Sign up text - outside scrollable area
               Center(
                 child: GestureDetector(
                   onTap: _signUp,

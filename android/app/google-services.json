@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "256669257357",
+    "project_id": "proplinq-1263e",
+    "storage_bucket": "proplinq-1263e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:256669257357:android:6e79df14c7fa8105a8dcc4",
+        "android_client_info": {
+          "package_name": "com.example.proplinq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1YjAUNSh0ykHfKhz0tKidK3YPI-5H09Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

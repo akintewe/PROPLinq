@@ -26,6 +26,8 @@ class PropertyService {
     required String parking,
     required List<String> features,
     required List<File> images,
+    List<File>? images360,
+    File? video,
   }) async {
     try {
       print('🏠 Creating property...');
@@ -37,6 +39,8 @@ class PropertyService {
       print('Price: $price');
       print('Features: $features');
       print('Images: ${images.length} files');
+      print('360 Images: ${images360?.length ?? 0} files');
+      print('Video: ${video != null ? "1 file" : "none"}');
 
       // Prepare form fields
       final Map<String, String> fields = {
@@ -59,6 +63,8 @@ class PropertyService {
 
       // Prepare files with validation and resizing
       final Map<String, File> files = {};
+      
+      // Add regular images
       for (int i = 0; i < images.length; i++) {
         final validatedImage = await _validateAndResizeImage(images[i]);
         if (validatedImage != null) {
@@ -67,9 +73,27 @@ class PropertyService {
           print('❌ Skipping invalid image: ${images[i].path}');
         }
       }
+      
+      // Add 360 images
+      if (images360 != null && images360.isNotEmpty) {
+        for (int i = 0; i < images360.length; i++) {
+          final validatedImage = await _validateAndResizeImage(images360[i]);
+          if (validatedImage != null) {
+            files['360[$i]'] = validatedImage;
+          } else {
+            print('❌ Skipping invalid 360 image: ${images360[i].path}');
+          }
+        }
+      }
+      
+      // Add video
+      if (video != null) {
+        files['video'] = video;
+        print('📹 Added video file: ${video.path}');
+      }
 
       if (files.isEmpty) {
-        print('❌ No valid images to upload');
+        print('❌ No valid files to upload');
         return null;
       }
 

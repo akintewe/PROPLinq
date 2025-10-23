@@ -3,10 +3,12 @@ import 'package:panorama/panorama.dart';
 
 class VirtualTour360View extends StatefulWidget {
   final String title;
+  final List<String>? property360Images;
 
   const VirtualTour360View({
     Key? key,
     this.title = '360° Virtual Tour',
+    this.property360Images,
   }) : super(key: key);
 
   @override
@@ -32,45 +34,8 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
   final Map<String, Image> _preloadedImages = {};
   bool _imagesPreloaded = false;
   
-  // Define multiple 360° nodes using only panorama images
-  final List<TourNode> _tourNodes = [
-    TourNode(
-      id: 'dining_area',
-      name: 'Dining Area',
-      imageUrl: 'assets/images/shot-panoramic-composition-living-room.jpg',
-      description: 'Elegant dining space with natural lighting',
-    ),
-    TourNode(
-      id: 'kitchen',
-      name: 'Modern Kitchen',
-      imageUrl: 'assets/images/d768064b335bad732c926d8f2fe54e3c55eb343a.jpg',
-      description: 'Fully equipped kitchen with premium appliances',
-    ),
-    TourNode(
-      id: 'bedroom',
-      name: 'Master Bedroom',
-      imageUrl: 'assets/images/shot-panoramic-composition-bedroom.jpg',
-      description: 'Spacious master bedroom with premium finishes',
-    ),
-    TourNode(
-      id: 'living_room_1',
-      name: 'Living Room View 1',
-      imageUrl: 'assets/images/shot-panoramic-composition-living-room (1).jpg',
-      description: 'Comfortable living space with modern decor',
-    ),
-    TourNode(
-      id: 'living_room_2',
-      name: 'Living Room View 2',
-      imageUrl: 'assets/images/shot-panoramic-composition-living-room (2).jpg',
-      description: 'Alternative perspective of the living area',
-    ),
-    TourNode(
-      id: 'living_room_3',
-      name: 'Living Room View 3',
-      imageUrl: 'assets/images/shot-panoramic-composition-living-room (3).jpg',
-      description: 'Final view of the elegant living space',
-    ),
-  ];
+  // Define multiple 360° nodes using actual property images
+  List<TourNode> _tourNodes = [];
 
   @override
   void initState() {
@@ -103,9 +68,46 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
       curve: Curves.easeInOutCubic,
     ));
     
+    // Initialize tour nodes with actual property 360 images
+    _initializeTourNodes();
+    
     // Set initial node to 0 (first image)
     _currentNodeIndex = 0;
     _nextNodeIndex = 0;
+  }
+
+  void _initializeTourNodes() {
+    print('🖼️ VirtualTour360View: Initializing tour nodes...');
+    print('🖼️ VirtualTour360View: Property 360 images: ${widget.property360Images}');
+    
+    if (widget.property360Images != null && widget.property360Images!.isNotEmpty) {
+      // Use actual property 360 images
+      _tourNodes = widget.property360Images!.asMap().entries.map((entry) {
+        final index = entry.key;
+        final imageUrl = entry.value;
+        
+        return TourNode(
+          id: 'property_360_$index',
+          name: '360° View ${index + 1}',
+          imageUrl: imageUrl,
+          description: 'Property 360° panorama view ${index + 1}',
+        );
+      }).toList();
+      
+      print('✅ VirtualTour360View: Created ${_tourNodes.length} tour nodes from property images');
+    } else {
+      // Fallback to dummy data if no property images
+      _tourNodes = [
+        TourNode(
+          id: 'fallback',
+          name: '360° View',
+          imageUrl: 'assets/images/shot-panoramic-composition-living-room.jpg',
+          description: '360° virtual tour view',
+        ),
+      ];
+      
+      print('⚠️ VirtualTour360View: No property 360 images found, using fallback data');
+    }
   }
 
   @override
@@ -129,12 +131,20 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
   Future<void> _preloadImages() async {
     for (final node in _tourNodes) {
       try {
-        final image = Image.asset(
-          node.imageUrl,
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-          isAntiAlias: true,
-        );
+        // Check if it's a network URL or asset path
+        final image = node.imageUrl.startsWith('http')
+            ? Image.network(
+                node.imageUrl,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
+              )
+            : Image.asset(
+                node.imageUrl,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
+              );
         
         // Trigger image loading
         await precacheImage(image.image, context);
@@ -219,12 +229,12 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
         title: Column(
           children: [
             Text(
-              widget.title,
-              style: const TextStyle(
-                color: Colors.white,
+          widget.title,
+          style: const TextStyle(
+            color: Colors.white,
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+            fontWeight: FontWeight.w600,
+          ),
             ),
             Text(
               _currentNode.name,
@@ -284,47 +294,48 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
                   child: Panorama(
                     child: _imagesPreloaded && _preloadedImages.containsKey(_currentNode.id)
                         ? _preloadedImages[_currentNode.id]!
-                        : Image.asset(
-                            _currentNode.imageUrl,
-                            fit: BoxFit.cover,
-                            filterQuality: FilterQuality.high,
-                            isAntiAlias: true,
-                            cacheWidth: null,
-                            cacheHeight: null,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Color(0xFF1e3c72),
-                                      Color(0xFF2a5298),
-                                      Color(0xFF426DC2),
-                                    ],
-                                  ),
-                                ),
-                                child: const Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.error_outline,
-                                        size: 64,
-                                        color: Colors.white,
-                                      ),
-                                      SizedBox(height: 16),
-                                      Text(
-                                        'Failed to load panoramic image',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Please check your internet connection',
+                        : _currentNode.imageUrl.startsWith('http')
+                            ? Image.network(
+                                _currentNode.imageUrl,
+               fit: BoxFit.cover,
+                                filterQuality: FilterQuality.high,
+                                isAntiAlias: true,
+                                cacheWidth: null,
+                                cacheHeight: null,
+               errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF1e3c72),
+                        Color(0xFF2a5298),
+                        Color(0xFF426DC2),
+                      ],
+                    ),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.white,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Failed to load panoramic image',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Please check your internet connection',
                                         style: TextStyle(
                                           color: Colors.white70,
                                           fontSize: 14,
@@ -335,14 +346,66 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
                                 ),
                               );
                             },
+                          )
+                            : Image.asset(
+                                _currentNode.imageUrl,
+                                fit: BoxFit.cover,
+                                filterQuality: FilterQuality.high,
+                                isAntiAlias: true,
+                                cacheWidth: null,
+                                cacheHeight: null,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Color(0xFF1e3c72),
+                                          Color(0xFF2a5298),
+                                          Color(0xFF426DC2),
+                                        ],
+                                      ),
+                                    ),
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline,
+                                            size: 64,
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(height: 16),
+                                          Text(
+                                            'Failed to load panoramic image',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'Asset image not found',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
                           ),
-                    onViewChanged: _onViewChanged,
-                    onTap: (longitude, latitude, tilt) {
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+                         onViewChanged: _onViewChanged,
+             onTap: (longitude, latitude, tilt) {
                       // This is the key - use Panorama's onTap to detect taps
                       print('🎯 Panorama tapped at: $longitude, $latitude');
                       _moveToNextImage();
-                    },
-                    animSpeed: 1.0,
+             },
+             animSpeed: 1.0,
                     sensorControl: SensorControl.None,
                     sensitivity: 1.0,
                   ),
@@ -371,15 +434,15 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                     child: Text(
                       'Drag to explore • Tap anywhere to move to next area • ${_currentNode.description}',
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                         color: Colors.white,
+                         fontSize: 14,
+                         fontWeight: FontWeight.w500,
+                       ),
+                     ),
+                   ),
                   IconButton(
                     icon: const Icon(
                       Icons.info_outline,
@@ -416,12 +479,12 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
                   const SizedBox(width: 4),
                   Text(
                     '${_currentNodeIndex + 1}/${_tourNodes.length}',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
-                  ),
+                ),
                 ],
               ),
             ),
@@ -435,21 +498,21 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
               right: 0,
               bottom: 0,
               child: Container(
-                color: Colors.black,
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
+              color: Colors.black,
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
                         color: Colors.white,
                         strokeWidth: 3,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
+                    ),
+                    SizedBox(height: 16),
+                    Text(
                         'Loading Virtual Tour...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -527,11 +590,11 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
                 'Swipe in any direction to rotate the view and explore different areas.',
               ),
               const SizedBox(height: 16),
-              _instructionItem(
+                             _instructionItem(
                 Icons.touch_app,
                 'Tap to Move',
                 'Tap anywhere on the image to move to the next panoramic view.',
-              ),
+               ),
               const SizedBox(height: 16),
               _instructionItem(
                 Icons.info,
