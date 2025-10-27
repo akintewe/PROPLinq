@@ -312,6 +312,72 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     );
   }
 
+  /// Show report listing dialog
+  void _showReportDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Report Listing',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+          content: const Text(
+            'If you believe this listing violates our terms of service or contains inappropriate content, please report it. Our team will review your report.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF666666),
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF666666),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // TODO: Implement report submission
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Report submitted. Thank you!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF426DC2),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Submit Report',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   /// Get 360 panorama images from property data
   List<String> _getProperty360Images() {
     final property = widget.propertyData ?? _getDefaultProperty();
@@ -989,125 +1055,99 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               //   ],
                               // ),
                               
-                              // Message Agent/Hotel button for home seekers
+                              // Contact Agent button for home seekers
                               if (widget.isHomeSeeker) ...[
                                 Container(
                                   width: double.infinity,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          begin: Alignment.centerLeft,
-                                          end: Alignment.centerRight,
-                                          stops: [0.0, 1.0, 1.0],
-                                          colors: [
-                                            Color(0xFF426DC2),
-                                            Color(0xFF63ADDC),
-                                            Color(0xFF75CFEA),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          print('🚀 MESSAGE AGENT: Opening chat with property data: $property');
-                                          print('🚀 MESSAGE AGENT: Property keys: ${property.keys.toList()}');
-                                          print('🚀 MESSAGE AGENT: Property ID: ${property['id']}');
-                                          print('🚀 MESSAGE AGENT: Property Title: ${property['title']}');
-                                          
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                          builder: (context) => InAppChatView(
-                                            agentData: property,
-                                            propertyTitle: property['title'] as String,
-                                            propertyId: property['id']?.toString(),
-                                          ),
-                                            ),
-                                          );
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(25),
-                                          ),
-                                        ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(
-                                          Icons.message,
-                                          color: Colors.white,
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          isHotel ? 'Message Hotel' : 'Message Agent',
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                      ),
-                                    ),
-                              ),
-                              
-                              const SizedBox(height: 16),
-                              ],
-                              
-                              Container(
-                                width: double.infinity,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: const Color(0xFF426DC2)),
-                                  borderRadius: BorderRadius.circular(25),
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    if (widget.isHomeSeeker) {
-                                      // For home seekers, open chat screen
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: const Color(0xFF426DC2)),
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      // Open chat screen for home seekers
                                       print('🚀 Opening chat with property data: $property');
+                                      print('🚀 Property keys: ${property.keys.toList()}');
                                       print('🚀 Property ID: ${property['id']}');
                                       print('🚀 Property Title: ${property['title']}');
                                       
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
                                           builder: (context) => InAppChatView(
-                                            agentData: property, // Pass the full property data
+                                            agentData: property,
                                             propertyTitle: property['title'] ?? 'Property',
                                             propertyId: property['id']?.toString(),
                                           ),
                                         ),
                                       );
-                                    } else {
-                                      // For agents, mark as rented (existing functionality)
-                                      _markAsRented();
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    shadowColor: Colors.transparent,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25),
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
                                     ),
-                                  ),
-                                  child: Text(
-                                    widget.isHomeSeeker 
-                                        ? (isHotel ? 'Book Now' : 'Contact Agent')
-                                        : 'Mark as rented',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF426DC2),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.message,
+                                          color: Color(0xFF426DC2),
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          isHotel ? 'Contact Hotel' : 'Contact Agent',
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF426DC2),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
-                              ),
+                              ],
+                              
+                              // Mark as rented button for agents
+                              if (!widget.isHomeSeeker) ...[
+                                Container(
+                                  width: double.infinity,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: const Color(0xFF426DC2)),
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      // For agents, mark as rented
+                                      _markAsRented();
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Mark as rented',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF426DC2),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ],
                           
@@ -1467,6 +1507,56 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                 );
                               }
                             },
+                          ),
+                          
+                          const SizedBox(height: 20),
+                          
+                          // Report listing button
+                          Container(
+                            width: double.infinity,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: const Color(0xFF426DC2)),
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                // TODO: Implement report listing functionality
+                                _showReportDialog();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                shadowColor: Colors.transparent,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF426DC2).withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: SvgPicture.asset('assets/icons/message-question (1).svg')
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    'Report listing',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF426DC2),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                           
                           const SizedBox(height: 100), // Space for bottom bar

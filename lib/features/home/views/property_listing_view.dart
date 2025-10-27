@@ -79,6 +79,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   String _selectedPropertyType = '';
   String _listingType = 'For rent'; // 'For rent' or 'For sale'
   bool _isHotelType = false;
+  bool _isShortletType = false;
   String _gatedStatus = '';
   String _parkingStatus = '';
   
@@ -142,6 +143,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     setState(() {
       _selectedPropertyType = newValue ?? '';
       _isHotelType = newValue == 'Hotel';
+      _isShortletType = newValue == 'Shortlet';
       
       // Reset form when property type changes
       _propertyTitleController.clear();
@@ -156,8 +158,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       _gatedStatus = '';
       _parkingStatus = '';
       
-      if (_isHotelType) {
-        _listingType = 'For rent'; // Hotels are always for rent
+      if (_isHotelType || _isShortletType) {
+        _listingType = 'For rent'; // Hotels and shortlets are always for rent
       }
     });
   }
@@ -180,7 +182,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   }
 
   bool _isStep2Valid() {
-    if (_isHotelType) {
+    if (_isHotelType || _isShortletType) {
       return _selectedAmenities.isNotEmpty;
     } else {
       return _roomsController.text.isNotEmpty &&
@@ -258,8 +260,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
               _currentStep == 0 
                   ? 'Tell us about your property'
                   : _currentStep == 1
-                      ? (_isHotelType ? 'What will your guest get' : 'What will your tenants get')
-                      : (_isHotelType ? 'Upload property' : 'Upload property'),
+                      ? ((_isHotelType || _isShortletType) ? 'What will your guest get' : 'What will your tenants get')
+                      : ((_isHotelType || _isShortletType) ? 'Upload property' : 'Upload property'),
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
@@ -273,8 +275,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
               _currentStep == 0 
                   ? 'Let us know the type of property you want to list'
                   : _currentStep == 1
-                      ? (_isHotelType ? 'Let us know what you have to offer your guest' : 'Let us know what your property has')
-                      : (_isHotelType ? 'kindly upload pictures and video of your property' : 'kindly upload pictures and video of your property'),
+                      ? ((_isHotelType || _isShortletType) ? 'Let us know what you have to offer your guest' : 'Let us know what your property has')
+                      : ((_isHotelType || _isShortletType) ? 'kindly upload pictures and video of your property' : 'kindly upload pictures and video of your property'),
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
@@ -338,7 +340,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       case 0:
         return _buildStep1();
       case 1:
-        return _isHotelType ? _buildStep2Hotel() : _buildStep2Regular();
+        return (_isHotelType || _isShortletType) ? _buildStep2Hotel() : _buildStep2Regular();
       case 2:
         return _buildStep3();
       default:
@@ -411,11 +413,11 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         // Property Title
         CustomTextField(
           label: 'Property title',
-          hintText: _isHotelType ? 'Enter title' : 'Enter property title',
+          hintText: (_isHotelType || _isShortletType) ? 'Enter title' : 'Enter property title',
           controller: _propertyTitleController,
         ),
         
-        if (!_isHotelType) ...[
+        if (!_isHotelType && !_isShortletType) ...[
           const SizedBox(height: 24),
           
           // For Rent/For Sale Radio Buttons (only for non-hotel properties)
@@ -544,8 +546,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         
         // Price
         CustomTextField(
-          label: _isHotelType ? 'Price per night' : 'Price',
-          hintText: _isHotelType ? 'Enter property price' : 'Enter property price',
+          label: (_isHotelType || _isShortletType) ? 'Price per night' : 'Price',
+          hintText: (_isHotelType || _isShortletType) ? 'Enter property price' : 'Enter property price',
           controller: _priceController,
           keyboardType: TextInputType.number,
           inputFormatters: [CurrencyInputFormatter()],
@@ -917,7 +919,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   }
 
   Widget _buildStep3() {
-    if (_isHotelType) {
+    if (_isHotelType || _isShortletType) {
       return _buildStep3Hotel();
     } else {
       return _buildStep3Regular();
@@ -925,11 +927,15 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   }
 
   Widget _buildStep3Hotel() {
+    final String labelText = _isShortletType 
+        ? 'Upload shortlet images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''} (Max 10 images)'
+        : 'Upload hotel images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''} (Max 10 images)';
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Upload hotel images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''} (Max 10 images)',
+          labelText,
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -1494,7 +1500,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       }
 
       // Validate step 2 fields based on property type
-      if (!_isHotelType) {
+      if (!_isHotelType && !_isShortletType) {
         if (_roomsController.text.isEmpty ||
             _bathroomsController.text.isEmpty ||
             _gatedStatus.isEmpty ||
@@ -1532,7 +1538,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
 
       // Prepare features list
       List<String> features = [];
-      if (_isHotelType) {
+      if (_isHotelType || _isShortletType) {
         features = _selectedAmenities;
       } else {
         // For regular properties, add basic features based on form data
@@ -1558,14 +1564,14 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         price: cleanPrice,
         category: _listingType,
         location: _locationController.text,
-        bedrooms: _roomsController.text,
-        bathrooms: _bathroomsController.text,
-        gated: _gatedStatus,
-        parking: _parkingStatus,
+        bedrooms: (_isHotelType || _isShortletType) ? '1' : _roomsController.text,
+        bathrooms: (_isHotelType || _isShortletType) ? '1' : _bathroomsController.text,
+        gated: (_isHotelType || _isShortletType) ? 'No' : _gatedStatus,
+        parking: (_isHotelType || _isShortletType) ? 'No' : _parkingStatus,
         features: features,
         images: _selectedImages,
-        images360: _selected360Images,
-        video: _selectedVideo,
+        images360: (_isHotelType || _isShortletType) ? [] : _selected360Images,
+        video: (_isHotelType || _isShortletType) ? null : _selectedVideo,
       );
 
       // Close loading dialog

@@ -1,4 +1,4 @@
-package com.example.proplinq
+package com.proplinq.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

@@ -935,7 +935,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     _buildPaymentOption(
                       'pay_now',
                       'Pay Now (Recommended)',
-                      'Secure your booking by paying now',
+                      'Secure your booking by paying the full amount now.Your\nbooking is 100% guaranteed',
                       true,
                     ),
                     
@@ -944,7 +944,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     _buildPaymentOption(
                       'pay_arrival',
                       'Pay on Arrival',
-                      'Pay full amount when you arrive',
+                      'Pay 10% deposit now to secure your booking. The\nremaining 90% will be paid directly at the hotel/shortlet',
                       false,
                     ),
                     
@@ -985,7 +985,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                       ),
                     ),
                     child: const Text(
-                      'Book now',
+                      'Pay now',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -1225,7 +1225,7 @@ class HotelBookingSuccessView extends StatelessWidget {
               const SizedBox(height: 16),
               
               const Text(
-                'Thanks for booking with us! Your appointment has been successfully scheduled.',
+                'Thanks for booking with us! Your booking has been successfully scheduled.',
                 style: TextStyle(
                   fontSize: 16,
                   color: Color(0xFF6C757D),
@@ -1261,7 +1261,7 @@ class HotelBookingSuccessView extends StatelessWidget {
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Text(
-                        'Your booking will be cancelled after 48hrs of your checking date if you don\'t show up',
+                        'Your booking will be cancelled if you don\'t check in within 48 hours of your scheduled check-in date.',
                         style: TextStyle(
                           fontSize: 14,
                           color: Color(0xFF1976D2),
@@ -1304,7 +1304,7 @@ class HotelBookingSuccessView extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                            'Confirm availability',
+                            'View booking details',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -1332,7 +1332,7 @@ class HotelBookingSuccessView extends StatelessWidget {
                         ),
                       ),
                       child: const Text(
-                        'Report an issue',
+                        'Contact support',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,

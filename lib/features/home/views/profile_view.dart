@@ -1141,34 +1141,8 @@ class _ProfileViewState extends State<ProfileView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF426DC2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.verified_user,
-                      size: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Rent-Now, Pay-Later Eligibility',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
+             
+             
               
               // Status message
               Text(
@@ -1187,12 +1161,13 @@ class _ProfileViewState extends State<ProfileView> {
               // KYC Action Button
               Container(
                 width: double.infinity,
-                height: 48,
+                height: 50,
                 decoration: BoxDecoration(
                   border: Border.all(color: const Color(0xFF426DC2)),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: ElevatedButton(
+                  
                   onPressed: _isLoadingKycStatus ? null : () {
                     // Navigate based on KYC status
                     if (_kycStatus?.status == 'pending') {
