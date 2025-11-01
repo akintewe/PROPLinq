@@ -106,6 +106,9 @@ dev_dependencies:
   json_serializable: ^6.7.1
   build_runner: ^2.4.7
 
+  # App icon generation
+  flutter_launcher_icons: ^0.13.1
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -151,3 +154,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  web:
+    generate: true
+    image_path: "assets/images/Proplinq Logo-Post-1.jpg"
+  macos:
+    generate: true
+    image_path: "assets/images/Proplinq Logo-Post-1.jpg"
+  image_path: "assets/images/Proplinq Logo-Post-1.jpg"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/Proplinq Logo-Post-1.jpg"
+  remove_alpha_ios: true

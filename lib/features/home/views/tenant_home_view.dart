@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
 import 'dart:async';
+import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
@@ -30,6 +31,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   int _currentIndex = 0;
   late AnimationController _animationController;
   late ScrollController _featuredScrollController;
+  late ScrollController _homeScrollController;
   bool _hasShownKycDialog = false;
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
@@ -53,6 +55,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     )..repeat();
     
     _featuredScrollController = ScrollController();
+    _homeScrollController = ScrollController();
     
     // Fetch user profile, properties, and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -309,14 +312,20 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   void dispose() {
     _animationController.dispose();
     _featuredScrollController.dispose();
+    _homeScrollController.dispose();
     super.dispose();
   }
 
   void _startFeaturedAutoScroll() {
     if (_properties.isEmpty) return;
     
-    // Auto-scroll every 3 seconds
-    Timer.periodic(const Duration(seconds: 3), (timer) {
+    // Card width (284) + separator (16) = 300 pixels per card
+    const double cardWidth = 284.0;
+    const double separatorWidth = 16.0;
+    const double scrollDistance = cardWidth + separatorWidth;
+    
+    // Auto-scroll every 3-4 seconds
+    Timer.periodic(const Duration(seconds: 4), (timer) {
       if (!mounted || _properties.isEmpty) {
         timer.cancel();
         return;
@@ -327,18 +336,18 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         final currentScroll = _featuredScrollController.offset;
         
         // If we're at the end, scroll back to the beginning
-        if (currentScroll >= maxScroll) {
+        if (currentScroll >= maxScroll - 10) {
           _featuredScrollController.animateTo(
             0,
-            duration: const Duration(milliseconds: 500),
+            duration: const Duration(milliseconds: 800),
             curve: Curves.easeInOut,
           );
         } else {
-          // Scroll to the next item
-          final nextScroll = currentScroll + 300; // Approximate width of card + spacing
+          // Scroll exactly one card at a time
+          final nextScroll = currentScroll + scrollDistance;
           _featuredScrollController.animateTo(
             nextScroll.clamp(0, maxScroll),
-            duration: const Duration(milliseconds: 500),
+            duration: const Duration(milliseconds: 800),
             curve: Curves.easeInOut,
           );
         }
@@ -520,6 +529,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Widget _buildHomeContent() {
     return SingleChildScrollView(
+      controller: _homeScrollController,
       child: Column(
         children: [
           _buildHeader(),
@@ -534,7 +544,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   Widget _buildSearchResults() {
-    return Column(
+    return SingleChildScrollView(
+      controller: _homeScrollController,
+      child: Column(
       children: [
         // Search Results Header
         Padding(
@@ -678,8 +690,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         ),
         
         // Search Results List
-        Expanded(
-          child: () {
+        Builder(
+          builder: (context) {
             final filteredResults = _getFilteredSearchResults();
             print('🏠 Tenant Search results - filteredResults.length: ${filteredResults.length}');
             print('🏠 Tenant Search results - _selectedLocation: $_selectedLocation');
@@ -689,6 +701,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             return filteredResults.isEmpty
                 ? _buildNoPropertiesFound()
                 : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     key: ValueKey('tenant_search_results_${filteredResults.length}_${_selectedCategory}'),
             padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: filteredResults.length,
@@ -697,9 +711,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       return _buildSearchPropertyCard(filteredResults[index]);
             },
                   );
-          }(),
+          },
         ),
       ],
+      ),
     );
   }
 
@@ -1546,7 +1561,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                              
                               const Spacer(),
                               Text(
-                                property.price,
+                                FormatUtils.formatPrice(property.price),
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -1846,6 +1861,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                             ),
                           ),
                         ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -1860,6 +1878,21 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                               color: Color(0xFF426DC2),
                             ),
                           ),
+                            ),
+                            if ((property.category == 'for_rent' || property.category == 'for_sale') &&
+                                property.type.toLowerCase() != 'hotel')
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  property.category == 'for_rent' ? 'For Rent' : 'For Sale',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF868686),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -1911,7 +1944,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '₦${property.price}',
+                              FormatUtils.formatPrice(property.price),
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -2150,7 +2183,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              property['price'] as String,
+                              FormatUtils.formatPrice(property['price'] as String),
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -2424,9 +2457,20 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     
     return GestureDetector(
       onTap: () {
+        // If clicking on home tab (index 0) when already on home, scroll to top
+        if (index == 0 && _currentIndex == 0) {
+          if (_homeScrollController.hasClients) {
+            _homeScrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        } else {
         setState(() {
           _currentIndex = index;
         });
+        }
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,

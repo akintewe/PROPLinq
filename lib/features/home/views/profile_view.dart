@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../../../core/utils/format_utils.dart';
 import 'property_listing_view.dart';
 import 'property_details_view.dart';
 import 'subscription_view.dart';
@@ -1526,7 +1527,9 @@ class _ProfileViewState extends State<ProfileView> {
             ),
             child: Stack(
               children: [
-                // Badge
+                // Badge - Only show for rent/for sale for apartments and shortlets (not hotels)
+                if ((property.category == 'for_rent' || property.category == 'for_sale') &&
+                    property.type.toLowerCase() != 'hotel')
                 Positioned(
                   top: 12,
                   left: 12,
@@ -1606,6 +1609,9 @@ class _ProfileViewState extends State<ProfileView> {
                           ),
                         ),
                       ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
@@ -1620,6 +1626,22 @@ class _ProfileViewState extends State<ProfileView> {
                             color: Color(0xFF426DC2),
                           ),
                         ),
+                          ),
+                          // Show "For Rent" or "For Sale" only for apartments and shortlets (not hotels)
+                          if ((property.category == 'for_rent' || property.category == 'for_sale') &&
+                              property.type.toLowerCase() != 'hotel')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                property.category == 'for_rent' ? 'For Rent' : 'For Sale',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF868686),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
@@ -1648,6 +1670,30 @@ class _ProfileViewState extends State<ProfileView> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
+                      // Approved & live tag
+                      Container(
+                        width: 90,
+                        height: 20,
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCCFBEA), // rgba(204, 251, 234, 1)
+                          borderRadius: BorderRadius.circular(70),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Approved & live',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF008D5A), // rgba(0, 141, 90, 1)
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                         const Text(
                           '(5.0)',
                           style: TextStyle(
@@ -1663,7 +1709,7 @@ class _ProfileViewState extends State<ProfileView> {
                       ),
                       const Spacer(),
                       Text(
-                          '₦${property.price}',
+                        FormatUtils.formatPrice(property.price),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -1673,6 +1719,83 @@ class _ProfileViewState extends State<ProfileView> {
                     ],
                   ),
                   const Spacer(),
+                  // Show both buttons side by side only for hotels
+                  if (property.type.toLowerCase() == 'hotel')
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 32,
+                            child: OutlinedButton(
+                              onPressed: () {},
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF426DC2),
+                                side: const BorderSide(color: Color(0xFF426DC2), width: 1),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              ),
+                              child: const Text(
+                                'Promote property',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF426DC2),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SizedBox(
+                            height: 32,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment(-0.99, 0.0),
+                                  end: Alignment(0.99, 0.0),
+                                  stops: [0.0113, 0.4555, 1.1245],
+                                  colors: [
+                                    Color(0xFF426DC2),
+                                    Color(0xFF75CFEA),
+                                    Color(0xCC33CC99),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: ElevatedButton(
+                                onPressed: () {},
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                ),
+                                child: const Text(
+                                  'Confirm check-in',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    // For non-hotels, show only Promote property button
                   SizedBox(
                     width: double.infinity,
                     height: 32,
@@ -1726,11 +1849,20 @@ class _ProfileViewState extends State<ProfileView> {
       child: Column(
         children: [
           const Text(
-            'Want to subscribe to monthly unlimited listing of properties?',
+            'Unlock Unlimited Listings',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+            const Text(
+            'Subscribe for boundess property uploads',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: Colors.white,
             ),
           ),
@@ -1752,7 +1884,7 @@ class _ProfileViewState extends State<ProfileView> {
                   borderRadius: BorderRadius.circular(22),
                 ),
               ),
-              child: const Text(
+              child:  Text(
                 'Subscribe',
                 style: TextStyle(
                   fontSize: 14,

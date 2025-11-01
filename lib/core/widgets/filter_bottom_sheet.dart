@@ -30,7 +30,7 @@ class FilterBottomSheet extends StatefulWidget {
 }
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
-  String _selectedCategory = 'All';
+  String? _selectedPropertyType; // Apartment, Hotels, or Shortlets (no "All" option)
   String _selectedStatus = 'All';
   String _selectedRating = 'All';
   String _fromPrice = '';
@@ -54,7 +54,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   void _resetFilters() {
     setState(() {
-      _selectedCategory = 'All';
+      _selectedPropertyType = null;
       _selectedStatus = 'All';
       _selectedRating = 'All';
       _fromPrice = '';
@@ -68,7 +68,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   void _applyFilters() {
     final filters = {
-      'category': _selectedCategory,
+      'propertyType': _selectedPropertyType, // Can be null if none selected
+      'category': _selectedPropertyType, // For backward compatibility
       'status': _selectedStatus,
       'rating': _selectedRating,
       'fromPrice': _fromPrice,
@@ -129,45 +130,62 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Categories
-                  _buildSectionTitle('Categories'),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
+                  // Property Type (Apartment, Hotels, Shortlets) - No title, just buttons
+                  const SizedBox(height: 8),
+                  Row(
                     children: [
-                      _buildCategoryChip('All', _selectedCategory == 'All'),
-                      _buildCategoryChip('Real Estate', _selectedCategory == 'Real Estate'),
-                      _buildCategoryChip('Hotels', _selectedCategory == 'Hotels'),
-                      _buildCategoryChip('Shortlets', _selectedCategory == 'Shortlets'),
+                      Flexible(
+                        flex: 1,
+                        child: _buildPropertyTypeChip('Apartment', _selectedPropertyType == 'Apartment'),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        flex: 1,
+                        child: _buildPropertyTypeChip('Hotels', _selectedPropertyType == 'Hotels'),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        flex: 1,
+                        child: _buildPropertyTypeChip('Shortlets', _selectedPropertyType == 'Shortlets'),
+                      ),
                     ],
                   ),
                   
+                  // Status - Only show when Apartment is selected
+                  if (_selectedPropertyType == 'Apartment') ...[
                   const SizedBox(height: 32),
+                    _buildSectionTitle('Status'),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatusChip('All', _selectedStatus == 'All'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatusChip('For sale', _selectedStatus == 'For sale'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatusChip('For rent', _selectedStatus == 'For rent'),
+                        ),
+                      ],
+                    ),
+                  ],
                   
                   // Price Range
+                  const SizedBox(height: 32),
                   _buildSectionTitle('Price range'),
                   const SizedBox(height: 16),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'From',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
+                        child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(30),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: const Color(0xFF426DC2),
                                   width: 1,
@@ -183,9 +201,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                   disabledBorder: InputBorder.none,
                                   errorBorder: InputBorder.none,
                                   focusedErrorBorder: InputBorder.none,
-                                  hintText: '0',
+                              hintText: 'From',
                                   hintStyle: TextStyle(
-                                    color: Color(0xFF868686),
+                                fontSize: 14,
+                                color: Color(0xFF999999),
                                   ),
                                   isDense: true,
                                   contentPadding: EdgeInsets.zero,
@@ -196,35 +215,22 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                   });
                                 },
                               ),
-                            ),
-                          ],
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Container(
-                        width: 20,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        width: 12,
                         height: 1,
-                        color: const Color(0xFF426DC2),
+                        color: const Color(0xFF868686),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'To',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
+                        child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(30),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: const Color(0xFF426DC2),
                                   width: 1,
@@ -240,9 +246,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                   disabledBorder: InputBorder.none,
                                   errorBorder: InputBorder.none,
                                   focusedErrorBorder: InputBorder.none,
-                                  hintText: '0',
+                              hintText: 'To',
                                   hintStyle: TextStyle(
-                                    color: Color(0xFF868686),
+                                fontSize: 14,
+                                color: Color(0xFF999999),
                                   ),
                                   isDense: true,
                                   contentPadding: EdgeInsets.zero,
@@ -253,25 +260,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                   });
                                 },
                               ),
-                            ),
-                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Status
-                  _buildSectionTitle('Status'),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _buildStatusChip('All', _selectedStatus == 'All'),
-                      _buildStatusChip('For sale', _selectedStatus == 'For sale'),
-                      _buildStatusChip('For rent', _selectedStatus == 'For rent'),
                     ],
                   ),
                   
@@ -346,7 +336,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: Color(0xFF666666),
                         ),
                       ),
                     ),
@@ -378,34 +368,40 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
-  Widget _buildCategoryChip(String title, bool isSelected) {
+  Widget _buildPropertyTypeChip(String title, bool isSelected) {
     String? svgAsset;
-    Color? iconColor;
+    IconData? fallbackIcon;
+    
     switch (title) {
-      case 'Real Estate':
-        svgAsset = 'assets/icons/emojione_houses.svg';
-       // blue
+      case 'Apartment':
+        svgAsset = 'assets/icons/emojione-monotone_houses.svg';
+        fallbackIcon = Icons.apartment;
         break;
       case 'Hotels':
         svgAsset = 'assets/icons/emojione_houses.svg'; 
-      
+        fallbackIcon = Icons.hotel;
         break;
       case 'Shortlets':
-        svgAsset = 'assets/icons/emojione_houses.svg'; // placeholder, replace with correct shortlet SVG if available
-     
+        svgAsset = 'assets/icons/emojione_houses.svg';
+        fallbackIcon = Icons.home;
         break;
       default:
         svgAsset = null;
-        iconColor = null;
+        fallbackIcon = null;
     }
+    
     return GestureDetector(
       onTap: () {
         setState(() {
-          _selectedCategory = title;
+          _selectedPropertyType = isSelected ? null : title;
+          // Reset status if not Apartment
+          if (_selectedPropertyType != 'Apartment') {
+            _selectedStatus = 'All';
+          }
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
@@ -422,26 +418,49 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           color: isSelected ? null : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? Colors.transparent : const Color(0xFF426DC2),
+            color: isSelected 
+                ? Colors.transparent 
+                : const Color(0xFFE0E0E0),
             width: 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (svgAsset != null)
-              SvgPicture.asset(
+            if (svgAsset != null || fallbackIcon != null)
+              svgAsset != null
+                  ? SvgPicture.asset(
                 svgAsset,
                 width: 16,
                 height: 16,
-              ),
-            if (svgAsset != null) const SizedBox(width: 6),
-            Text(
+                      colorFilter: isSelected
+                          ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                          : null,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(
+                          fallbackIcon ?? Icons.home,
+                          size: 16,
+                          color: isSelected ? Colors.white : const Color(0xFF666666),
+                        );
+                      },
+                    )
+                  : Icon(
+                      fallbackIcon ?? Icons.home,
+                      size: 16,
+                      color: isSelected ? Colors.white : const Color(0xFF666666),
+                    ),
+            if (svgAsset != null || fallbackIcon != null) const SizedBox(width: 6),
+            Flexible(
+              child: Text(
               title,
               style: TextStyle(
-                fontSize: 14,
+                  fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : const Color(0xFF426DC2),
+                  color: isSelected ? Colors.white : Colors.black,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],
@@ -479,12 +498,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             width: 1,
           ),
         ),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : const Color(0xFF426DC2),
+        child: Center(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: isSelected ? Colors.white : const Color(0xFF426DC2),
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
       ),
@@ -528,7 +550,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               size: 16,
               color: isSelected ? Colors.white : const Color(0xFF4CAF50),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               title,
               style: TextStyle(

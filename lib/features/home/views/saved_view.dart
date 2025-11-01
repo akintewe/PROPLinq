@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../services/favorite_service.dart';
 import '../models/property_model.dart';
@@ -343,10 +342,16 @@ class _SavedViewState extends State<SavedView> {
       );
     }
 
-    // Show saved properties list
-    return ListView.separated(
+    // Show saved properties grid
+    return GridView.builder(
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
       itemCount: _savedProperties.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final property = _savedProperties[index];
         return _buildSavedPropertyCard(property);
@@ -397,212 +402,258 @@ class _SavedViewState extends State<SavedView> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Property image
-              Container(
-                height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+              Expanded(
+                flex: 3,
                 child: Container(
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.3),
-                      ],
+                    image: DecorationImage(
+                      image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
+                      fit: BoxFit.cover,
                     ),
                   ),
-                  child: Stack(
-                    children: [
-                      // Verification badge
-                      if (property.user?.verificationStatus == 'verified')
-                        Positioned(
-                          top: 16,
-                          left: 16,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.verified,
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  'Verified Agent',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.3),
+                        ],
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Verification badge
+                        if (property.user?.verificationStatus == 'verified')
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.verified,
+                                    size: 10,
                                     color: Colors.white,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 3),
+                                  const Text(
+                                    'Verified',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        
+                        // Favorite button (filled heart)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () => _removeFromFavorites(property),
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.favorite,
+                                size: 14,
+                                color: Colors.red,
+                              ),
                             ),
                           ),
                         ),
-                      
-                      // Favorite button (filled heart)
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: GestureDetector(
-                          onTap: () => _removeFromFavorites(property),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
-                              shape: BoxShape.circle,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              // Property details
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              property.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            child: const Icon(
-                              Icons.favorite,
-                              size: 18,
-                              color: Colors.red,
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECF0F9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              property.type,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF426DC2),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            size: 11,
+                            color: Color(0xFF868686),
+                          ),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              property.location,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF868686),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Text(
+                            '(5.0)',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF868686),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(
+                            Icons.star,
+                            size: 11,
+                            color: Colors.green,
+                          ),
+                          const Spacer(),
+                          Flexible(
+                            child: Text(
+                              property.formattedPrice,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF426DC2),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const Spacer(),
+                      
+                      // Contact agent button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 28,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment(-0.99, 0.0),
+                              end: Alignment(0.99, 0.0),
+                              stops: [0.0113, 0.4555, 1.1245],
+                              colors: [
+                                Color(0xFF426DC2),
+                                Color(0xFF75CFEA),
+                                Color(0xCC33CC99),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => PropertyDetailsView(
+                                  propertyData: {
+                                    'id': property.id,
+                                    'badges': [property.user?.verificationStatus ?? 'Unverified'],
+                                    'title': property.title,
+                                    'location': property.location,
+                                    'rating': '(5.0)',
+                                    'price': property.price,
+                                    'type': property.type,
+                                    'category': property.category,
+                                    'description': property.description,
+                                    'features': property.features,
+                                    'imageUrl': property.imageUrl,
+                                    'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null,
+                                    'user': property.user?.toJson(),
+                                    'agent': {
+                                      'name': property.user?.fullName ?? 'Agent',
+                                      'title': 'Agent',
+                                      'phone': property.user?.phoneNumber ?? '',
+                                      'email': property.user?.email ?? '',
+                                      'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
+                                    },
+                                  },
+                                  isHomeSeeker: true,
+                                )),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              padding: EdgeInsets.zero,
+                            ),
+                            child: const Text(
+                              'Contact agent',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-              
-              // Property details
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            property.title,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECF0F9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            property.type,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF426DC2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: Color(0xFF868686),
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            property.location,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF868686),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Text(
-                          '(5.0)',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF868686),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.star,
-                          size: 16,
-                          color: Colors.green,
-                        ),
-                        const Spacer(),
-                        Text(
-                          property.formattedPrice,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF426DC2),
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Contact agent button
-                    SizedBox(
-                      width: double.infinity,
-                      child: GradientButton(
-                        text: 'Contact agent',
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => PropertyDetailsView(
-                              propertyData: {
-                                'id': property.id,
-                                'badges': [property.user?.verificationStatus ?? 'Unverified'],
-                                'title': property.title,
-                                'location': property.location,
-                                'rating': '(5.0)',
-                                'price': property.price,
-                                'type': property.type,
-                                'category': property.category,
-                                'description': property.description,
-                                'features': property.features,
-                                'imageUrl': property.imageUrl,
-                                'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null,
-                                'user': property.user?.toJson(),
-                                'agent': {
-                                  'name': property.user?.fullName ?? 'Agent',
-                                  'title': 'Agent',
-                                  'phone': property.user?.phoneNumber ?? '',
-                                  'email': property.user?.email ?? '',
-                                  'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
-                                },
-                              },
-                              isHomeSeeker: true,
-                            )),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],
