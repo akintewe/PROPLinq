@@ -35,6 +35,9 @@ migrate_working_dir/
 
 # Symbolication related
 app.*.symbols
+**/native-debug-symbols.zip
+native-debug-symbols.zip
+*.symbols.zip
 
 # Obfuscation related
 app.*.map.json
