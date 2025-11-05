@@ -29,7 +29,7 @@ class _SignUpViewState extends State<SignUpView> {
   final AuthService _authService = AuthService();
   
   // Google Places API Key
-  final String _googleApiKey = 'AIzaSyDLvqz3w_9ASjj--fmcfBz9CH7S_R1gZnM';
+  final String _googleApiKey = 'AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ';
   
   // Controllers for Home Seeker
   final TextEditingController _fullNameController = TextEditingController();

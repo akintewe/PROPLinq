@@ -42,7 +42,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   final TextEditingController _locationController = TextEditingController();
   
   // Google Places API Key
-  final String _googleApiKey = 'AIzaSyDLvqz3w_9ASjj--fmcfBz9CH7S_R1gZnM';
+  final String _googleApiKey = 'AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ';
 
   @override
   void dispose() {

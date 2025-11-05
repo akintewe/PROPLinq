@@ -556,6 +556,20 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   Widget build(BuildContext context) {
     // Get property data or use defaults
     final property = widget.propertyData ?? _getDefaultProperty();
+    // Derive a propertyId if missing (e.g., from images list)
+    String derivedPropertyId = (property['id']?.toString()) ?? '';
+    if (derivedPropertyId.isEmpty) {
+      final images = property['images'];
+      if (images is List && images.isNotEmpty) {
+        final first = images.first;
+        if (first is Map<String, dynamic>) {
+          final pid = first['property_id'];
+          if (pid != null) {
+            derivedPropertyId = pid.toString();
+          }
+        }
+      }
+    }
     final propertyType = property['type'] as String? ?? 'Apartment';
     final normalizedType = propertyType.toLowerCase();
     final isHotel = normalizedType == 'hotel';
@@ -1066,18 +1080,25 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                   ),
                                   child: ElevatedButton(
                                     onPressed: () {
-                                      // Open chat screen for home seekers
-                                      print('🚀 Opening chat with property data: $property');
-                                      print('🚀 Property keys: ${property.keys.toList()}');
-                                      print('🚀 Property ID: ${property['id']}');
-                                      print('🚀 Property Title: ${property['title']}');
-                                      
+                                      // Open chat with agent (ensure correct agent/user structure and property id)
+                                      final user = property['user'] as Map<String, dynamic>?;
+                                      final agentId = user?['id']?.toString();
+                                      final agentData = {
+                                        'id': agentId,
+                                        'user': {
+                                          'id': agentId,
+                                          'full_name': _getAgentName(property),
+                                          'profile_image_url': _getAgentProfileImage(property),
+                                          'phone_number': _getAgentPhone(property),
+                                          'email': _getAgentEmail(property),
+                                        },
+                                      };
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
                                           builder: (context) => InAppChatView(
-                                            agentData: property,
-                                            propertyTitle: property['title'] ?? 'Property',
-                                            propertyId: property['id']?.toString(),
+                                            agentData: agentData,
+                                            propertyTitle: (property['title'] as String?) ?? 'Property',
+                                            propertyId: derivedPropertyId,
                                           ),
                                         ),
                                       );
@@ -1635,7 +1656,45 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                         borderRadius: BorderRadius.circular(25),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          // Bottom contact button: open chat
+                          final property = widget.propertyData ?? _getDefaultProperty();
+                          final user = property['user'] as Map<String, dynamic>?;
+                          final agentId = user?['id']?.toString();
+                          final agentData = {
+                            'id': agentId,
+                            'user': {
+                              'id': agentId,
+                              'full_name': _getAgentName(property),
+                              'profile_image_url': _getAgentProfileImage(property),
+                              'phone_number': _getAgentPhone(property),
+                              'email': _getAgentEmail(property),
+                            },
+                          };
+                          // Derive property id similarly
+                          String bottomPropertyId = (property['id']?.toString()) ?? '';
+                          if (bottomPropertyId.isEmpty) {
+                            final images = property['images'];
+                            if (images is List && images.isNotEmpty) {
+                              final first = images.first;
+                              if (first is Map<String, dynamic>) {
+                                final pid = first['property_id'];
+                                if (pid != null) {
+                                  bottomPropertyId = pid.toString();
+                                }
+                              }
+                            }
+                          }
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => InAppChatView(
+                                agentData: agentData,
+                                propertyTitle: (property['title'] as String?) ?? 'Property',
+                                propertyId: bottomPropertyId,
+                              ),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,

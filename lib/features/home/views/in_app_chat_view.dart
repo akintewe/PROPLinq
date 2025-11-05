@@ -34,11 +34,14 @@ class _InAppChatViewState extends State<InAppChatView> {
   bool _showWhatsAppBanner = false;
   Map<String, dynamic>? _propertyDetails;
   Timer? _whatsAppTimer;
+  Timer? _chatRefreshTimer;
   final ImagePicker _imagePicker = ImagePicker();
   String? _selectedFilePath;
   String? _selectedFileType;
   String? _currentUserProfileImage;
   String? _currentUserName;
+  bool _isTypingVisible = false;
+  int _lastConversationLength = 0;
 
   @override
   void initState() {
@@ -53,7 +56,15 @@ class _InAppChatViewState extends State<InAppChatView> {
     _loadCurrentUserProfile();
     _startWhatsAppTimer();
     _markMessagesAsRead(); // Mark messages as read when chat is opened
+
+    // Poll for new messages periodically while this screen is open (faster)
+    _chatRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      if (!mounted) return;
+      await _checkForIncomingMessageAndMaybeShowTyping();
+    });
   }
+
+  
 
   Future<void> _loadChatHistory() async {
     try {
@@ -112,6 +123,7 @@ class _InAppChatViewState extends State<InAppChatView> {
       final currentUser = await _authService.getCurrentUser();
       final currentUserId = currentUser?.id.toString();
       
+      final previousCount = _messages.length;
       setState(() {
         _messages.clear();
         
@@ -184,7 +196,9 @@ class _InAppChatViewState extends State<InAppChatView> {
         _isLoadingChats = false;
       });
       
+      if (_messages.length > previousCount) {
       _scrollToBottom();
+      }
     } catch (e) {
       print('❌ Error loading chat history: $e');
       setState(() {
@@ -193,6 +207,67 @@ class _InAppChatViewState extends State<InAppChatView> {
         _isLoadingChats = false;
       });
     }
+  }
+
+  String? _getAgentId() {
+    final user = widget.agentData['user'] as Map<String, dynamic>?;
+    final agentId = user?['id']?.toString() ?? widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
+    return agentId;
+  }
+
+  Future<void> _checkForIncomingMessageAndMaybeShowTyping() async {
+    try {
+      final agentId = _getAgentId();
+      if (agentId == null || agentId.isEmpty) return;
+
+      final conversation = await _chatService.getConversation(agentId);
+      if (conversation.isEmpty) return;
+
+      // If there are more messages on server than we last saw
+      if (conversation.length > _lastConversationLength) {
+        final currentUser = await _authService.getCurrentUser();
+        final currentUserId = currentUser?.id.toString();
+        final last = conversation.last;
+        final senderId = (last['sender_id'] as dynamic)?.toString();
+
+        if (senderId != null && senderId != currentUserId && !_isTypingVisible) {
+          _showTypingThenRefresh();
+          _lastConversationLength = conversation.length; // prevent duplicate typings
+          return;
+        }
+      }
+
+      // No new incoming message – just refresh
+      await _loadChatHistory();
+      _markMessagesAsRead();
+      _lastConversationLength = conversation.length;
+    } catch (_) {
+      // ignore polling errors
+    }
+  }
+
+  void _showTypingThenRefresh() {
+    if (!mounted || _isTypingVisible) return;
+    setState(() {
+      _isTypingVisible = true;
+      _messages.add(ChatMessage(
+        text: 'typing…',
+        isFromUser: false,
+        timestamp: DateTime.now(),
+        isTyping: true,
+      ));
+    });
+    _scrollToBottom();
+
+    Future.delayed(const Duration(seconds: 1), () async {
+      if (!mounted) return;
+      setState(() {
+        _messages.removeWhere((m) => m.isTyping == true);
+        _isTypingVisible = false;
+      });
+      await _loadChatHistory();
+      _markMessagesAsRead();
+    });
   }
 
   void _scrollToBottom() {
@@ -1661,6 +1736,7 @@ class _InAppChatViewState extends State<InAppChatView> {
 
   @override
   void dispose() {
+    _chatRefreshTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     _whatsAppTimer?.cancel();
@@ -1676,6 +1752,7 @@ class ChatMessage {
   final String? fileType;
   final bool isRead;
   final String? receivedAt;
+  final bool isTyping;
 
   ChatMessage({
     required this.text,
@@ -1685,5 +1762,6 @@ class ChatMessage {
     this.fileType,
     this.isRead = true,
     this.receivedAt,
+    this.isTyping = false,
   });
 }

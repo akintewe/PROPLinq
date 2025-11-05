@@ -5,6 +5,7 @@ import '../../auth/services/auth_service.dart';
 import '../../auth/views/login_view.dart';
 import 'account_settings_view.dart';
 import 'privacy_policy_view.dart';
+import 'terms_and_conditions_view.dart';
 
 class SettingsView extends StatefulWidget {
   final bool isAgent;
@@ -82,7 +83,14 @@ class _SettingsViewState extends State<SettingsView> {
                         iconPath: 'assets/icons/book.svg',
                         iconColor: const Color(0xFF426DC2),
                         title: 'Terms & condition',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TermsAndConditionsView(),
+                            ),
+                          );
+                        },
                       ),
                       
                       const SizedBox(height: 20),

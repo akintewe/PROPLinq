@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../services/chat_service.dart';
 import '../../auth/services/auth_service.dart';
 import 'in_app_chat_view.dart';
@@ -22,26 +23,39 @@ class _MessagesViewState extends State<MessagesView> {
   List<Map<String, dynamic>> _conversations = [];
   List<Map<String, dynamic>> _filteredConversations = [];
   bool _isLoading = true;
+  Timer? _refreshTimer;
+  bool _isFetching = false;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
     _searchController.addListener(_filterConversations);
+    // Periodically refresh conversations list (faster)
+    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      _loadConversations();
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _loadConversations() async {
+    if (_isFetching) return;
+    _isFetching = true;
     try {
       print('📥 Loading conversations from API...');
+      if (_isFirstLoad) {
       setState(() {
         _isLoading = true;
       });
+      }
       
       final chatData = await _chatService.getUserChats();
       print('📥 Received ${chatData.length} conversations from API');
@@ -162,6 +176,7 @@ class _MessagesViewState extends State<MessagesView> {
         _conversations = conversations;
         _filteredConversations = conversations;
         _isLoading = false;
+        _isFirstLoad = false;
       });
       
     } catch (e) {
@@ -170,7 +185,11 @@ class _MessagesViewState extends State<MessagesView> {
         _conversations = [];
         _filteredConversations = [];
         _isLoading = false;
+        _isFirstLoad = false;
       });
+    }
+    finally {
+      _isFetching = false;
     }
   }
 

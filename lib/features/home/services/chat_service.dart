@@ -34,14 +34,17 @@ class ChatService {
         print('📤 Sending as form-data with file path as string');
         
         final dio = Dio();
-        final formData = FormData.fromMap({
+        final Map<String, dynamic> formFields = {
           'sender_id': senderId, // Send as string, not int
           'receiver_id': receiverId, // Send as string, not int
           'message': message,
-          'property_id': propertyId, // Send as string, not int
           'sent_at': DateTime.now().toIso8601String(),
           'file': file, // Send file path as string
-        });
+        };
+        if (propertyId.isNotEmpty) {
+          formFields['property_id'] = propertyId; // only include when available
+        }
+        final formData = FormData.fromMap(formFields);
 
         print('📤 Form data: ${formData.fields}');
         print('📤 File field: ${formData.files}');
@@ -64,13 +67,16 @@ class ChatService {
         // No file, send as regular JSON
         print('📤 Sending as JSON without file');
         
-        final body = {
+        final Map<String, dynamic> body = {
           'sender_id': int.parse(senderId),
           'receiver_id': int.parse(receiverId),
           'message': message,
-          'property_id': int.parse(propertyId),
           'sent_at': DateTime.now().toIso8601String(),
         };
+        final parsedPropertyId = int.tryParse(propertyId);
+        if (parsedPropertyId != null) {
+          body['property_id'] = parsedPropertyId;
+        }
 
         print('📤 Chat request body: $body');
 
