@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:proplinq/features/home/views/agent_home_view.dart';
+import 'package:proplinq/features/home/views/tenant_home_view.dart';
 import 'package:proplinq/features/auth/services/auth_service.dart';
 
 class OptionSelectionView extends StatefulWidget {
@@ -145,10 +145,15 @@ class _OptionSelectionViewState extends State<OptionSelectionView> {
       if (response.success && response.data != null) {
         print('✅ Auto-login successful');
         
-        // Navigate to home screen
+        // Determine initial filter based on selection
+        final initialFilter = option == 'hotel' ? 'hotels' : 'non_hotels';
+
+        // Navigate to tenant home with initial bottom sheet
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (context) => const AgentHomeView(),
+            builder: (context) => TenantHomeView(
+              initialFilter: initialFilter,
+            ),
           ),
           (route) => false,
         );

@@ -157,7 +157,10 @@ class _SignUpViewState extends State<SignUpView> {
         }
       } else {
         // Registration failed
-        _showErrorMessage(response.message ?? 'Registration failed. Please try again.');
+        _showErrorMessage(
+          response.message ?? 'Registration failed. Please try again.',
+          onRetry: _signUp,
+        );
         if (response.errors != null && response.errors!.isNotEmpty) {
           _showErrorMessage(response.errors!.join('\n'));
         }
@@ -242,12 +245,22 @@ class _SignUpViewState extends State<SignUpView> {
     return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
   }
 
-  void _showErrorMessage(String message) {
+  void _showErrorMessage(String message, {VoidCallback? onRetry}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 4),
+        action: onRetry != null
+            ? SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  onRetry();
+                },
+              )
+            : null,
       ),
     );
   }

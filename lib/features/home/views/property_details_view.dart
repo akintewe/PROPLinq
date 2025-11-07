@@ -1069,7 +1069,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               //   ],
                               // ),
                               
-                              // Contact Agent button for home seekers
+                          // Contact Agent / Book Now button for home seekers
                               if (widget.isHomeSeeker) ...[
                                 Container(
                                   width: double.infinity,
@@ -1080,28 +1080,38 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                   ),
                                   child: ElevatedButton(
                                     onPressed: () {
-                                      // Open chat with agent (ensure correct agent/user structure and property id)
-                                      final user = property['user'] as Map<String, dynamic>?;
-                                      final agentId = user?['id']?.toString();
-                                      final agentData = {
-                                        'id': agentId,
-                                        'user': {
+                                      if (isHotel) {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => HotelReservationView(
+                                              propertyData: property,
+                                            ),
+                                          ),
+                                        );
+                                      } else {
+                                        // Open chat with agent (ensure correct agent/user structure and property id)
+                                        final user = property['user'] as Map<String, dynamic>?;
+                                        final agentId = user?['id']?.toString();
+                                        final agentData = {
                                           'id': agentId,
-                                          'full_name': _getAgentName(property),
-                                          'profile_image_url': _getAgentProfileImage(property),
-                                          'phone_number': _getAgentPhone(property),
-                                          'email': _getAgentEmail(property),
-                                        },
-                                      };
+                                          'user': {
+                                            'id': agentId,
+                                            'full_name': _getAgentName(property),
+                                            'profile_image_url': _getAgentProfileImage(property),
+                                            'phone_number': _getAgentPhone(property),
+                                            'email': _getAgentEmail(property),
+                                          },
+                                        };
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
                                           builder: (context) => InAppChatView(
-                                            agentData: agentData,
-                                            propertyTitle: (property['title'] as String?) ?? 'Property',
-                                            propertyId: derivedPropertyId,
+                                              agentData: agentData,
+                                              propertyTitle: (property['title'] as String?) ?? 'Property',
+                                              propertyId: derivedPropertyId,
                                           ),
                                         ),
                                       );
+                                      }
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
@@ -1115,14 +1125,16 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
+                                        if (!isHotel) ...[
                                         const Icon(
                                           Icons.message,
                                           color: Color(0xFF426DC2),
                                           size: 18,
                                         ),
                                         const SizedBox(width: 8),
+                                        ],
                                         Text(
-                                          isHotel ? 'Contact Hotel' : 'Contact Agent',
+                                          isHotel ? 'Book Now' : 'Contact Agent',
                                           style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600,
@@ -1192,62 +1204,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                           ),
                           
                           const SizedBox(height: 40),
-                          
-                          // Hotel action button - only show for hotels
-                          if (isHotel) ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                        stops: [0.0, 1.0, 1.0],
-                                        colors: [
-                                          Color(0xFF426DC2),
-                                          Color(0xFF63ADDC),
-                                          Color(0xFF75CFEA),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) => HotelReservationView(
-                                              propertyData: property,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(25),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Make a reservation',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                             
                             const SizedBox(height: 40),
-                          ],
                           
                           // Virtual Tour - only show for non-hotel properties and if 360 images are available
                           if (!isHotel && property360Images.isNotEmpty) ...[
@@ -1657,43 +1615,59 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                       ),
                       child: ElevatedButton(
                         onPressed: () {
-                          // Bottom contact button: open chat
                           final property = widget.propertyData ?? _getDefaultProperty();
-                          final user = property['user'] as Map<String, dynamic>?;
-                          final agentId = user?['id']?.toString();
-                          final agentData = {
-                            'id': agentId,
-                            'user': {
+                          final propertyType = property['type'] as String? ?? 'Apartment';
+                          final normalizedType = propertyType.toLowerCase();
+                          final isHotel = normalizedType == 'hotel';
+                          final isShortlet = normalizedType == 'shortlet';
+
+                          if (isHotel || isShortlet) {
+                            // Navigate to reservation screen for hotels and shortlets
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => HotelReservationView(
+                                  propertyData: property,
+                                ),
+                              ),
+                            );
+                          } else {
+                            // Bottom contact button: open chat for other property types
+                            final user = property['user'] as Map<String, dynamic>?;
+                            final agentId = user?['id']?.toString();
+                            final agentData = {
                               'id': agentId,
-                              'full_name': _getAgentName(property),
-                              'profile_image_url': _getAgentProfileImage(property),
-                              'phone_number': _getAgentPhone(property),
-                              'email': _getAgentEmail(property),
-                            },
-                          };
-                          // Derive property id similarly
-                          String bottomPropertyId = (property['id']?.toString()) ?? '';
-                          if (bottomPropertyId.isEmpty) {
-                            final images = property['images'];
-                            if (images is List && images.isNotEmpty) {
-                              final first = images.first;
-                              if (first is Map<String, dynamic>) {
-                                final pid = first['property_id'];
-                                if (pid != null) {
-                                  bottomPropertyId = pid.toString();
+                              'user': {
+                                'id': agentId,
+                                'full_name': _getAgentName(property),
+                                'profile_image_url': _getAgentProfileImage(property),
+                                'phone_number': _getAgentPhone(property),
+                                'email': _getAgentEmail(property),
+                              },
+                            };
+                            // Derive property id similarly
+                            String bottomPropertyId = (property['id']?.toString()) ?? '';
+                            if (bottomPropertyId.isEmpty) {
+                              final images = property['images'];
+                              if (images is List && images.isNotEmpty) {
+                                final first = images.first;
+                                if (first is Map<String, dynamic>) {
+                                  final pid = first['property_id'];
+                                  if (pid != null) {
+                                    bottomPropertyId = pid.toString();
+                                  }
                                 }
                               }
                             }
-                          }
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => InAppChatView(
-                                agentData: agentData,
-                                propertyTitle: (property['title'] as String?) ?? 'Property',
-                                propertyId: bottomPropertyId,
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => InAppChatView(
+                                  agentData: agentData,
+                                  propertyTitle: (property['title'] as String?) ?? 'Property',
+                                  propertyId: bottomPropertyId,
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,

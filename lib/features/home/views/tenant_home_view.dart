@@ -21,7 +21,9 @@ import 'property_details_view.dart';
 
 
 class TenantHomeView extends StatefulWidget {
-  const TenantHomeView({super.key});
+  final String? initialFilter; // 'hotels' or 'non_hotels'
+
+  const TenantHomeView({super.key, this.initialFilter});
 
   @override
   State<TenantHomeView> createState() => _TenantHomeViewState();
@@ -33,6 +35,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   late ScrollController _featuredScrollController;
   late ScrollController _homeScrollController;
   bool _hasShownKycDialog = false;
+  bool _hasShownInitialFilterSheet = false;
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
   String _selectedCategory = 'All';
@@ -125,6 +128,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       
       // Start auto-scrolling after properties are loaded
       _startFeaturedAutoScroll();
+      _maybeShowInitialBottomSheet();
     } catch (e) {
       print('❌ Error fetching properties: $e');
       setState(() {
@@ -142,6 +146,110 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         );
       }
     }
+  }
+
+  void _maybeShowInitialBottomSheet() {
+    if (_hasShownInitialFilterSheet) return;
+    if (widget.initialFilter == null) return;
+    if (_properties.isEmpty) return;
+
+    final filter = widget.initialFilter!;
+    final filteredProperties = _filterPropertiesForInitial(filter);
+    if (filteredProperties.isEmpty) return;
+
+    _hasShownInitialFilterSheet = true;
+
+    final title = filter == 'hotels'
+        ? 'Top Hotels For You'
+        : 'Explore Homes & Apartments';
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showInitialSelectionBottomSheet(filteredProperties, title);
+    });
+  }
+
+  List<PropertyModel> _filterPropertiesForInitial(String filter) {
+    bool isHotel(PropertyModel property) {
+      final type = property.type.toLowerCase();
+      final category = property.category.toLowerCase();
+      return type.contains('hotel') || category.contains('hotel');
+    }
+
+    if (filter == 'hotels') {
+      return _properties.where(isHotel).toList();
+    }
+
+    // non_hotels
+    return _properties.where((property) => !isHotel(property)).toList();
+  }
+
+  void _showInitialSelectionBottomSheet(List<PropertyModel> properties, String title) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E0E0),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close, color: Color(0xFF426DC2)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      itemCount: properties.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) => _buildPropertyListItem(index, properties),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _showKycDialogIfNeeded() async {
@@ -435,15 +543,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         },
       ),
     );
-  }
-
-  void _clearSearchResults() {
-    setState(() {
-      _isShowingSearchResults = false;
-      _selectedLocation = '';
-      _selectedCategory = 'All';
-      _selectedProperties = [];
-    });
   }
 
   void _goBackToHome() {

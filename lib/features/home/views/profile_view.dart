@@ -506,9 +506,6 @@ class _ProfileViewState extends State<ProfileView> {
         
         const SizedBox(height: 40),
         
-        // Apply for Agent Button (only for tenants)
-        if (!widget.isAgent) _buildApplyForAgentButton(),
-        
         // Agent-specific sections
         if (widget.isAgent) ...[
           _buildCurrentListingSection(),
@@ -816,53 +813,6 @@ class _ProfileViewState extends State<ProfileView> {
         ),
       ),
     );
-  }
-
-  Widget _buildApplyForAgentButton() {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment(-1.0, -0.02),
-          end: Alignment(1.0, 0.02),
-          stops: [0.0113, 0.4555, 1.1245],
-          colors: [
-            Color(0xFF426DC2),
-            Color(0xFF75CFEA),
-            Color.fromRGBO(51, 204, 153, 0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: ElevatedButton(
-        onPressed: () {
-          // Handle apply for agent action
-          _showApplyForAgentDialog();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-        ),
-        child: const Text(
-          'Apply for agent',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showApplyForAgentDialog() {
-    // This would typically show a dialog or navigate to agent application screen
-    // For now, we'll just show a simple dialog
   }
 
   Widget _buildAgentActionButtons(BuildContext context) {
