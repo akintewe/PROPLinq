@@ -29,6 +29,7 @@ class _LoginViewState extends State<LoginView> {
   bool _isLoading = false;
   bool _isBiometricAvailable = false;
   bool _isBiometricEnabled = false;
+  bool _rememberMe = false;
   
   final AuthService _authService = AuthService();
   final BiometricService _biometricService = BiometricService();
@@ -106,6 +107,9 @@ class _LoginViewState extends State<LoginView> {
       if (response.success && response.data != null) {
         // Login successful
         _showSuccessMessage('Login successful! Welcome back, ${response.data!.user.fullName}!');
+        
+        // Save remember me preference
+        await _storageService.setRememberMe(_rememberMe);
         
         // Enable biometric authentication if available
         if (_isBiometricAvailable) {
@@ -379,20 +383,64 @@ class _LoginViewState extends State<LoginView> {
               
               const SizedBox(height: 16),
               
-              // Forgot password
-              Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  onTap: _forgotPassword,
-                  child: const Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF0E4CDD),
+              // Remember me checkbox and Forgot password
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Remember me checkbox
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _rememberMe = !_rememberMe;
+                      });
+                    },
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: _rememberMe ? const Color(0xFF0E4CDD) : Colors.white,
+                            border: Border.all(
+                              color: _rememberMe ? const Color(0xFF0E4CDD) : const Color(0xFFCFD3D6),
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: _rememberMe
+                              ? const Icon(
+                                  Icons.check,
+                                  size: 14,
+                                  color: Colors.white,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Remember me',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF868686),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                  
+                  // Forgot password
+                  GestureDetector(
+                    onTap: _forgotPassword,
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF0E4CDD),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               
               const SizedBox(height: 32),

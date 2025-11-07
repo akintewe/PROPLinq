@@ -4,6 +4,8 @@ import '../../../core/services/biometric_service.dart';
 import '../../onboarding/views/onboarding_view.dart';
 import '../../auth/views/login_view.dart';
 import '../../auth/views/biometric_login_view.dart';
+import '../../home/views/tenant_home_view.dart';
+import '../../home/views/agent_home_view.dart';
 
 class SecondSplashView extends StatefulWidget {
   const SecondSplashView({super.key});
@@ -35,19 +37,31 @@ class _SecondSplashViewState extends State<SecondSplashView> {
       final token = await _storageService.getToken();
       
       if (isLoggedIn && token != null) {
-        // User is logged in, check if biometric is enabled
-        final isBiometricEnabled = await _storageService.isBiometricEnabled();
-        final isBiometricAvailable = await _biometricService.isBiometricAvailable();
+        // Check if remember me is enabled and still valid (within 5 days)
+        final isRememberMeValid = await _storageService.isRememberMeValid();
         
-        if (isBiometricEnabled && isBiometricAvailable) {
-          // Navigate to biometric login
-          _navigateToBiometricLogin();
+        if (isRememberMeValid) {
+          // Remember me is valid, skip biometric and go directly to home
+          print('✅ Remember me is valid, navigating directly to home');
+          _navigateToHome();
         } else {
-          // Navigate to regular login
-          _navigateToLogin();
+          // Remember me is not valid or not enabled, check biometric
+          final isBiometricEnabled = await _storageService.isBiometricEnabled();
+          final isBiometricAvailable = await _biometricService.isBiometricAvailable();
+          
+          if (isBiometricEnabled && isBiometricAvailable) {
+            // Navigate to biometric login
+            print('🔐 Remember me not valid, navigating to biometric login');
+            _navigateToBiometricLogin();
+          } else {
+            // Navigate to regular login
+            print('🔑 Remember me not valid, navigating to regular login');
+            _navigateToLogin();
+          }
         }
       } else {
         // User is not logged in, navigate to onboarding
+        print('👋 User not logged in, navigating to onboarding');
         _navigateToOnboarding();
       }
     } catch (e) {
@@ -94,6 +108,39 @@ class _SecondSplashViewState extends State<SecondSplashView> {
         transitionDuration: const Duration(milliseconds: 500),
       ),
     );
+  }
+
+  Future<void> _navigateToHome() async {
+    // Get user type to determine which home screen to show
+    final userType = await _storageService.getUserType();
+    
+    if (!mounted) return;
+    
+    // Navigate based on user type
+    if (userType == 'agent') {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const AgentHomeView(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    } else {
+      // Default to tenant home for 'home_seeker' or any other type
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const TenantHomeView(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    }
   }
 
   @override

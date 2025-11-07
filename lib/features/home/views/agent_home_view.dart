@@ -8,6 +8,7 @@ import 'saved_view.dart';
 import 'messages_view.dart';
 import 'profile_view.dart';
 import 'settings_view.dart';
+import 'subscription_view.dart';
 import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
@@ -56,7 +57,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   // Promotional messages for rotating banner
   final List<String> _promotionalMessages = [
-    "GET FREE PROMOTION",
+    "PROMOTE YOUR PROPERTY TODAY",
   ];
 
   @override
@@ -2243,46 +2244,56 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   }
 
   Widget _buildAnimatedBanner() {
-    return Container(
-      width: double.infinity,
-      height: 40,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment(-1.0, 0.0),
-          end: Alignment(1.0, 0.0),
-          stops: [0.0113, 0.4555, 1.1245],
-          colors: [
-            Color(0xFF426DC2),
-            Color(0xFF75CFEA),
-            Color.fromRGBO(51, 204, 153, 0.8),
-          ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const SubscriptionView(),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        height: 40,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment(-1.0, 0.0),
+            end: Alignment(1.0, 0.0),
+            stops: [0.0113, 0.4555, 1.1245],
+            colors: [
+              Color(0xFF426DC2),
+              Color(0xFF75CFEA),
+              Color.fromRGBO(51, 204, 153, 0.8),
+            ],
+          ),
         ),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(_animationController.value * -200, 0),
-              child: Row(
-                children: List.generate(10, (index) => 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      _getCurrentPromotionalMessage(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          child: AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(_animationController.value * -200, 0),
+                child: Row(
+                  children: List.generate(10, (index) => 
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        _getCurrentPromotionalMessage(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

@@ -12,6 +12,8 @@ class StorageService {
   static const String _isLoggedInKey = 'is_logged_in';
   static const String _userTypeKey = 'user_type';
   static const String _biometricEnabledKey = 'biometric_enabled';
+  static const String _rememberMeKey = 'remember_me';
+  static const String _rememberMeTimestampKey = 'remember_me_timestamp';
 
   // Token management
   Future<void> saveToken(String token) async {
@@ -89,6 +91,52 @@ class StorageService {
     await prefs.remove(_biometricEnabledKey);
   }
 
+  // Remember Me management
+  Future<void> setRememberMe(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_rememberMeKey, enabled);
+    if (enabled) {
+      // Save the current timestamp when remember me is enabled
+      await prefs.setInt(_rememberMeTimestampKey, DateTime.now().millisecondsSinceEpoch);
+    } else {
+      // Clear timestamp when remember me is disabled
+      await prefs.remove(_rememberMeTimestampKey);
+    }
+  }
+
+  Future<bool> isRememberMeEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_rememberMeKey) ?? false;
+  }
+
+  Future<bool> isRememberMeValid() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isEnabled = prefs.getBool(_rememberMeKey) ?? false;
+    
+    if (!isEnabled) {
+      return false;
+    }
+
+    final timestamp = prefs.getInt(_rememberMeTimestampKey);
+    if (timestamp == null) {
+      return false;
+    }
+
+    // Check if 5 days have passed
+    final savedDate = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    final now = DateTime.now();
+    final difference = now.difference(savedDate);
+    
+    // Return true if less than 5 days have passed
+    return difference.inDays < 5;
+  }
+
+  Future<void> removeRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_rememberMeKey);
+    await prefs.remove(_rememberMeTimestampKey);
+  }
+
   // Clear all stored data
   Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
@@ -97,6 +145,8 @@ class StorageService {
     await prefs.remove(_isLoggedInKey);
     await prefs.remove(_userTypeKey);
     await prefs.remove(_biometricEnabledKey);
+    await prefs.remove(_rememberMeKey);
+    await prefs.remove(_rememberMeTimestampKey);
   }
 
   // Generic storage methods
