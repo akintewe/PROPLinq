@@ -269,6 +269,7 @@ class PropertyService {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiConstants.listProperties,
         queryParams: queryParams,
+        requiresAuth: true,
         fromJson: (json) => json,
       );
 
@@ -328,6 +329,7 @@ class PropertyService {
         final response = await _apiService.get<Map<String, dynamic>>(
           ApiConstants.listProperties,
           queryParams: queryParams,
+          requiresAuth: true,
           fromJson: (json) => json,
         );
 
@@ -376,6 +378,7 @@ class PropertyService {
       
       final response = await _apiService.get<Map<String, dynamic>>(
         '${ApiConstants.listProperties}/$propertyId',
+        requiresAuth: true,
         fromJson: (json) => json,
       );
 

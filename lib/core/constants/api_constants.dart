@@ -30,7 +30,7 @@ class ApiConstants {
   static const String deleteProperty = '/properties';
   static const String searchProperties = '/properties/search';
   static const String favoriteProperties = '/properties/favorites';
-  static const String listProperties = '/properties';
+  static const String listProperties = '/get-properties-list';
   static const String myProperties = '/agent/properties';
   
   // KYC Endpoints
