@@ -6,6 +6,7 @@ import 'package:proplinq/core/widgets/google_map_widget.dart';
 import 'virtual_tour_360_view.dart';
 import 'hotel_reservation_view.dart';
 import 'in_app_chat_view.dart';
+import '../../auth/services/auth_service.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   final Map<String, dynamic>? propertyData;
@@ -27,6 +28,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   late AnimationController _textAnimationController;
   int _currentTextIndex = 0;
   Timer? _textTimer;
+  final AuthService _authService = AuthService();
+  bool _isOwner = false;
   
   // Default fallback images for when property has no images
   final List<String> _fallbackImages = [
@@ -50,7 +53,36 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     print('🎯 PropertyDetailsView: Initializing rotating text banner...');
     _initializeTextAnimation();
     _startTextRotation();
+    _checkPropertyOwnership();
     print('🎯 PropertyDetailsView: Rotating text banner initialized');
+  }
+  
+  Future<void> _checkPropertyOwnership() async {
+    try {
+      final currentUser = await _authService.getCurrentUser();
+      final property = widget.propertyData ?? _getDefaultProperty();
+      final propertyUser = property['user'] as Map<String, dynamic>?;
+      final propertyUserId = propertyUser?['id']?.toString();
+      
+      print('🔍 Checking property ownership...');
+      print('  - Current User ID: ${currentUser?.id}');
+      print('  - Property User ID: $propertyUserId');
+      print('  - Property User Data: $propertyUser');
+      print('  - Property Data Keys: ${property.keys.toList()}');
+      
+      if (currentUser != null && propertyUserId != null) {
+        setState(() {
+          _isOwner = currentUser.id.toString() == propertyUserId;
+        });
+        print('✅ Property ownership check complete: isOwner = $_isOwner');
+        print('  - Current User: ${currentUser.fullName} (${currentUser.email})');
+        print('  - Property Owner: ${propertyUser?['full_name']} (${propertyUser?['email']})');
+      } else {
+        print('⚠️ Cannot determine ownership: currentUser or propertyUserId is null');
+      }
+    } catch (e) {
+      print('❌ Error checking property ownership: $e');
+    }
   }
 
   void _initializeTextAnimation() {
@@ -593,7 +625,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     print('Property 360 Images: $property360Images');
     print('Property Data Keys: ${property.keys.toList()}');
     
-    final isForSale = (property['badges'] as List<String>?)?.contains('For sale') ?? false;
+    final badges = property['badges'];
+    final isForSale = (badges is List && badges.isNotEmpty) 
+        ? badges.any((badge) => badge.toString().toLowerCase().contains('for sale'))
+        : false;
     
     return Scaffold(
       backgroundColor: Colors.white,
@@ -808,6 +843,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                           
                           // Location
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Icon(
                                 Icons.location_on,
@@ -815,11 +851,14 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                                 color: Color(0xFF868686),
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                property['location'] as String,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF868686),
+                              Expanded(
+                                child: Text(
+                                  property['location'] as String,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF868686),
+                                  ),
+                                  softWrap: true,
                                 ),
                               ),
                             ],
@@ -1069,83 +1108,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               //   ],
                               // ),
                               
-                          // Contact Agent / Book Now button for home seekers
-                              if (widget.isHomeSeeker) ...[
-                                Container(
-                                  width: double.infinity,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: const Color(0xFF426DC2)),
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      if (isHotel) {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) => HotelReservationView(
-                                              propertyData: property,
-                                            ),
-                                          ),
-                                        );
-                                      } else {
-                                        // Open chat with agent (ensure correct agent/user structure and property id)
-                                        final user = property['user'] as Map<String, dynamic>?;
-                                        final agentId = user?['id']?.toString();
-                                        final agentData = {
-                                          'id': agentId,
-                                          'user': {
-                                            'id': agentId,
-                                            'full_name': _getAgentName(property),
-                                            'profile_image_url': _getAgentProfileImage(property),
-                                            'phone_number': _getAgentPhone(property),
-                                            'email': _getAgentEmail(property),
-                                          },
-                                        };
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => InAppChatView(
-                                              agentData: agentData,
-                                              propertyTitle: (property['title'] as String?) ?? 'Property',
-                                              propertyId: derivedPropertyId,
-                                          ),
-                                        ),
-                                      );
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      shadowColor: Colors.transparent,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        if (!isHotel) ...[
-                                        const Icon(
-                                          Icons.message,
-                                          color: Color(0xFF426DC2),
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ],
-                                        Text(
-                                          isHotel ? 'Book Now' : 'Contact Agent',
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF426DC2),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          // Removed duplicate Contact Agent button - keeping only the bottom bar button
                               
                               // Mark as rented button for agents
                               if (!widget.isHomeSeeker) ...[
@@ -1436,8 +1399,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                           
                           const SizedBox(height: 20),
                           
-                          // Google Maps Widget
-                          Builder(
+                          // Google Maps Widget (hide if owner)
+                          if (!_isOwner) ...[
+                            Builder(
                             builder: (context) {
                               try {
                                 final coordinates = _getPropertyCoordinates(property);
@@ -1487,22 +1451,24 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               }
                             },
                           ),
+                          ],
                           
                           const SizedBox(height: 20),
                           
-                          // Report listing button
-                          Container(
-                            width: double.infinity,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0xFF426DC2)),
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // TODO: Implement report listing functionality
-                                _showReportDialog();
-                              },
+                          // Report listing button (hide if owner)
+                          if (!_isOwner) ...[
+                            Container(
+                              width: double.infinity,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: const Color(0xFF426DC2)),
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  // TODO: Implement report listing functionality
+                                  _showReportDialog();
+                                },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 shadowColor: Colors.transparent,
@@ -1537,6 +1503,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               ),
                             ),
                           ),
+                          ],
                           
                           const SizedBox(height: 100), // Space for bottom bar
                         ],
@@ -1597,24 +1564,26 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                     ],
                   ),
                   const SizedBox(width: 24),
-                  Expanded(
-                    child: Container(
-                      height: 50,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment(-1.0, 0.0),
-                          end: Alignment(1.0, 0.0),
-                          stops: [0.0113, 0.4555, 1.1245],
-                          colors: [
-                            Color(0xFF426DC2),
-                            Color(0xFF75CFEA),
-                            Color.fromRGBO(51, 204, 153, 0.8),
-                          ],
+                  // Hide bottom button if owner
+                  if (!_isOwner)
+                    Expanded(
+                      child: Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment(-1.0, 0.0),
+                            end: Alignment(1.0, 0.0),
+                            stops: [0.0113, 0.4555, 1.1245],
+                            colors: [
+                              Color(0xFF426DC2),
+                              Color(0xFF75CFEA),
+                              Color.fromRGBO(51, 204, 153, 0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(25),
                         ),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () {
+                        child: ElevatedButton(
+                          onPressed: () {
                           final property = widget.propertyData ?? _getDefaultProperty();
                           final propertyType = property['type'] as String? ?? 'Apartment';
                           final normalizedType = propertyType.toLowerCase();

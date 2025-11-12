@@ -583,75 +583,7 @@ class _SavedViewState extends State<SavedView> {
                         ],
                       ),
                       
-                      const Spacer(),
-                      
-                      // Contact agent button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 28,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment(-0.99, 0.0),
-                              end: Alignment(0.99, 0.0),
-                              stops: [0.0113, 0.4555, 1.1245],
-                              colors: [
-                                Color(0xFF426DC2),
-                                Color(0xFF75CFEA),
-                                Color(0xCC33CC99),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => PropertyDetailsView(
-                                  propertyData: {
-                                    'id': property.id,
-                                    'badges': [property.user?.verificationStatus ?? 'Unverified'],
-                                    'title': property.title,
-                                    'location': property.location,
-                                    'rating': '(5.0)',
-                                    'price': property.price,
-                                    'type': property.type,
-                                    'category': property.category,
-                                    'description': property.description,
-                                    'features': property.features,
-                                    'imageUrl': property.imageUrl,
-                                    'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null,
-                                    'user': property.user?.toJson(),
-                                    'agent': {
-                                      'name': property.user?.fullName ?? 'Agent',
-                                      'title': 'Agent',
-                                      'phone': property.user?.phoneNumber ?? '',
-                                      'email': property.user?.email ?? '',
-                                      'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
-                                    },
-                                  },
-                                  isHomeSeeker: true,
-                                )),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(100),
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: const Text(
-                              'Contact agent',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                      // Removed "Contact agent" button - tapping the card already opens property details
                     ],
                   ),
                 ),

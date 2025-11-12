@@ -324,52 +324,80 @@ class _HotelReservationViewState extends State<HotelReservationView> {
             
             // Check-out
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FA),
-                  border: Border.all(color: const Color(0xFFE9ECEF)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6C757D),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Icon(
-                          Icons.calendar_today,
-                            size: 12,
-                            color: Colors.white,
+              child: GestureDetector(
+                onTap: () async {
+                  final DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: _checkOutDate,
+                    firstDate: _checkInDate.add(const Duration(days: 1)),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                    builder: (context, child) {
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: const ColorScheme.light(
+                            primary: Color(0xFF426DC2),
+                            onPrimary: Colors.white,
+                            onSurface: Colors.black,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Check-out',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6C757D),
-                            fontWeight: FontWeight.w500,
+                        child: child!,
+                      );
+                    },
+                  );
+                  if (pickedDate != null) {
+                    setState(() {
+                      _checkOutDate = pickedDate;
+                      _nights = _checkOutDate.difference(_checkInDate).inDays;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA),
+                    border: Border.all(color: const Color(0xFFE9ECEF)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6C757D),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(
+                            Icons.calendar_today,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${_checkOutDate.day.toString().padLeft(2, '0')}/${_checkOutDate.month.toString().padLeft(2, '0')}/${_checkOutDate.year}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Check-out',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF6C757D),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        '${_checkOutDate.day.toString().padLeft(2, '0')}/${_checkOutDate.month.toString().padLeft(2, '0')}/${_checkOutDate.year}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

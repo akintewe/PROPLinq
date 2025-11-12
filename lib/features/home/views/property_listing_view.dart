@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dotted_border/dotted_border.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
@@ -1400,68 +1400,91 @@ class _PropertyListingViewState extends State<PropertyListingView> {
 
   Future<void> _pickFile(String fileType) async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: (fileType == 'images' || fileType == 'hotel_images' || fileType == '360_images')
-            ? ['jpg', 'jpeg', 'png']
-            : ['mp4', 'mov', 'avi'],
-        allowMultiple: (fileType == 'images' || fileType == 'hotel_images' || fileType == '360_images'),
-      );
+      // Show bottom sheet for image/video source selection
+      if (fileType == 'images' || fileType == 'hotel_images' || fileType == '360_images' || fileType == 'video') {
+        final ImageSource? source = await _showImageSourceBottomSheet(fileType == 'video');
+        if (source == null) return; // User cancelled
 
-      if (result != null && result.files.isNotEmpty) {
-        setState(() {
-          if (fileType == 'images' || fileType == 'hotel_images') {
-            // Check if adding these files would exceed the limit
-            final totalImages = _selectedImages.length + result.files.length;
-            if (totalImages > 10) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Maximum 10 images allowed. Please select fewer images.'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-              return;
-            }
-            
-            // Add images to the list
-            for (var file in result.files) {
-              if (file.path != null) {
-                _selectedImages.add(File(file.path!));
-              }
-            }
-          } else if (fileType == '360_images') {
-            // Check if adding these files would exceed the limit
-            final total360Images = _selected360Images.length + result.files.length;
-            if (total360Images > 5) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Maximum 5 360° images allowed. Please select fewer images.'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-              return;
-            }
-            
-            // Add 360 images to the list
-            for (var file in result.files) {
-              if (file.path != null) {
-                _selected360Images.add(File(file.path!));
-              }
-            }
-          } else if (fileType == 'video') {
-            // Set video file
-            if (result.files.first.path != null) {
-              _selectedVideo = File(result.files.first.path!);
+        final ImagePicker picker = ImagePicker();
+        
+        if (fileType == 'video') {
+          // Pick video from selected source
+          final XFile? pickedVideo = await picker.pickVideo(source: source);
+
+          if (pickedVideo != null) {
+            setState(() {
+              _selectedVideo = File(pickedVideo.path);
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Video selected successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          // Pick images - only gallery allows multiple selection
+          List<XFile> pickedFiles = [];
+          
+          if (source == ImageSource.gallery) {
+            // Gallery - multiple selection
+            pickedFiles = await picker.pickMultiImage();
+          } else {
+            // Camera - single image
+            final XFile? image = await picker.pickImage(source: source);
+            if (image != null) {
+              pickedFiles = [image];
             }
           }
-        });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${result.files.length} file(s) selected successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+          if (pickedFiles.isNotEmpty) {
+            setState(() {
+              if (fileType == 'images' || fileType == 'hotel_images') {
+                // Check if adding these files would exceed the limit
+                final totalImages = _selectedImages.length + pickedFiles.length;
+                if (totalImages > 10) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Maximum 10 images allowed. Please select fewer images.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                
+                // Add images to the list
+                for (var file in pickedFiles) {
+                  _selectedImages.add(File(file.path));
+                }
+              } else if (fileType == '360_images') {
+                // Check if adding these files would exceed the limit
+                final total360Images = _selected360Images.length + pickedFiles.length;
+                if (total360Images > 5) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Maximum 5 360° images allowed. Please select fewer images.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                
+                // Add 360 images to the list
+                for (var file in pickedFiles) {
+                  _selected360Images.add(File(file.path));
+                }
+              }
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${pickedFiles.length} image(s) selected successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1471,6 +1494,110 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         ),
       );
     }
+  }
+
+  Future<ImageSource?> _showImageSourceBottomSheet(bool isVideo) async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isVideo ? 'Select Video Source' : 'Select Image Source',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Gallery Option
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF426DC2).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.photo_library,
+                  color: Color(0xFF426DC2),
+                ),
+              ),
+              title: Text(
+                isVideo ? 'Choose from Gallery' : 'Choose from Gallery',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                isVideo ? 'Select a video from your device' : 'Select multiple images from your device',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF868686),
+                ),
+              ),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Camera Option
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF426DC2).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Color(0xFF426DC2),
+                ),
+              ),
+              title: Text(
+                isVideo ? 'Record Video' : 'Take Photo',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                isVideo ? 'Record a new video' : 'Take a new photo with camera',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF868686),
+                ),
+              ),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Cancel Button
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF868686),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _submitListing() async {

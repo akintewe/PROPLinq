@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/chat_service.dart';
 import '../../auth/services/auth_service.dart';
 import 'in_app_chat_view.dart';
@@ -26,6 +27,7 @@ class _MessagesViewState extends State<MessagesView> {
   Timer? _refreshTimer;
   bool _isFetching = false;
   bool _isFirstLoad = true;
+  Map<String, bool> _unreadStatusCache = {}; // Cache for unread status
 
   @override
   void initState() {
@@ -172,6 +174,9 @@ class _MessagesViewState extends State<MessagesView> {
         print('📥 Conversation $i: $time - ${message.length > 20 ? "${message.substring(0, 20)}..." : message} - Unread: $unreadCount (has_unread: $hasUnread)');
       }
       
+      // Precompute unread status for all conversations
+      await _updateUnreadStatusCache(conversations);
+      
       setState(() {
         _conversations = conversations;
         _filteredConversations = conversations;
@@ -251,8 +256,57 @@ class _MessagesViewState extends State<MessagesView> {
     return conversation['message'] ?? '';
   }
 
+  Future<void> _updateUnreadStatusCache(List<Map<String, dynamic>> conversations) async {
+    final prefs = await SharedPreferences.getInstance();
+    final Map<String, bool> newCache = {};
+    
+    for (final conversation in conversations) {
+      final conversationId = conversation['id']?.toString();
+      if (conversationId == null) continue;
+      
+      // Get the last seen timestamp for this conversation
+      final lastSeenKey = 'last_seen_$conversationId';
+      final lastSeenTimestampStr = prefs.getString(lastSeenKey);
+      
+      // Get the message timestamp
+      final messageTimestampStr = conversation['sent_at'] as String?;
+      if (messageTimestampStr == null) {
+        newCache[conversationId] = false;
+        continue;
+      }
+      
+      final messageTimestamp = DateTime.tryParse(messageTimestampStr);
+      if (messageTimestamp == null) {
+        newCache[conversationId] = false;
+        continue;
+      }
+      
+      // If no last seen timestamp, use the API's has_unread flag
+      if (lastSeenTimestampStr == null) {
+        newCache[conversationId] = conversation['has_unread'] == true;
+        continue;
+      }
+      
+      // Parse last seen timestamp
+      final lastSeenTimestamp = DateTime.tryParse(lastSeenTimestampStr);
+      if (lastSeenTimestamp == null) {
+        newCache[conversationId] = conversation['has_unread'] == true;
+        continue;
+      }
+      
+      // Message is unread if it's newer than when we last saw this conversation
+      newCache[conversationId] = messageTimestamp.isAfter(lastSeenTimestamp);
+    }
+    
+    _unreadStatusCache = newCache;
+  }
+
   bool _hasUnreadMessages(Map<String, dynamic> conversation) {
-    return conversation['has_unread'] == true;
+    final conversationId = conversation['id']?.toString();
+    if (conversationId == null) return false;
+    
+    // Check cache first
+    return _unreadStatusCache[conversationId] ?? false;
   }
 
   Widget _buildConversationAvatar(Map<String, dynamic> conversation) {
@@ -370,31 +424,39 @@ class _MessagesViewState extends State<MessagesView> {
     );
   }
 
-  void _markConversationAsRead(Map<String, dynamic> conversation) {
-    // Mark this conversation as read by updating the local state
+  Future<void> _markConversationAsRead(Map<String, dynamic> conversation) async {
+    final conversationKey = conversation['id']?.toString();
+    if (conversationKey == null) return;
+    
+    // Save the current timestamp as the last seen time for this conversation
+    final prefs = await SharedPreferences.getInstance();
+    final lastSeenKey = 'last_seen_$conversationKey';
+    await prefs.setString(lastSeenKey, DateTime.now().toIso8601String());
+    
+    print('✅ Marked conversation $conversationKey as read at ${DateTime.now().toIso8601String()}');
+    
+    // Update local state and cache to immediately remove the unread indicator
     setState(() {
-      final conversationKey = conversation['id']?.toString();
-      if (conversationKey != null) {
-        // Find and update the conversation in both lists
-        for (int i = 0; i < _conversations.length; i++) {
-          if (_conversations[i]['id'] == conversationKey) {
-            _conversations[i]['unread_count'] = 0;
-            _conversations[i]['has_unread'] = false;
-            break;
-          }
+      // Update cache
+      _unreadStatusCache[conversationKey] = false;
+      
+      // Find and update the conversation in both lists
+      for (int i = 0; i < _conversations.length; i++) {
+        if (_conversations[i]['id'] == conversationKey) {
+          _conversations[i]['unread_count'] = 0;
+          _conversations[i]['has_unread'] = false;
+          break;
         }
-        
-        for (int i = 0; i < _filteredConversations.length; i++) {
-          if (_filteredConversations[i]['id'] == conversationKey) {
-            _filteredConversations[i]['unread_count'] = 0;
-            _filteredConversations[i]['has_unread'] = false;
-            break;
-          }
+      }
+      
+      for (int i = 0; i < _filteredConversations.length; i++) {
+        if (_filteredConversations[i]['id'] == conversationKey) {
+          _filteredConversations[i]['unread_count'] = 0;
+          _filteredConversations[i]['has_unread'] = false;
+          break;
         }
       }
     });
-    
-    print('✅ Marked conversation ${conversation['id']} as read');
   }
 
   @override
@@ -510,6 +572,8 @@ class _MessagesViewState extends State<MessagesView> {
                             
                             return Container(
                               decoration: BoxDecoration(
+                                // Add subtle background color for unread messages
+                                color: hasUnread ? const Color(0xFFF0F7FF) : Colors.white,
                                 border: Border(
                                   bottom: BorderSide(
                                     color: const Color(0xFFEFF0F2),
@@ -605,15 +669,22 @@ class _MessagesViewState extends State<MessagesView> {
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
-                                                // WhatsApp style: Only show blue dot for unread, no count number
+                                                // Unread badge - more prominent than before
                                                 if (hasUnread) ...[
                                                   const SizedBox(width: 8),
                                                   Container(
-                                                    width: 8,
-                                                    height: 8,
-                                                    decoration: const BoxDecoration(
-                                                      color: Color(0xFF426DC2),
-                                                      shape: BoxShape.circle,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFF426DC2),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    child: const Text(
+                                                      'NEW',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],

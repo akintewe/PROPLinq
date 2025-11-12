@@ -489,6 +489,25 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
            (filters['location'] != null && filters['location'].toString().isNotEmpty);
   }
   
+  bool _doesPropertyMatchCategory(PropertyModel property, String categoryFilter) {
+    final normalizedFilter = categoryFilter.toLowerCase();
+    final propertyType = property.type.toLowerCase();
+    final propertyCategory = property.category.toLowerCase();
+
+    if (normalizedFilter == 'hotels') {
+      return propertyType.contains('hotel') || propertyCategory.contains('hotel');
+    } else if (normalizedFilter == 'shortlets') {
+      return propertyType.contains('shortlet') || propertyCategory.contains('shortlet');
+    } else if (normalizedFilter == 'real estate') {
+      final isApartment = propertyType.contains('apartment');
+      final isHotelLike = propertyType.contains('hotel') || propertyCategory.contains('hotel');
+      final isShortletLike = propertyType.contains('shortlet') || propertyCategory.contains('shortlet');
+      return isApartment && !isHotelLike && !isShortletLike;
+    }
+
+    return true;
+  }
+  
   List<PropertyModel> _getFilteredProperties() {
     print('🔍 Agent _getFilteredProperties called:');
     print('🔍 Agent _isShowingSearchResults: $_isShowingSearchResults');
@@ -514,24 +533,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       return propertiesToFilter;
     } else {
       final filtered = propertiesToFilter.where((property) {
-        final propertyType = property.type.toLowerCase();
-        final propertyCategory = property.category.toLowerCase();
         final categoryFilter = _selectedCategory.toLowerCase();
-        
-        print('🏠 Agent Filtering property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
-        
-        // Updated mapping logic based on actual API data
-        if (categoryFilter == 'hotels') {
-          // Match by type or category
-          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
-        } else if (categoryFilter == 'real estate') {
-          // Match apartments and other real estate
-          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
-        } else if (categoryFilter == 'shortlets') {
-          // Match shortlets
-          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
-        }
-        return true;
+        print('🏠 Agent Filtering property: "${property.title}" - Type: "${property.type}" - Category: "${property.category}" against filter: "$categoryFilter"');
+        return _doesPropertyMatchCategory(property, categoryFilter);
       }).toList();
       print('🔍 Agent Final filtered properties: ${filtered.length} properties');
       return filtered;
@@ -1003,25 +1007,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       return propertiesToFilter;
     } else {
       final filtered = propertiesToFilter.where((property) {
-        final propertyType = property.type.toLowerCase();
-        final propertyCategory = property.category.toLowerCase();
         final categoryFilter = _selectedCategory.toLowerCase();
-        
-        print('🏠 Agent Search results filtering property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
-        
-        // Updated mapping logic based on actual API data
-        if (categoryFilter == 'hotels') {
-          // Match by type or category
-          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
-        } else if (categoryFilter == 'real estate') {
-          // Match apartments and other real estate
-          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
-        } else if (categoryFilter == 'shortlets') {
-          // Match shortlets
-          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
-        }
-        return true;
-        }).toList();
+        print('🏠 Agent Search results filtering property: "${property.title}" - Type: "${property.type}" - Category: "${property.category}" against filter: "$categoryFilter"');
+        return _doesPropertyMatchCategory(property, categoryFilter);
+      }).toList();
       print('🔍 Agent Search results final filtered properties: ${filtered.length} properties');
       return filtered;
     }

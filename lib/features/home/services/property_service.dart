@@ -483,4 +483,99 @@ class PropertyService {
       return [];
     }
   }
+
+  /// Update an existing property
+  Future<bool> updateProperty({
+    required int propertyId,
+    required String title,
+    required String description,
+    required String price,
+    required String location,
+    required int bedrooms,
+    required int bathrooms,
+    required bool gated,
+    required bool parking,
+    required List<String> features,
+    required String status,
+  }) async {
+    try {
+      print('🏠 Updating property ID: $propertyId');
+      print('📋 Update Data:');
+      print('Title: $title');
+      print('Description: $description');
+      print('Price: $price');
+      print('Location: $location');
+      print('Bedrooms: $bedrooms');
+      print('Bathrooms: $bathrooms');
+      print('Gated: $gated');
+      print('Parking: $parking');
+      print('Features: $features');
+      print('Status: $status');
+
+      // Prepare request body
+      final Map<String, dynamic> body = {
+        'title': title,
+        'description': description,
+        'price': double.tryParse(price.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0,
+        'location': location,
+        'bedrooms': bedrooms,
+        'bathrooms': bathrooms,
+        'gated': gated,
+        'parking': parking,
+        'features': features,
+        'status': status,
+      };
+
+      print('📤 Sending PUT request to: /properties/$propertyId');
+      print('📤 Request body: $body');
+
+      final response = await _apiService.put(
+        '/properties/$propertyId',
+        body: body,
+        requiresAuth: true,
+      );
+
+      print('✅ Update response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('✅ Property updated successfully');
+        return true;
+      } else {
+        print('❌ Update failed with status: ${response.statusCode}');
+        print('❌ Response data: ${response.data}');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error updating property: $e');
+      print('📍 Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
+  /// Delete a property
+  Future<bool> deleteProperty(int propertyId) async {
+    try {
+      print('🗑️ Deleting property ID: $propertyId');
+
+      final response = await _apiService.delete(
+        '/properties/$propertyId',
+        requiresAuth: true,
+      );
+
+      print('✅ Delete response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('✅ Property deleted successfully');
+        return true;
+      } else {
+        print('❌ Delete failed with status: ${response.statusCode}');
+        print('❌ Response data: ${response.data}');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error deleting property: $e');
+      print('📍 Stack trace: $stackTrace');
+      return false;
+    }
+  }
 } 

@@ -903,6 +903,27 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     );
   }
 
+  bool _doesPropertyMatchCategory(PropertyModel property, String categoryFilter) {
+    final normalizedFilter = categoryFilter.toLowerCase();
+    final propertyType = property.type.toLowerCase();
+    final propertyCategory = property.category.toLowerCase();
+
+    if (normalizedFilter == 'hotels') {
+      return propertyType.contains('hotel') || propertyCategory.contains('hotel');
+    } else if (normalizedFilter == 'shortlets') {
+      return propertyType.contains('shortlet') || propertyCategory.contains('shortlet');
+    } else if (normalizedFilter == 'real estate') {
+      // Real Estate should only show apartment properties (exclude hotel/shortlet blends)
+      final isApartment = propertyType.contains('apartment');
+      final isHotelLike = propertyType.contains('hotel') || propertyCategory.contains('hotel');
+      final isShortletLike = propertyType.contains('shortlet') || propertyCategory.contains('shortlet');
+      return isApartment && !isHotelLike && !isShortletLike;
+    }
+
+    // Default to true for unhandled categories
+    return true;
+  }
+
   List<Map<String, dynamic>> _getFilteredSearchResults() {
     print('🔍 Tenant _getFilteredSearchResults called:');
     print('🔍 Tenant _selectedProperties.length: ${_selectedProperties.length}');
@@ -929,38 +950,33 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       filteredProperties = propertiesToFilter;
     } else {
       filteredProperties = propertiesToFilter.where((property) {
-        final propertyType = property.type.toLowerCase();
-        final propertyCategory = property.category.toLowerCase();
         final categoryFilter = _selectedCategory.toLowerCase();
-        
-        print('🏠 Tenant Search results filtering property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
-        
-        // Updated mapping logic based on actual API data
-        if (categoryFilter == 'hotels') {
-          // Match by type or category
-          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
-        } else if (categoryFilter == 'real estate') {
-          // Match apartments and other real estate
-          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
-        } else if (categoryFilter == 'shortlets') {
-          // Match shortlets
-          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
-        }
-        return true;
+        print('🏠 Tenant Search results filtering property: "${property.title}" - Type: "${property.type}" - Category: "${property.category}" against filter: "$categoryFilter"');
+        return _doesPropertyMatchCategory(property, categoryFilter);
       }).toList();
       print('🔍 Tenant Search results final filtered properties: ${filteredProperties.length} properties');
     }
     
     // Convert PropertyModel to Map format for compatibility with existing UI
     final mapProperties = filteredProperties.map((property) => {
-      'badges': ['Verified Agent'], // Default badge
+      'id': property.id,
+      'badges': [property.user?.verificationStatus ?? 'Unverified'],
       'title': property.title,
       'location': property.location,
       'rating': '(5.0)', // Default rating
       'price': property.price,
       'type': property.type,
       'category': property.category,
-      'image': property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'
+      'period': property.category,
+      'features': property.features,
+      'image': property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center',
+      'agent': {
+        'name': property.user?.fullName ?? 'Agent',
+        'title': 'Agent',
+        'phone': property.user?.phoneNumber ?? '',
+        'email': property.user?.email ?? '',
+        'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
+      },
     }).toList();
 
     print('🔍 Tenant Search results returning ${mapProperties.length} map properties');
@@ -992,24 +1008,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       return propertiesToFilter;
     } else {
       final filtered = propertiesToFilter.where((property) {
-        final propertyType = property.type.toLowerCase();
-        final propertyCategory = property.category.toLowerCase();
         final categoryFilter = _selectedCategory.toLowerCase();
-        
-        print('🏠 Filtering property: "${property.title}" - Type: "$propertyType" - Category: "$propertyCategory" against filter: "$categoryFilter"');
-        
-        // Updated mapping logic based on actual API data
-        if (categoryFilter == 'hotels') {
-          // Match by type or category
-          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
-        } else if (categoryFilter == 'real estate') {
-          // Match apartments and other real estate
-          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
-        } else if (categoryFilter == 'shortlets') {
-          // Match shortlets
-          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
-        }
-        return true;
+        print('🏠 Filtering property: "${property.title}" - Type: "${property.type}" - Category: "${property.category}" against filter: "$categoryFilter"');
+        return _doesPropertyMatchCategory(property, categoryFilter);
       }).toList();
       print('🔍 Final filtered properties: ${filtered.length} properties');
       return filtered;

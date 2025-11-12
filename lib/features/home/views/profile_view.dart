@@ -6,6 +6,8 @@ import '../../../core/utils/format_utils.dart';
 import 'property_listing_view.dart';
 import 'property_details_view.dart';
 import 'subscription_view.dart';
+import 'all_properties_view.dart';
+import 'edit_property_view.dart';
 import '../../finance/views/agent_kyc_view.dart';
 import '../../finance/views/kyc_status_review_view.dart';
 import '../../finance/views/user_kyc_status_review_view.dart';
@@ -1289,13 +1291,39 @@ class _ProfileViewState extends State<ProfileView> {
           ),
             ),
             if (!_isLoadingMyProperties && _myProperties.isNotEmpty)
-              Text(
-                '${_myProperties.length} properties',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF666666),
-                ),
+              Row(
+                children: [
+                  Text(
+                    '${_myProperties.length} ${_myProperties.length == 1 ? 'property' : 'properties'}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => AllPropertiesView(
+                            properties: _myProperties,
+                            currentUser: _currentUser,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'View all',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF426DC2),
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
@@ -1312,7 +1340,7 @@ class _ProfileViewState extends State<ProfileView> {
                   ? _buildEmptyPropertiesState()
                   : ListView.separated(
             scrollDirection: Axis.horizontal,
-                      itemCount: _myProperties.length,
+                      itemCount: _myProperties.length, // Show all properties with horizontal scrolling
             separatorBuilder: (context, index) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
               return _buildPropertyCard(index);
@@ -1426,6 +1454,7 @@ class _ProfileViewState extends State<ProfileView> {
           MaterialPageRoute(
             builder: (context) => PropertyDetailsView(
               propertyData: {
+                'id': property.id, // Pass property ID
                 'badges': ['Verified Agent'],
                 'title': property.title,
                 'location': property.location,
@@ -1436,6 +1465,17 @@ class _ProfileViewState extends State<ProfileView> {
                 'description': property.description,
                 'features': property.features,
                 'imageUrl': property.imageUrl, // Pass actual image URL from API
+                'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images
+                'property360_images': property.property360Images, // Pass 360 images
+                'video_url': property.videoUrl, // Pass video URL
+                'user': property.user?.toJson() ?? {
+                  'id': _currentUser?.id,
+                  'full_name': _currentUser?.fullName ?? 'Agent',
+                  'email': _currentUser?.email ?? '',
+                  'phone_number': _currentUser?.phoneNumber ?? '',
+                  'whatsapp_number': _currentUser?.whatsappNumber ?? _currentUser?.phoneNumber ?? '',
+                  'profile_image_full_url': _currentUser?.profilePicture,
+                }, // Pass user data with ID for ownership check
                 'agent': {
                   'name': _currentUser?.fullName ?? 'Agent',
                   'title': 'Agent',
@@ -1519,17 +1559,20 @@ class _ProfileViewState extends State<ProfileView> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.more_vert,
-              size: 16,
-                          color: Colors.black,
+                      GestureDetector(
+                        onTap: () => _showPropertyOptionsMenu(context, property),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.more_vert,
+                            size: 16,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ],
@@ -1941,6 +1984,209 @@ class _ProfileViewState extends State<ProfileView> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showPropertyOptionsMenu(BuildContext context, PropertyModel property) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Property Options',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Edit Option
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF426DC2).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.edit,
+                  color: Color(0xFF426DC2),
+                ),
+              ),
+              title: const Text(
+                'Edit Property',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text(
+                'Update property details',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF868686),
+                ),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                // Navigate to edit property screen
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => EditPropertyView(property: property),
+                  ),
+                );
+                
+                // Refresh property list if edit was successful
+                if (result == true) {
+                  _fetchMyProperties();
+                }
+              },
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Delete Option
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.delete,
+                  color: Colors.red,
+                ),
+              ),
+              title: const Text(
+                'Delete Property',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+              subtitle: const Text(
+                'Remove this property listing',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF868686),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(context, property);
+              },
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Cancel Button
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF868686),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, PropertyModel property) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Property'),
+        content: Text('Are you sure you want to delete "${property.title}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              // Show loading indicator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (BuildContext context) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
+                    ),
+                  );
+                },
+              );
+              
+              try {
+                final propertyService = PropertyService();
+                final success = await propertyService.deleteProperty(property.id);
+                
+                // Close loading indicator
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  
+                  if (success) {
+                    // Show success message
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Property deleted successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    
+                    // Refresh the property list
+                    _fetchMyProperties();
+                  } else {
+                    // Show error message
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to delete property. Please try again.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                // Close loading indicator
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  
+                  // Show error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting property: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
     );
   }
 } 
