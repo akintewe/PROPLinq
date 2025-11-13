@@ -1293,13 +1293,13 @@ class _ProfileViewState extends State<ProfileView> {
             if (!_isLoadingMyProperties && _myProperties.isNotEmpty)
               Row(
                 children: [
-                  Text(
+              Text(
                     '${_myProperties.length} ${_myProperties.length == 1 ? 'property' : 'properties'}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF666666),
-                    ),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF666666),
+                ),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
@@ -1562,16 +1562,16 @@ class _ProfileViewState extends State<ProfileView> {
                       GestureDetector(
                         onTap: () => _showPropertyOptionsMenu(context, property),
                         child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.more_vert,
-                            size: 16,
-                            color: Colors.black,
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.more_vert,
+              size: 16,
+                          color: Colors.black,
                           ),
                         ),
                       ),

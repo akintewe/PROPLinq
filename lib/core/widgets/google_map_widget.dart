@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:proplinq/features/home/views/map_directions_view.dart';
 
 class GoogleMapWidget extends StatefulWidget {
   final double? latitude;
@@ -298,17 +299,20 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   }
 
   void _getDirections(double lat, double lng, String title) async {
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
-    print('🗺️ GoogleMapWidget: Getting directions URL: $url');
+    print('🗺️ GoogleMapWidget: Opening in-app directions view');
     
     try {
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        _showErrorSnackBar('Could not open directions');
-      }
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => MapDirectionsView(
+            destinationLatitude: lat,
+            destinationLongitude: lng,
+            propertyTitle: title,
+          ),
+        ),
+      );
     } catch (e) {
-      print('❌ GoogleMapWidget: Error getting directions: $e');
+      print('❌ GoogleMapWidget: Error opening directions: $e');
       _showErrorSnackBar('Error opening directions');
     }
   }
@@ -631,51 +635,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                     ),
                   ],
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingUI() {
-    print('🗺️ GoogleMapWidget: Building loading UI');
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F4FD),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              color: Color(0xFF426DC2),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _isInitializing ? 'Initializing Map...' : 'Loading Map...',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF426DC2),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coordinates: ${widget.latitude ?? _defaultLatitude}, ${widget.longitude ?? _defaultLongitude}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF868686),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Markers: ${_markers.length}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF868686),
               ),
             ),
           ],

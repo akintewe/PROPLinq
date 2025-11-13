@@ -46,17 +46,17 @@ class _SecondSplashViewState extends State<SecondSplashView> {
           _navigateToHome();
         } else {
           // Remember me is not valid or not enabled, check biometric
-          final isBiometricEnabled = await _storageService.isBiometricEnabled();
-          final isBiometricAvailable = await _biometricService.isBiometricAvailable();
-          
-          if (isBiometricEnabled && isBiometricAvailable) {
-            // Navigate to biometric login
+        final isBiometricEnabled = await _storageService.isBiometricEnabled();
+        final isBiometricAvailable = await _biometricService.isBiometricAvailable();
+        
+        if (isBiometricEnabled && isBiometricAvailable) {
+          // Navigate to biometric login
             print('🔐 Remember me not valid, navigating to biometric login');
-            _navigateToBiometricLogin();
-          } else {
-            // Navigate to regular login
+          _navigateToBiometricLogin();
+        } else {
+          // Navigate to regular login
             print('🔑 Remember me not valid, navigating to regular login');
-            _navigateToLogin();
+          _navigateToLogin();
           }
         }
       } else {

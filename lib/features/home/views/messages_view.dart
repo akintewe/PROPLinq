@@ -440,20 +440,20 @@ class _MessagesViewState extends State<MessagesView> {
       // Update cache
       _unreadStatusCache[conversationKey] = false;
       
-      // Find and update the conversation in both lists
-      for (int i = 0; i < _conversations.length; i++) {
-        if (_conversations[i]['id'] == conversationKey) {
-          _conversations[i]['unread_count'] = 0;
-          _conversations[i]['has_unread'] = false;
-          break;
+        // Find and update the conversation in both lists
+        for (int i = 0; i < _conversations.length; i++) {
+          if (_conversations[i]['id'] == conversationKey) {
+            _conversations[i]['unread_count'] = 0;
+            _conversations[i]['has_unread'] = false;
+            break;
+          }
         }
-      }
-      
-      for (int i = 0; i < _filteredConversations.length; i++) {
-        if (_filteredConversations[i]['id'] == conversationKey) {
-          _filteredConversations[i]['unread_count'] = 0;
-          _filteredConversations[i]['has_unread'] = false;
-          break;
+        
+        for (int i = 0; i < _filteredConversations.length; i++) {
+          if (_filteredConversations[i]['id'] == conversationKey) {
+            _filteredConversations[i]['unread_count'] = 0;
+            _filteredConversations[i]['has_unread'] = false;
+            break;
         }
       }
     });

@@ -853,10 +853,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  property['location'] as String,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF868686),
+                                property['location'] as String,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF868686),
                                   ),
                                   softWrap: true,
                                 ),
@@ -1387,7 +1387,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                           const SizedBox(height: 40),
                           ],
                           
-                          // Google Map
+                          // Google Map (hide if owner)
+                          if (!_isOwner) ...[
                           const Text(
                             'Google Map',
                             style: TextStyle(
@@ -1399,9 +1400,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                           
                           const SizedBox(height: 20),
                           
-                          // Google Maps Widget (hide if owner)
-                          if (!_isOwner) ...[
-                            Builder(
+                          // Google Maps Widget
+                          Builder(
                             builder: (context) {
                               try {
                                 final coordinates = _getPropertyCoordinates(property);
@@ -1457,18 +1457,18 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                           
                           // Report listing button (hide if owner)
                           if (!_isOwner) ...[
-                            Container(
-                              width: double.infinity,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFF426DC2)),
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  // TODO: Implement report listing functionality
-                                  _showReportDialog();
-                                },
+                          Container(
+                            width: double.infinity,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: const Color(0xFF426DC2)),
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                // TODO: Implement report listing functionality
+                                _showReportDialog();
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 shadowColor: Colors.transparent,
@@ -1566,23 +1566,23 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                   const SizedBox(width: 24),
                   // Hide bottom button if owner
                   if (!_isOwner)
-                    Expanded(
-                      child: Container(
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment(-1.0, 0.0),
-                            end: Alignment(1.0, 0.0),
-                            stops: [0.0113, 0.4555, 1.1245],
-                            colors: [
-                              Color(0xFF426DC2),
-                              Color(0xFF75CFEA),
-                              Color.fromRGBO(51, 204, 153, 0.8),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(25),
+                  Expanded(
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment(-1.0, 0.0),
+                          end: Alignment(1.0, 0.0),
+                          stops: [0.0113, 0.4555, 1.1245],
+                          colors: [
+                            Color(0xFF426DC2),
+                            Color(0xFF75CFEA),
+                            Color.fromRGBO(51, 204, 153, 0.8),
+                          ],
                         ),
-                        child: ElevatedButton(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: ElevatedButton(
                           onPressed: () {
                           final property = widget.propertyData ?? _getDefaultProperty();
                           final propertyType = property['type'] as String? ?? 'Apartment';

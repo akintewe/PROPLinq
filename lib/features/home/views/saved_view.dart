@@ -18,6 +18,7 @@ class _SavedViewState extends State<SavedView> {
   bool _isSavedProperties = true; // Toggle between Recently Viewed and Saved Properties
   final FavoriteService _favoriteService = FavoriteService();
   List<PropertyModel> _savedProperties = [];
+  // ignore: unused_field
   bool _isLoadingSavedProperties = true;
 
   @override
@@ -488,9 +489,9 @@ class _SavedViewState extends State<SavedView> {
                 ),
               ),
               
-              // Property details
+              // Property details (reduced height)
               Expanded(
-                flex: 4,
+                flex: 2,
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Column(

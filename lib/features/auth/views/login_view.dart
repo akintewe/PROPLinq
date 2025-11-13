@@ -427,19 +427,19 @@ class _LoginViewState extends State<LoginView> {
                       ],
                     ),
                   ),
-                  
-                  // Forgot password
+              
+              // Forgot password
                   GestureDetector(
-                    onTap: _forgotPassword,
-                    child: const Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF0E4CDD),
-                      ),
+                  onTap: _forgotPassword,
+                  child: const Text(
+                    'Forgot Password?',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF0E4CDD),
                     ),
                   ),
+                ),
                 ],
               ),
               

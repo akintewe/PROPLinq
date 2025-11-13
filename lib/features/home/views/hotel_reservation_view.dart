@@ -351,52 +351,52 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                     });
                   }
                 },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F9FA),
-                    border: Border.all(color: const Color(0xFFE9ECEF)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF6C757D),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Icon(
-                            Icons.calendar_today,
-                              size: 12,
-                              color: Colors.white,
-                            ),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FA),
+                  border: Border.all(color: const Color(0xFFE9ECEF)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6C757D),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Check-out',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF6C757D),
-                              fontWeight: FontWeight.w500,
-                            ),
+                          child: const Icon(
+                          Icons.calendar_today,
+                            size: 12,
+                            color: Colors.white,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${_checkOutDate.day.toString().padLeft(2, '0')}/${_checkOutDate.month.toString().padLeft(2, '0')}/${_checkOutDate.year}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
                         ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Check-out',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6C757D),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${_checkOutDate.day.toString().padLeft(2, '0')}/${_checkOutDate.month.toString().padLeft(2, '0')}/${_checkOutDate.year}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
                       ),
-                    ],
+                    ),
+                  ],
                   ),
                 ),
               ),

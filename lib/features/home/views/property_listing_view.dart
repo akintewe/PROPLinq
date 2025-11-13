@@ -1439,50 +1439,50 @@ class _PropertyListingViewState extends State<PropertyListingView> {
           }
 
           if (pickedFiles.isNotEmpty) {
-            setState(() {
-              if (fileType == 'images' || fileType == 'hotel_images') {
-                // Check if adding these files would exceed the limit
+        setState(() {
+          if (fileType == 'images' || fileType == 'hotel_images') {
+            // Check if adding these files would exceed the limit
                 final totalImages = _selectedImages.length + pickedFiles.length;
-                if (totalImages > 10) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Maximum 10 images allowed. Please select fewer images.'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                  return;
-                }
-                
-                // Add images to the list
+            if (totalImages > 10) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Maximum 10 images allowed. Please select fewer images.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+            
+            // Add images to the list
                 for (var file in pickedFiles) {
                   _selectedImages.add(File(file.path));
-                }
-              } else if (fileType == '360_images') {
-                // Check if adding these files would exceed the limit
+            }
+          } else if (fileType == '360_images') {
+            // Check if adding these files would exceed the limit
                 final total360Images = _selected360Images.length + pickedFiles.length;
-                if (total360Images > 5) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Maximum 5 360° images allowed. Please select fewer images.'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                  return;
-                }
-                
-                // Add 360 images to the list
+            if (total360Images > 5) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Maximum 5 360° images allowed. Please select fewer images.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+            
+            // Add 360 images to the list
                 for (var file in pickedFiles) {
                   _selected360Images.add(File(file.path));
-                }
-              }
-            });
+            }
+          }
+        });
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
                 content: Text('${pickedFiles.length} image(s) selected successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            backgroundColor: Colors.green,
+          ),
+        );
           }
         }
       }

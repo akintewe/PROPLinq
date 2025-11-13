@@ -1245,46 +1245,46 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         );
       },
       child: Container(
-        width: double.infinity,
-        height: 40,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment(-1.0, 0.0),
-            end: Alignment(1.0, 0.0),
-            stops: [0.0113, 0.4555, 1.1245],
-            colors: [
-              Color(0xFF426DC2),
-              Color(0xFF75CFEA),
-              Color.fromRGBO(51, 204, 153, 0.8),
-            ],
-          ),
+      width: double.infinity,
+      height: 40,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment(-1.0, 0.0),
+          end: Alignment(1.0, 0.0),
+          stops: [0.0113, 0.4555, 1.1245],
+          colors: [
+            Color(0xFF426DC2),
+            Color(0xFF75CFEA),
+            Color.fromRGBO(51, 204, 153, 0.8),
+          ],
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
           physics: const NeverScrollableScrollPhysics(),
-          child: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(_animationController.value * -200, 0),
-                child: Row(
-                  children: List.generate(10, (index) => 
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(_animationController.value * -200, 0),
+              child: Row(
+                children: List.generate(10, (index) => 
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
                         'WELCOME TO PROPLINQ',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                        ),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            );
+          },
           ),
         ),
       ),
