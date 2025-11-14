@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_strings.dart';
+import 'core/services/onesignal_service.dart';
 import 'features/splash/views/second_splash_view.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter binding is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize OneSignal
+  await OneSignalService().initialize();
+  
   runApp(const PropLinqApp());
 }
 

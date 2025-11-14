@@ -16,6 +16,14 @@
 -keep class com.google.firebase.** { *; }
 -dontwarn com.google.firebase.**
 
+# OneSignal
+-keep class com.onesignal.** { *; }
+-dontwarn com.onesignal.**
+-keep interface com.onesignal.OSNotificationOpenedResult { *; }
+-keep interface com.onesignal.OSInAppMessageAction { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**
+
 # Google Play Core (split install)
 -keep class com.google.android.play.core.** { *; }
 -dontwarn com.google.android.play.core.**

@@ -4,6 +4,7 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/onesignal_service.dart';
 import '../services/auth_service.dart';
 import 'forgot_password_view.dart';
 import 'sign_up_view.dart';
@@ -34,6 +35,7 @@ class _LoginViewState extends State<LoginView> {
   final AuthService _authService = AuthService();
   final BiometricService _biometricService = BiometricService();
   final StorageService _storageService = StorageService();
+  final OneSignalService _oneSignalService = OneSignalService();
 
   @override
   void initState() {
@@ -117,6 +119,13 @@ class _LoginViewState extends State<LoginView> {
           setState(() {
             _isBiometricEnabled = true;
           });
+        }
+        
+        // Set OneSignal user ID and tags
+        await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
+        await _oneSignalService.setUserType(response.data!.user.userType);
+        if (response.data!.user.location.isNotEmpty) {
+          await _oneSignalService.setUserLocation(response.data!.user.location);
         }
         
         _navigateToHome(response.data!.user.userType);

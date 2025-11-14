@@ -96,6 +96,9 @@ dependencies:
   vector_math: ^2.1.4
   shimmer: ^3.0.0
   panorama: ^0.4.1
+  
+  # Push notifications with OneSignal
+  onesignal_flutter: ^5.2.5
 
 dev_dependencies:
   flutter_test:
