@@ -19,7 +19,149 @@ import '../../finance/views/agent_kyc_view.dart';
 import '../../finance/views/complete_kyc_view.dart';
 import '../services/property_service.dart';
 import '../services/favorite_service.dart';
+import '../services/chat_service.dart';
 import '../models/property_model.dart';
+
+// Image carousel widget for agent property cards
+class _AgentPropertyImageCarousel extends StatefulWidget {
+  final PropertyModel property;
+  final Function(PropertyModel) onFavoriteToggle;
+  final Widget Function(PropertyModel) buildVerificationBadge;
+
+  const _AgentPropertyImageCarousel({
+    required this.property,
+    required this.onFavoriteToggle,
+    required this.buildVerificationBadge,
+  });
+
+  @override
+  State<_AgentPropertyImageCarousel> createState() => _AgentPropertyImageCarouselState();
+}
+
+class _AgentPropertyImageCarouselState extends State<_AgentPropertyImageCarousel> {
+  late PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Get all image URLs
+    List<String> imageUrls = [];
+    if (widget.property.images != null && widget.property.images!.isNotEmpty) {
+      imageUrls = widget.property.images!.map((img) {
+        return img['full_url'] as String? ?? img['url'] as String? ?? '';
+      }).where((url) => url.isNotEmpty).toList();
+    }
+    // Fallback to imageUrl
+    if (imageUrls.isEmpty && widget.property.imageUrl != null) {
+      imageUrls = [widget.property.imageUrl!];
+    }
+    // Final fallback
+    if (imageUrls.isEmpty) {
+      imageUrls = ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'];
+    }
+
+    return Container(
+      height: 200,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          // Image carousel
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: imageUrls.length,
+            itemBuilder: (context, index) {
+              return Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(imageUrls[index]),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.3),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Badges
+          Positioned(
+            top: 16,
+            left: 16,
+            child: widget.buildVerificationBadge(widget.property),
+          ),
+          // Favorite button
+          Positioned(
+            top: 16,
+            right: 16,
+            child: GestureDetector(
+              onTap: () => widget.onFavoriteToggle(widget.property),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.property.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  size: 18,
+                  color: widget.property.isFavorite ? Colors.red : const Color(0xFF868686),
+                ),
+              ),
+            ),
+          ),
+          // Pagination dots (only show if more than 1 image)
+          if (imageUrls.length > 1)
+            Positioned(
+              bottom: 12,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(imageUrls.length, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _currentPage == index ? 8 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 class AgentHomeView extends StatefulWidget {
   const AgentHomeView({super.key});
@@ -49,11 +191,14 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
   final FavoriteService _favoriteService = FavoriteService();
+  final ChatService _chatService = ChatService();
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   List<PropertyModel> _properties = [];
   List<PropertyModel> _selectedProperties = [];
   bool _isLoadingProperties = true;
+  int _unreadMessageCount = 0;
+  Timer? _unreadCountTimer;
 
   // Promotional messages for rotating banner
   final List<String> _promotionalMessages = [
@@ -78,8 +223,16 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserProfile();
       await _fetchProperties();
+      await _fetchUnreadMessageCount();
       await _showKycDialogIfNeeded();
       _startFeaturedAutoScroll();
+      
+      // Periodically refresh unread message count
+      _unreadCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (mounted) {
+          _fetchUnreadMessageCount();
+        }
+      });
     });
   }
 
@@ -297,6 +450,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   @override
   void dispose() {
+    _unreadCountTimer?.cancel();
     _animationController.dispose();
     _featuredScrollController.dispose();
     _homeScrollController.dispose();
@@ -1016,6 +1170,14 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     }
   }
 
+  Widget _buildAgentImageCarousel(PropertyModel property) {
+    return _AgentPropertyImageCarousel(
+      property: property,
+      onFavoriteToggle: _toggleFavorite,
+      buildVerificationBadge: _buildVerificationBadge,
+    );
+  }
+
   Widget _buildSearchPropertyCard(PropertyModel property) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1034,65 +1196,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         borderRadius: BorderRadius.circular(16),
         child: Column(
           children: [
-            // Property image
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.3),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Badges
-                    Positioned(
-                      top: 16,
-                      left: 16,
-                      child: _buildVerificationBadge(property),
-                    ),
-                    // Favorite button
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: GestureDetector(
-                        onTap: () => _toggleFavorite(property),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                        ),
-                          child: Builder(
-                            builder: (context) {
-                              print('❤️ Heart Icon Debug - Property: ${property.title}, isFavorite: ${property.isFavorite}');
-                              return Icon(
-                                property.isFavorite ? Icons.favorite : Icons.favorite_border,
-                              size: 18,
-                                color: property.isFavorite ? Colors.red : const Color(0xFF868686),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Property image carousel
+            _buildAgentImageCarousel(property),
             
             // Property details
             Padding(
@@ -2288,6 +2393,66 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     );
   }
 
+  Future<void> _fetchUnreadMessageCount() async {
+    try {
+      final chatData = await _chatService.getUserChats();
+      final currentUser = await _authService.getCurrentUser();
+      final currentUserId = currentUser?.id.toString();
+      
+      if (currentUserId == null) {
+        setState(() {
+          _unreadMessageCount = 0;
+        });
+        return;
+      }
+      
+      // Group conversations and count unread ones
+      Map<String, Map<String, dynamic>> conversationMap = {};
+      
+      for (final chat in chatData) {
+        final user = chat['user'] as Map<String, dynamic>?;
+        final otherPersonId = user?['id']?.toString() ?? '';
+        final receivedAt = chat['received_at'] as String?;
+        final isUnread = receivedAt == null;
+        
+        if (otherPersonId.isEmpty) continue;
+        
+        String conversationKey = otherPersonId;
+        
+        if (!conversationMap.containsKey(conversationKey)) {
+          conversationMap[conversationKey] = {
+            'has_unread': isUnread,
+          };
+        } else {
+          if (isUnread) {
+            conversationMap[conversationKey]!['has_unread'] = true;
+          }
+        }
+      }
+      
+      // Count conversations with unread messages
+      int unreadCount = 0;
+      for (final conversation in conversationMap.values) {
+        if (conversation['has_unread'] == true) {
+          unreadCount++;
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _unreadMessageCount = unreadCount;
+        });
+      }
+    } catch (e) {
+      print('❌ Error fetching unread message count: $e');
+      if (mounted) {
+        setState(() {
+          _unreadMessageCount = 0;
+        });
+      }
+    }
+  }
+
   Widget _buildCustomBottomNavBar() {
     return Container(
       height: 80,
@@ -2317,6 +2482,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   Widget _buildNavItem(int index, String title, String selectedIcon, String unselectedIcon) {
     final isSelected = _currentIndex == index;
+    final showBadge = index == 2 && _unreadMessageCount > 0; // Messages tab (index 2)
     
     return GestureDetector(
       onTap: () {
@@ -2330,46 +2496,81 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             );
           }
         } else {
-        setState(() {
-          _currentIndex = index;
-        });
+          setState(() {
+            _currentIndex = index;
+          });
+          // Refresh unread count when navigating to messages
+          if (index == 2) {
+            _fetchUnreadMessageCount();
+          }
         }
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SvgPicture.asset(
-            isSelected ? selectedIcon : unselectedIcon,
-            width: 24,
-            height: 24,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback to Material icons if SVG fails
-              IconData fallbackIcon;
-              switch (title) {
-                case 'Home':
-                  fallbackIcon = isSelected ? Icons.home : Icons.home_outlined;
-                  break;
-                case 'Saved':
-                  fallbackIcon = isSelected ? Icons.favorite : Icons.favorite_border;
-                  break;
-                case 'Messages':
-                  fallbackIcon = isSelected ? Icons.message : Icons.message_outlined;
-                  break;
-                case 'Profile':
-                  fallbackIcon = isSelected ? Icons.person : Icons.person_outline;
-                  break;
-                case 'Settings':
-                  fallbackIcon = isSelected ? Icons.settings : Icons.settings_outlined;
-                  break;
-                default:
-                  fallbackIcon = Icons.circle;
-              }
-              return Icon(
-                fallbackIcon,
-                size: 24,
-                color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFB0B5BB),
-              );
-            },
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              SvgPicture.asset(
+                isSelected ? selectedIcon : unselectedIcon,
+                width: 24,
+                height: 24,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback to Material icons if SVG fails
+                  IconData fallbackIcon;
+                  switch (title) {
+                    case 'Home':
+                      fallbackIcon = isSelected ? Icons.home : Icons.home_outlined;
+                      break;
+                    case 'Saved':
+                      fallbackIcon = isSelected ? Icons.favorite : Icons.favorite_border;
+                      break;
+                    case 'Messages':
+                      fallbackIcon = isSelected ? Icons.message : Icons.message_outlined;
+                      break;
+                    case 'Profile':
+                      fallbackIcon = isSelected ? Icons.person : Icons.person_outline;
+                      break;
+                    case 'Settings':
+                      fallbackIcon = isSelected ? Icons.settings : Icons.settings_outlined;
+                      break;
+                    default:
+                      fallbackIcon = Icons.circle;
+                  }
+                  return Icon(
+                    fallbackIcon,
+                    size: 24,
+                    color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFB0B5BB),
+                  );
+                },
+              ),
+              // Badge for unread messages
+              if (showBadge)
+                Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF426DC2),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      _unreadMessageCount > 99 ? '99+' : '$_unreadMessageCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(

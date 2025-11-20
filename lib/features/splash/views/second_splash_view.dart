@@ -22,8 +22,8 @@ class _SecondSplashViewState extends State<SecondSplashView> {
   void initState() {
     super.initState();
     
-    // Check authentication status after 6 seconds to let GIF play well
-    Future.delayed(const Duration(seconds: 6), () {
+    // Check authentication status after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         _checkAuthenticationStatus();
       }
@@ -146,73 +146,36 @@ class _SecondSplashViewState extends State<SecondSplashView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Animated GIF background - covers full screen
-          SizedBox.expand(
+          // Centered logo - Instagram style small size
+          Center(
             child: Image.asset(
-              'assets/videos/WhatsAppVideo2025-11-03at1.10.59PM-ezgif.com-video-to-gif-converter.gif',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                // Fallback in case GIF fails to load
-                return Container(
-                  color: Colors.black,
-                  child: const Center(
-                    child: Text(
-                      'PropLinq',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                );
-              },
+              'assets/icons/PropLinq Logo-Icon-v1 (2).png',
+              height: 70,
+              width: 70,
+              fit: BoxFit.contain,
             ),
           ),
           
-          // Dark gradient overlay at the bottom
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 200, // Height of gradient overlay
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.3),
-                    Colors.black.withOpacity(0.7),
-                    Colors.black.withOpacity(0.9),
-                  ],
-                  stops: const [0.0, 0.4, 0.8, 1.0],
-                ),
-              ),
-            ),
-          ),
-          
-          // Logo at the bottom - positioned higher
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 80, // Moved up from 40 to 80
-            child: Center(
-              child: Hero(
-                tag: 'splash_logo',
-                child: Image.asset(
-                  'assets/icons/PropLinq Logo-v1-SVG 1 (1).png',
-                  height: 50,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-          ),
+          // Existing splash logo at the bottom - small Instagram style
+          // Positioned(
+          //   left: 0,
+          //   right: 0,
+          //   bottom: 80,
+          //   child: Center(
+          //     child: Hero(
+          //       tag: 'splash_logo',
+          //       child: Image.asset(
+          //         'assets/icons/PropLinq Logo-v1-SVG 1 (1).png',
+          //         height: 60,
+          //         fit: BoxFit.contain,
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

@@ -1712,7 +1712,7 @@ class _InAppChatViewState extends State<InAppChatView> {
                     Text(
                       message.text,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.w400,
                         color: message.isFromUser ? Colors.white : Colors.black,
                       ),

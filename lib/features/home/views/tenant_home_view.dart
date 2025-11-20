@@ -10,16 +10,167 @@ import 'saved_view.dart';
 import 'messages_view.dart';
 import 'profile_view.dart';
 import 'settings_view.dart';
-import 'subscription_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/models/user_model.dart';
 import '../../finance/views/complete_kyc_view.dart';
 import '../../finance/views/agent_kyc_view.dart';
 import '../services/property_service.dart';
 import '../services/favorite_service.dart';
+import '../services/chat_service.dart';
 import '../models/property_model.dart';
 import 'property_details_view.dart';
 
+// Image carousel widget for property cards
+class _PropertyImageCarousel extends StatefulWidget {
+  final List<String> imageUrls;
+  final List<dynamic> badges;
+
+  const _PropertyImageCarousel({
+    required this.imageUrls,
+    required this.badges,
+  });
+
+  @override
+  State<_PropertyImageCarousel> createState() => _PropertyImageCarouselState();
+}
+
+class _PropertyImageCarouselState extends State<_PropertyImageCarousel> {
+  late PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          // Image carousel
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: widget.imageUrls.length,
+            itemBuilder: (context, index) {
+              return Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(widget.imageUrls[index]),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.3),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Badges
+          Positioned(
+            top: 16,
+            left: 16,
+            child: Row(
+              children: widget.badges.map((badge) {
+                final badgeText = badge.toString();
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (badgeText == 'Verified Agent')
+                        const Icon(
+                          Icons.verified,
+                          size: 14,
+                          color: Colors.green,
+                        ),
+                      if (badgeText == 'Verified Agent') const SizedBox(width: 4),
+                      Text(
+                        badgeText,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          // Favorite button
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.favorite_border,
+                size: 18,
+                color: Color(0xFF868686),
+              ),
+            ),
+          ),
+          // Pagination dots (only show if more than 1 image)
+          if (widget.imageUrls.length > 1)
+            Positioned(
+              bottom: 12,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.imageUrls.length, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _currentPage == index ? 8 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 class TenantHomeView extends StatefulWidget {
   final String? initialFilter; // 'hotels' or 'non_hotels'
@@ -44,11 +195,14 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
   final FavoriteService _favoriteService = FavoriteService();
+  final ChatService _chatService = ChatService();
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   List<PropertyModel> _properties = [];
   List<PropertyModel> _selectedProperties = [];
   bool _isLoadingProperties = true;
+  int _unreadMessageCount = 0;
+  Timer? _unreadCountTimer;
 
   @override
   void initState() {
@@ -65,9 +219,26 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserProfile();
       await _fetchProperties();
+      await _fetchUnreadMessageCount();
       await _showKycDialogIfNeeded();
       _startFeaturedAutoScroll();
+      
+      // Periodically refresh unread message count
+      _unreadCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (mounted) {
+          _fetchUnreadMessageCount();
+        }
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _unreadCountTimer?.cancel();
+    _animationController.dispose();
+    _featuredScrollController.dispose();
+    _homeScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchUserProfile() async {
@@ -415,14 +586,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     } catch (e) {
       print('❌ Error testing property details: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _featuredScrollController.dispose();
-    _homeScrollController.dispose();
-    super.dispose();
   }
 
   void _startFeaturedAutoScroll() {
@@ -958,25 +1121,44 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
     
     // Convert PropertyModel to Map format for compatibility with existing UI
-    final mapProperties = filteredProperties.map((property) => {
-      'id': property.id,
-      'badges': [property.user?.verificationStatus ?? 'Unverified'],
-      'title': property.title,
-      'location': property.location,
-      'rating': '(5.0)', // Default rating
-      'price': property.price,
-      'type': property.type,
-      'category': property.category,
-      'period': property.category,
-      'features': property.features,
-      'image': property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center',
-      'agent': {
-        'name': property.user?.fullName ?? 'Agent',
-        'title': 'Agent',
-        'phone': property.user?.phoneNumber ?? '',
-        'email': property.user?.email ?? '',
-        'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
-      },
+    final mapProperties = filteredProperties.map((property) {
+      // Extract all image URLs from images array
+      List<String> imageUrls = [];
+      if (property.images != null && property.images!.isNotEmpty) {
+        imageUrls = property.images!.map((img) {
+          return img['full_url'] as String? ?? img['url'] as String? ?? '';
+        }).where((url) => url.isNotEmpty).toList();
+      }
+      // Fallback to imageUrl if no images array
+      if (imageUrls.isEmpty && property.imageUrl != null) {
+        imageUrls = [property.imageUrl!];
+      }
+      // Final fallback
+      if (imageUrls.isEmpty) {
+        imageUrls = ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'];
+      }
+      
+      return {
+        'id': property.id,
+        'badges': [property.user?.verificationStatus ?? 'Unverified'],
+        'title': property.title,
+        'location': property.location,
+        'rating': '(5.0)', // Default rating
+        'price': property.price,
+        'type': property.type,
+        'category': property.category,
+        'period': property.category,
+        'features': property.features,
+        'image': imageUrls.first, // First image for backward compatibility
+        'images': imageUrls, // All images for carousel
+        'agent': {
+          'name': property.user?.fullName ?? 'Agent',
+          'title': 'Agent',
+          'phone': property.user?.phoneNumber ?? '',
+          'email': property.user?.email ?? '',
+          'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
+        },
+      };
     }).toList();
 
     print('🔍 Tenant Search results returning ${mapProperties.length} map properties');
@@ -1236,15 +1418,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   Widget _buildAnimatedBanner() {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const SubscriptionView(),
-          ),
-        );
-      },
-      child: Container(
+    // Home seeker banner is not clickable - no action on tap
+    return Container(
       width: double.infinity,
       height: 40,
       decoration: const BoxDecoration(
@@ -1261,7 +1436,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-          physics: const NeverScrollableScrollPhysics(),
+        physics: const NeverScrollableScrollPhysics(),
         child: AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
@@ -1272,7 +1447,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                        'WELCOME TO PROPLINQ',
+                      'WELCOME TO PROPLINQ',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -1285,7 +1460,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
               ),
             );
           },
-          ),
         ),
       ),
     );
@@ -2076,6 +2250,32 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     );
   }
 
+  Widget _buildImageCarousel(Map<String, dynamic> property) {
+    // Get all images for this property
+    List<String> imageUrls = [];
+    if (property['images'] != null && property['images'] is List) {
+      final imagesList = property['images'] as List;
+      imageUrls = imagesList.map((img) {
+        if (img is String) return img;
+        if (img is Map) return img['full_url'] as String? ?? img['url'] as String? ?? '';
+        return '';
+      }).where((url) => url.isNotEmpty).toList();
+    }
+    // Fallback to single image
+    if (imageUrls.isEmpty && property['image'] != null) {
+      imageUrls = [property['image'] as String];
+    }
+    // Final fallback
+    if (imageUrls.isEmpty) {
+      imageUrls = ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'];
+    }
+    
+    return _PropertyImageCarousel(
+      imageUrls: imageUrls,
+      badges: property['badges'] as List<dynamic>? ?? [],
+    );
+  }
+
   Widget _buildSearchPropertyCard(Map<String, dynamic> property) {
     return GestureDetector(
       onTap: () async {
@@ -2127,88 +2327,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           borderRadius: BorderRadius.circular(16),
           child: Column(
             children: [
-              // Property image
-              Container(
-                height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(property['image'] as String),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.3),
-                      ],
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Badges
-                      Positioned(
-                        top: 16,
-                        left: 16,
-                        child: Row(
-                          children: (property['badges'] as List<String>).map((badge) {
-                            return Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (badge == 'Verified Agent')
-                                    const Icon(
-                                      Icons.verified,
-                                      size: 14,
-                                      color: Colors.green,
-                                    ),
-                                  if (badge == 'Verified Agent') const SizedBox(width: 4),
-                                  Text(
-                                    badge,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w400,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      // Favorite button
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.favorite_border,
-                            size: 18,
-                            color: Color(0xFF868686),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Property image carousel
+              _buildImageCarousel(property),
               
               // Property details
               Padding(
@@ -2536,6 +2656,66 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     );
   }
 
+  Future<void> _fetchUnreadMessageCount() async {
+    try {
+      final chatData = await _chatService.getUserChats();
+      final currentUser = await _authService.getCurrentUser();
+      final currentUserId = currentUser?.id.toString();
+      
+      if (currentUserId == null) {
+        setState(() {
+          _unreadMessageCount = 0;
+        });
+        return;
+      }
+      
+      // Group conversations and count unread ones
+      Map<String, Map<String, dynamic>> conversationMap = {};
+      
+      for (final chat in chatData) {
+        final user = chat['user'] as Map<String, dynamic>?;
+        final otherPersonId = user?['id']?.toString() ?? '';
+        final receivedAt = chat['received_at'] as String?;
+        final isUnread = receivedAt == null;
+        
+        if (otherPersonId.isEmpty) continue;
+        
+        String conversationKey = otherPersonId;
+        
+        if (!conversationMap.containsKey(conversationKey)) {
+          conversationMap[conversationKey] = {
+            'has_unread': isUnread,
+          };
+        } else {
+          if (isUnread) {
+            conversationMap[conversationKey]!['has_unread'] = true;
+          }
+        }
+      }
+      
+      // Count conversations with unread messages
+      int unreadCount = 0;
+      for (final conversation in conversationMap.values) {
+        if (conversation['has_unread'] == true) {
+          unreadCount++;
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _unreadMessageCount = unreadCount;
+        });
+      }
+    } catch (e) {
+      print('❌ Error fetching unread message count: $e');
+      if (mounted) {
+        setState(() {
+          _unreadMessageCount = 0;
+        });
+      }
+    }
+  }
+
   Widget _buildCustomBottomNavBar() {
     return Container(
       height: 80,
@@ -2565,6 +2745,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Widget _buildNavItem(int index, String title, String selectedIcon, String unselectedIcon) {
     final isSelected = _currentIndex == index;
+    final showBadge = index == 2 && _unreadMessageCount > 0; // Messages tab (index 2)
     
     return GestureDetector(
       onTap: () {
@@ -2578,46 +2759,81 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             );
           }
         } else {
-        setState(() {
-          _currentIndex = index;
-        });
+          setState(() {
+            _currentIndex = index;
+          });
+          // Refresh unread count when navigating to messages
+          if (index == 2) {
+            _fetchUnreadMessageCount();
+          }
         }
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SvgPicture.asset(
-            isSelected ? selectedIcon : unselectedIcon,
-            width: 24,
-            height: 24,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback to Material icons if SVG fails
-              IconData fallbackIcon;
-              switch (title) {
-                case 'Home':
-                  fallbackIcon = isSelected ? Icons.home : Icons.home_outlined;
-                  break;
-                case 'Saved':
-                  fallbackIcon = isSelected ? Icons.favorite : Icons.favorite_border;
-                  break;
-                case 'Messages':
-                  fallbackIcon = isSelected ? Icons.message : Icons.message_outlined;
-                  break;
-                case 'Profile':
-                  fallbackIcon = isSelected ? Icons.person : Icons.person_outline;
-                  break;
-                case 'Settings':
-                  fallbackIcon = isSelected ? Icons.settings : Icons.settings_outlined;
-                  break;
-                default:
-                  fallbackIcon = Icons.circle;
-              }
-              return Icon(
-                fallbackIcon,
-                size: 24,
-                color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFB0B5BB),
-              );
-            },
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              SvgPicture.asset(
+                isSelected ? selectedIcon : unselectedIcon,
+                width: 24,
+                height: 24,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback to Material icons if SVG fails
+                  IconData fallbackIcon;
+                  switch (title) {
+                    case 'Home':
+                      fallbackIcon = isSelected ? Icons.home : Icons.home_outlined;
+                      break;
+                    case 'Saved':
+                      fallbackIcon = isSelected ? Icons.favorite : Icons.favorite_border;
+                      break;
+                    case 'Messages':
+                      fallbackIcon = isSelected ? Icons.message : Icons.message_outlined;
+                      break;
+                    case 'Profile':
+                      fallbackIcon = isSelected ? Icons.person : Icons.person_outline;
+                      break;
+                    case 'Settings':
+                      fallbackIcon = isSelected ? Icons.settings : Icons.settings_outlined;
+                      break;
+                    default:
+                      fallbackIcon = Icons.circle;
+                  }
+                  return Icon(
+                    fallbackIcon,
+                    size: 24,
+                    color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFB0B5BB),
+                  );
+                },
+              ),
+              // Badge for unread messages
+              if (showBadge)
+                Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF426DC2),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      _unreadMessageCount > 99 ? '99+' : '$_unreadMessageCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
