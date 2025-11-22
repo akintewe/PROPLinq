@@ -41,6 +41,12 @@
 	<string>This app needs access to location when open to show nearby properties on the map.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Proplinq needs access to your photo library so you can upload property photos and personalize your listings.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Proplinq needs access to save photos to your photo library when you take pictures for property listings or chat messages.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Proplinq needs access to your camera to take photos for property listings and chat messages.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Proplinq needs access to your microphone to record videos with audio for property listings and chat messages.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

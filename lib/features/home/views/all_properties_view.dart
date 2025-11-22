@@ -938,13 +938,16 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              // Close confirmation dialog first
+              Navigator.of(context).pop();
               
-              // Show loading indicator
+              // Show loading indicator and store its context
+              BuildContext? loadingDialogContext;
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (BuildContext context) {
+                builder: (BuildContext dialogContext) {
+                  loadingDialogContext = dialogContext;
                   return const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
@@ -957,10 +960,12 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
                 final propertyService = PropertyService();
                 final success = await propertyService.deleteProperty(property.id);
                 
-                // Close loading indicator
+                // Close loading indicator first, using the stored context
+                if (loadingDialogContext != null && mounted) {
+                  Navigator.of(loadingDialogContext!).pop();
+                }
+                
                 if (mounted) {
-                  Navigator.of(context).pop();
-                  
                   if (success) {
                     // Show success message
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -970,7 +975,7 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
                       ),
                     );
                     
-                    // Remove property from list and update UI
+                    // Remove property from list and update UI after closing dialog
                     setState(() {
                       widget.properties.removeWhere((p) => p.id == property.id);
                       _filterProperties();
@@ -991,10 +996,12 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
                   }
                 }
               } catch (e) {
-                // Close loading indicator
+                // Always close loading indicator even on error
+                if (loadingDialogContext != null && mounted) {
+                  Navigator.of(loadingDialogContext!).pop();
+                }
+                
                 if (mounted) {
-                  Navigator.of(context).pop();
-                  
                   // Show error message
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

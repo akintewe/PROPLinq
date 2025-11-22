@@ -9,6 +9,9 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/location_autocomplete_field.dart';
 import '../services/property_service.dart';
 import 'property_listing_success_view.dart';
+import '../../auth/services/auth_service.dart';
+import '../../finance/views/agent_kyc_view.dart';
+import '../../finance/views/complete_kyc_view.dart';
 
 class CurrencyInputFormatter extends TextInputFormatter {
   @override
@@ -1684,7 +1687,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
 
       // Create property using the service
       final propertyService = PropertyService();
-      final result = await propertyService.createProperty(
+      final response = await propertyService.createProperty(
         type: _selectedPropertyType,
         title: _propertyTitleController.text,
         description: _descriptionController.text,
@@ -1704,7 +1707,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       // Close loading dialog
       Navigator.of(context).pop();
 
-      if (result != null) {
+      if (response.success && response.data != null) {
         // Success - navigate to success screen
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -1712,8 +1715,24 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       ),
     );
       } else {
-        // Error - show more specific error message
-        _showErrorDialog('Failed to create property. Please ensure:\n\n• Images are in JPG, JPEG, or PNG format\n• Images have reasonable dimensions (300px minimum)\n• All required fields are filled\n• Images are not corrupted or invalid\n\nPlease try with a different image.');
+        // Check if this is a 403 error related to KYC verification or property limit
+        final message = response.message?.toLowerCase() ?? '';
+        final isKycLimitError = response.statusCode == 403 && 
+            response.message != null && 
+            (message.contains('kyc') || 
+             message.contains('maximum limit') || 
+             message.contains('property limit') ||
+             (message.contains('limit') && message.contains('property')));
+        
+        if (isKycLimitError) {
+          // Show KYC-specific dialog with navigation option
+          _showKycLimitDialog(response.message!);
+        } else {
+          // Other errors - show generic error message
+          final errorMessage = response.message ?? 
+              'Failed to create property. Please ensure:\n\n• Images are in JPG, JPEG, or PNG format\n• Images have reasonable dimensions (300px minimum)\n• All required fields are filled\n• Images are not corrupted or invalid\n\nPlease try with a different image.';
+          _showErrorDialog(errorMessage);
+        }
       }
     } catch (e) {
       // Close loading dialog
@@ -1733,6 +1752,84 @@ class _PropertyListingViewState extends State<PropertyListingView> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showKycLimitDialog(String message) async {
+    if (!mounted) return;
+    
+    final authService = AuthService();
+    final userType = await authService.getUserType();
+    
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Property Limit Reached',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.verified_user,
+                size: 48,
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Complete your KYC verification to list unlimited properties.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Later'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to appropriate KYC screen based on user type
+                if (userType == 'agent') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AgentKycView(),
+                    ),
+                  );
+                } else {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const CompleteKycView(),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Complete KYC'),
             ),
           ],
         );

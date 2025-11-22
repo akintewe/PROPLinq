@@ -82,43 +82,67 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
         return;
       }
 
-      // Get current position with timeout
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('⏰ Location request timed out, using default location');
-          // Use a default location near the destination for simulator testing
-          return Position(
-            latitude: widget.destinationLatitude + 0.05, // ~5km north
-            longitude: widget.destinationLongitude + 0.05,
-            timestamp: DateTime.now(),
-            accuracy: 0,
-            altitude: 0,
-            altitudeAccuracy: 0,
-            heading: 0,
-            headingAccuracy: 0,
-            speed: 0,
-            speedAccuracy: 0,
-          );
-        },
-      );
+      // Try to get last known position first (faster)
+      Position? position;
+      try {
+        position = await Geolocator.getLastKnownPosition();
+        if (position != null) {
+          print('✅ Using last known location: ${position.latitude}, ${position.longitude}');
+        }
+      } catch (e) {
+        print('⚠️ Could not get last known position: $e');
+      }
 
-      print('✅ Current location: ${position.latitude}, ${position.longitude}');
+      // If no last known position, get current position
+      if (position == null) {
+        print('📍 Getting fresh GPS location...');
+        try {
+          // Use longer timeout and better accuracy settings
+          position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 15),
+          ).timeout(
+            const Duration(seconds: 20),
+          );
+          print('✅ Got fresh GPS location: ${position.latitude}, ${position.longitude}');
+        } catch (timeoutError) {
+          print('⏰ Location request timed out, trying last known position again...');
+          // Try last known position as fallback
+          position = await Geolocator.getLastKnownPosition();
+          if (position == null) {
+            throw Exception('Could not get location. Please ensure location services are enabled and try again.');
+          }
+          print('✅ Using last known position as fallback: ${position.latitude}, ${position.longitude}');
+        }
+      }
+
+      // At this point, position is guaranteed to be non-null (either from getLastKnownPosition or getCurrentPosition)
+      final currentPosition = position;
+
+      // Validate coordinates are reasonable (not 0,0 or obviously fake)
+      if (currentPosition.latitude == 0.0 && currentPosition.longitude == 0.0) {
+        throw Exception('Invalid location coordinates. Please ensure GPS is enabled.');
+      }
+
+      print('✅ Final location coordinates: ${currentPosition.latitude}, ${currentPosition.longitude}');
+      print('📍 Location accuracy: ${currentPosition.accuracy} meters');
+      print('📍 Destination coordinates: ${widget.destinationLatitude}, ${widget.destinationLongitude}');
+      print('📍 Property title: ${widget.propertyTitle}');
 
       if (!mounted) return;
 
       setState(() {
-        _currentPosition = position;
+        _currentPosition = currentPosition;
         _isLoadingLocation = false;
       });
 
       // Add markers
       _addMarkers();
+      
+      print('📍 Markers added - Current: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}');
+      print('📍 Markers added - Destination: ${widget.destinationLatitude}, ${widget.destinationLongitude}');
 
-      // Get directions (this might fail on simulator, but we handle it gracefully)
+      // Get directions
       await _getDirections();
 
       // Move camera to show both locations
@@ -128,7 +152,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
     } catch (e) {
       print('❌ Error getting location: $e');
       setState(() {
-        _errorMessage = 'Failed to get current location: $e';
+        _errorMessage = 'Failed to get current location: ${e.toString()}';
         _isLoadingLocation = false;
       });
     }
@@ -299,9 +323,24 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
           ? '${(durationInMinutes / 60).toStringAsFixed(0)} hours ${(durationInMinutes % 60).toStringAsFixed(0)} mins'
           : '${durationInMinutes.toStringAsFixed(0)} mins';
 
+      // Draw a straight line between the two points
+      final straightLine = [
+        LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        LatLng(widget.destinationLatitude, widget.destinationLongitude),
+      ];
+
       setState(() {
         _distance = '$distanceStr (approx)';
         _duration = '$durationStr (approx)';
+        _polylines = {
+          Polyline(
+            polylineId: const PolylineId('straight_line'),
+            points: straightLine,
+            color: const Color(0xFF426DC2).withOpacity(0.6),
+            width: 4,
+            patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+          ),
+        };
       });
 
       print('📏 Straight-line distance: $_distance');
@@ -363,100 +402,151 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Map
-          if (_currentPosition != null)
-            GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: LatLng(
-                  _currentPosition!.latitude,
-                  _currentPosition!.longitude,
-                ),
-                zoom: 14,
+          // Map - Always show map, even if current location is not available
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: LatLng(
+                _currentPosition?.latitude ?? widget.destinationLatitude,
+                _currentPosition?.longitude ?? widget.destinationLongitude,
               ),
-              markers: _markers,
-              polylines: _polylines,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              onMapCreated: (GoogleMapController controller) {
-                try {
-                  _mapController = controller;
-                  // Delay the camera animation to ensure map is fully initialized
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    if (mounted) {
-                      _fitMapToRoute();
-                    }
-                  });
-                } catch (e) {
-                  print('❌ Error in onMapCreated: $e');
-                }
-              },
-            )
-          else
-            Container(
-              color: const Color(0xFFE8F4FD),
-              child: Center(
-                child: _isLoadingLocation
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(
-                            color: Color(0xFF426DC2),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Getting your location...',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF426DC2),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.location_off,
-                            size: 60,
-                            color: Color(0xFF426DC2),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _errorMessage ?? 'Failed to get location',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF426DC2),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: _getCurrentLocation,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF426DC2),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                            ),
-                            child: const Text(
-                              'Retry',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
+              zoom: _currentPosition != null ? 14 : 15,
+            ),
+            markers: _markers.isEmpty && _currentPosition == null
+                ? {
+                    // Show at least the destination marker if current location is not available
+                    Marker(
+                      markerId: const MarkerId('destination'),
+                      position: LatLng(widget.destinationLatitude, widget.destinationLongitude),
+                      infoWindow: InfoWindow(
+                        title: widget.propertyTitle,
+                        snippet: 'Destination',
                       ),
+                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+                    ),
+                  }
+                : _markers,
+            polylines: _polylines,
+            myLocationEnabled: _currentPosition != null,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
+            onMapCreated: (GoogleMapController controller) {
+              try {
+                _mapController = controller;
+                // Delay the camera animation to ensure map is fully initialized
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    if (_currentPosition != null) {
+                      _fitMapToRoute();
+                    } else {
+                      // Just center on destination if current location is not available
+                      _mapController?.animateCamera(
+                        CameraUpdate.newLatLngZoom(
+                          LatLng(widget.destinationLatitude, widget.destinationLongitude),
+                          15,
+                        ),
+                      );
+                    }
+                  }
+                });
+              } catch (e) {
+                print('❌ Error in onMapCreated: $e');
+              }
+            },
+          ),
+          
+          // Loading overlay when getting location
+          if (_currentPosition == null && _isLoadingLocation)
+            Container(
+              color: Colors.white.withOpacity(0.9),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      color: Color(0xFF426DC2),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Getting your location...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF426DC2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          
+          // Error overlay when location fails
+          if (_currentPosition == null && !_isLoadingLocation && _errorMessage != null)
+            Container(
+              color: Colors.white.withOpacity(0.95),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.location_off,
+                        size: 60,
+                        color: Color(0xFF426DC2),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _errorMessage ?? 'Failed to get location',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF426DC2),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _getCurrentLocation,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF426DC2),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                        ),
+                        child: const Text(
+                          'Retry',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () {
+                          // Show destination only
+                          setState(() {
+                            _isLoadingLocation = false;
+                            _errorMessage = null;
+                          });
+                        },
+                        child: const Text(
+                          'Show destination only',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF426DC2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
 

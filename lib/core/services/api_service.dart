@@ -80,6 +80,26 @@ class ApiService {
   ApiResponse<T> _handleResponse<T>(http.Response response, T Function(Map<String, dynamic>) fromJson) {
     try {
       print('🌐 Raw API Response Body: ${response.body}');
+      
+      // Handle empty or whitespace-only responses (common for DELETE requests)
+      final body = response.body.trim();
+      if (body.isEmpty) {
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          // Empty successful response (e.g., 204 No Content)
+          return ApiResponse.success(
+            data: null,
+            message: 'Success',
+            statusCode: response.statusCode,
+          );
+        } else {
+          // Empty error response
+          return ApiResponse.error(
+            message: 'An error occurred',
+            statusCode: response.statusCode,
+          );
+        }
+      }
+      
       final Map<String, dynamic> jsonData = json.decode(response.body);
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -128,6 +148,14 @@ class ApiService {
         );
       }
     } catch (e) {
+      // If JSON parsing fails but status code is success, treat as success
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return ApiResponse.success(
+          data: null,
+          message: 'Success',
+          statusCode: response.statusCode,
+        );
+      }
       return ApiResponse.error(
         message: 'Failed to parse response: $e',
         statusCode: response.statusCode,

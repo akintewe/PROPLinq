@@ -191,22 +191,32 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   Future<void> _fetchMyProperties() async {
+    if (!mounted) return; // Check mounted before starting
+    
     try {
       print('🏠 Fetching my properties for profile view...');
-      setState(() {
-        _isLoadingMyProperties = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingMyProperties = true;
+        });
+      }
 
       final properties = await _propertyService.fetchMyProperties();
       
+      if (!mounted) return; // Check mounted after async operation
+      
       print('✅ My properties fetched successfully: ${properties.length} properties');
       
-      setState(() {
-        _myProperties = properties;
-        _isLoadingMyProperties = false;
-      });
+      if (mounted) {
+        setState(() {
+          _myProperties = properties;
+          _isLoadingMyProperties = false;
+        });
+      }
     } catch (e) {
       print('❌ Error fetching my properties: $e');
+      if (!mounted) return; // Check mounted before setState
+      
       setState(() {
         _isLoadingMyProperties = false;
       });
@@ -1701,12 +1711,16 @@ class _ProfileViewState extends State<ProfileView> {
                         color: Colors.green,
                       ),
                       const Spacer(),
-                      Text(
+                      Flexible(
+                        child: Text(
                         FormatUtils.formatPrice(property.price),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF426DC2),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -2121,13 +2135,16 @@ class _ProfileViewState extends State<ProfileView> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              // Close confirmation dialog first
+              Navigator.of(context).pop();
               
-              // Show loading indicator
+              // Show loading indicator and store its context
+              BuildContext? loadingDialogContext;
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (BuildContext context) {
+                builder: (BuildContext dialogContext) {
+                  loadingDialogContext = dialogContext;
                   return const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
@@ -2140,43 +2157,61 @@ class _ProfileViewState extends State<ProfileView> {
                 final propertyService = PropertyService();
                 final success = await propertyService.deleteProperty(property.id);
                 
-                // Close loading indicator
+                // Close loading indicator first, using the stored context
+                if (loadingDialogContext != null) {
+                  Navigator.of(loadingDialogContext!).pop();
+                }
+                
                 if (mounted) {
-                  Navigator.of(context).pop();
-                  
                   if (success) {
-                    // Show success message
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Property deleted successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
+                    // Refresh the property list first (this will rebuild the widget)
+                    await _fetchMyProperties();
                     
-                    // Refresh the property list
-                    _fetchMyProperties();
+                    // Wait for next frame to ensure widget tree is stable
+                    if (mounted) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Property deleted successfully!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      });
+                    }
                   } else {
-                    // Show error message
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Failed to delete property. Please try again.'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
+                    // Wait for next frame before showing error message
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to delete property. Please try again.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    });
                   }
                 }
               } catch (e) {
-                // Close loading indicator
+                // Always close loading indicator even on error
+                if (loadingDialogContext != null) {
+                  Navigator.of(loadingDialogContext!).pop();
+                }
+                
+                // Wait for next frame before showing error message
                 if (mounted) {
-                  Navigator.of(context).pop();
-                  
-                  // Show error message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error deleting property: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error deleting property: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  });
                 }
               }
             },

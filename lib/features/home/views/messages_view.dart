@@ -50,21 +50,27 @@ class _MessagesViewState extends State<MessagesView> {
 
   Future<void> _loadConversations() async {
     if (_isFetching) return;
+    if (!mounted) return; // Check mounted before starting
+    
     _isFetching = true;
     try {
       print('📥 Loading conversations from API...');
-      if (_isFirstLoad) {
-      setState(() {
-        _isLoading = true;
-      });
+      if (_isFirstLoad && mounted) {
+        setState(() {
+          _isLoading = true;
+        });
       }
       
       final chatData = await _chatService.getUserChats();
+      if (!mounted) return; // Check mounted after async operation
+      
       print('📥 Received ${chatData.length} conversations from API');
       print('📥 Chat data: $chatData');
       
       // Get current user to determine who is sender vs receiver
       final currentUser = await _authService.getCurrentUser();
+      if (!mounted) return; // Check mounted after async operation
+      
       final currentUserId = currentUser?.id.toString();
       print('📥 Current user ID: $currentUserId');
       
@@ -77,6 +83,10 @@ class _MessagesViewState extends State<MessagesView> {
         final sentAt = chat['sent_at'] ?? chat['updated_at'] ?? chat['created_at'] ?? '';
         final receivedAt = chat['received_at'] as String?;
         
+        // Extract sender_id to determine if current user sent this message
+        final senderId = chat['sender_id']?.toString();
+        final isSentByCurrentUser = senderId == currentUserId;
+        
         // Extract user information from the new API structure
         final user = chat['user'] as Map<String, dynamic>?;
         final otherPersonId = user?['id']?.toString() ?? '';
@@ -85,6 +95,8 @@ class _MessagesViewState extends State<MessagesView> {
         
         print('📥 Processing chat - Other Person ID: $otherPersonId, Property: $propertyId');
         print('📥 Chat - Message: $message, Received at: $receivedAt');
+        print('📥 Chat - Sender ID: $senderId, Current User ID: $currentUserId');
+        print('📥 Chat - Is sent by current user: $isSentByCurrentUser');
         print('📥 Chat - User: $userName, Profile Image: $userProfileImage');
         
         // Use the other person's ID as the conversation key
@@ -93,9 +105,10 @@ class _MessagesViewState extends State<MessagesView> {
         if (conversationKey.isEmpty) continue;
         
         // Determine if this message is unread
-        // Unread = received_at is null (meaning the other person hasn't read it yet)
-        final isUnread = receivedAt == null;
-        print('📥 Chat - Is unread: $isUnread (receivedAt: $receivedAt)');
+        // Unread = received_at is null AND current user is NOT the sender
+        // (meaning the message was sent TO the current user and they haven't read it yet)
+        final isUnread = receivedAt == null && !isSentByCurrentUser;
+        print('📥 Chat - Is unread: $isUnread (receivedAt: $receivedAt, sentByMe: $isSentByCurrentUser)');
         
         // Create or update conversation entry
         if (!conversationMap.containsKey(conversationKey)) {
@@ -177,6 +190,8 @@ class _MessagesViewState extends State<MessagesView> {
       // Precompute unread status for all conversations
       await _updateUnreadStatusCache(conversations);
       
+      if (!mounted) return; // Check mounted before setState
+      
       setState(() {
         _conversations = conversations;
         _filteredConversations = conversations;
@@ -186,6 +201,8 @@ class _MessagesViewState extends State<MessagesView> {
       
     } catch (e) {
       print('❌ Error loading conversations: $e');
+      if (!mounted) return; // Check mounted before setState in catch
+      
       setState(() {
         _conversations = [];
         _filteredConversations = [];

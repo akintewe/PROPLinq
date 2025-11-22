@@ -13,7 +13,7 @@ class PropertyService {
   final ApiService _apiService = ApiService();
 
   /// Create a new property with form data
-  Future<Map<String, dynamic>?> createProperty({
+  Future<ApiResponse<Map<String, dynamic>>> createProperty({
     required String type,
     required String title,
     required String description,
@@ -94,7 +94,10 @@ class PropertyService {
 
       if (files.isEmpty) {
         print('❌ No valid files to upload');
-        return null;
+        return ApiResponse.error(
+          message: 'No valid files to upload',
+          statusCode: 400,
+        );
       }
 
       print('📤 Sending request to API...');
@@ -121,7 +124,7 @@ class PropertyService {
         // Clean up temporary files
         await _cleanupTempFiles(files.values.toList());
         
-        return response.data;
+        return response;
       } else {
         print('❌ Failed to create property: ${response.message}');
         if (response.errors != null) {
@@ -131,11 +134,14 @@ class PropertyService {
         // Clean up temporary files even on error
         await _cleanupTempFiles(files.values.toList());
         
-        return null;
+        return response;
       }
     } catch (e) {
       print('❌ Error creating property: $e');
-      return null;
+      return ApiResponse.error(
+        message: 'Error creating property: $e',
+        statusCode: 0,
+      );
     }
   }
 
@@ -563,13 +569,16 @@ class PropertyService {
       );
 
       print('✅ Delete response status: ${response.statusCode}');
+      print('✅ Delete response success: ${response.success}');
+      print('✅ Delete response message: ${response.message}');
       
-      if (response.statusCode == 200 || response.statusCode == 204) {
+      if (response.success) {
         print('✅ Property deleted successfully');
         return true;
       } else {
         print('❌ Delete failed with status: ${response.statusCode}');
-        print('❌ Response data: ${response.data}');
+        print('❌ Response message: ${response.message}');
+        print('❌ Response errors: ${response.errors}');
         return false;
       }
     } catch (e, stackTrace) {

@@ -2676,7 +2676,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         final user = chat['user'] as Map<String, dynamic>?;
         final otherPersonId = user?['id']?.toString() ?? '';
         final receivedAt = chat['received_at'] as String?;
-        final isUnread = receivedAt == null;
+        
+        // Extract sender_id to determine if current user sent this message
+        final senderId = chat['sender_id']?.toString();
+        final isSentByCurrentUser = senderId == currentUserId;
+        
+        // Message is unread only if received_at is null AND current user is NOT the sender
+        final isUnread = receivedAt == null && !isSentByCurrentUser;
         
         if (otherPersonId.isEmpty) continue;
         
