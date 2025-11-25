@@ -18,4 +18,28 @@ import GoogleMaps
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+  
+  // Handle deep links when app is opened via URL
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    // Let Flutter plugins (including uni_links) handle the URL
+    return super.application(app, open: url, options: options)
+  }
+  
+  // Handle deep links when app is opened via URL (alternative method)
+  override func application(
+    _ application: UIApplication,
+    continue userActivity: NSUserActivity,
+    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+  ) -> Bool {
+    // Handle Universal Links
+    if userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+       let url = userActivity.webpageURL {
+      return super.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    }
+    return false
+  }
 }

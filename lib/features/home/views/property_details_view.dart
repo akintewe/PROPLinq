@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/widgets/google_map_widget.dart';
+import 'package:share_plus/share_plus.dart';
 import 'virtual_tour_360_view.dart';
 import 'hotel_reservation_view.dart';
 import 'in_app_chat_view.dart';
@@ -92,6 +93,194 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
       vsync: this,
     )..repeat();
     print('🎯 Text animation controller initialized');
+  }
+
+  /// Share property with deep link
+  Future<void> _shareProperty(BuildContext context) async {
+    try {
+      final property = widget.propertyData ?? _getDefaultProperty();
+      
+      print('📤 Share: Starting share process...');
+      print('📤 Share: Property data keys: ${property.keys.toList()}');
+      
+      // Get property ID - property.id is an int, so handle both int and string
+      String? propertyId;
+      final idValue = property['id'];
+      
+      if (idValue != null) {
+        // Handle both int and string IDs
+        if (idValue is int) {
+          propertyId = idValue.toString();
+          print('📤 Share: Found ID as int: $propertyId');
+        } else if (idValue is String) {
+          propertyId = idValue;
+          print('📤 Share: Found ID as string: $propertyId');
+        } else {
+          propertyId = idValue.toString();
+          print('📤 Share: Found ID (converted to string): $propertyId');
+        }
+      }
+      
+      // Fallback: Try to get from images
+      if ((propertyId == null || propertyId.isEmpty) && property['images'] != null) {
+        final images = property['images'];
+        if (images is List && images.isNotEmpty) {
+          final first = images.first;
+          if (first is Map<String, dynamic> && first['property_id'] != null) {
+            propertyId = first['property_id'].toString();
+            print('📤 Share: Found ID from images property_id: $propertyId');
+          }
+        }
+      }
+      
+      if (propertyId == null || propertyId.isEmpty) {
+        print('❌ Share: Property ID not found!');
+        print('   Available keys: ${property.keys.toList()}');
+        print('   ID value: $idValue (type: ${idValue.runtimeType})');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to share: Property ID not found. Please try again.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Get property type to determine deep link route
+      final propertyType = (property['type'] as String? ?? 'Apartment').toLowerCase();
+      String deepLinkRoute;
+      
+      if (propertyType == 'hotel') {
+        deepLinkRoute = 'proplinq://hotel/$propertyId';
+      } else if (propertyType == 'shortlet') {
+        deepLinkRoute = 'proplinq://shortlet/$propertyId';
+      } else {
+        // Default to listing (for apartments, houses, etc.)
+        deepLinkRoute = 'proplinq://listing/$propertyId';
+      }
+      
+      // Get property details for share message
+      final title = property['title'] as String? ?? 'Property';
+      final location = property['location'] as String? ?? '';
+      final price = property['price'] as String? ?? '';
+      
+      // Create share text with deep link prominently displayed
+      final shareText = '''🏠 $title
+
+📍 Location: $location
+💰 Price: $price
+
+━━━━━━━━━━━━━━━━━━━━
+🔗 VIEW PROPERTY:
+$deepLinkRoute
+━━━━━━━━━━━━━━━━━━━━
+
+Tap the link above to open this property in the Proplinq app!
+
+Download Proplinq if you don't have it installed yet.''';
+      
+      print('📤 Share: Property ID: $propertyId');
+      print('📤 Share: Property Type: $propertyType');
+      print('📤 Share: Deep Link: $deepLinkRoute');
+      print('📤 Share: Full share text length: ${shareText.length} characters');
+      
+      // Show a preview dialog first to confirm the deep link is generated
+      if (context.mounted) {
+        final shouldShare = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Share Property'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Property: $title'),
+                const SizedBox(height: 8),
+                const Text(
+                  'Deep Link URL:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  deepLinkRoute,
+                  style: const TextStyle(
+                    color: Color(0xFF426DC2),
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'This link will open the property directly in the Proplinq app.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF426DC2),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Share'),
+              ),
+            ],
+          ),
+        );
+        
+        if (shouldShare != true) {
+          print('ℹ️ Share cancelled by user');
+          return;
+        }
+      }
+      
+      // Share using platform share sheet
+      final result = await Share.share(
+        shareText,
+        subject: 'Check out this property: $title',
+      );
+      
+      if (result.status == ShareResultStatus.success) {
+        print('✅ Property shared successfully');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Property shared! Deep link: $deepLinkRoute'),
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'Copy',
+                onPressed: () {
+                  // Copy deep link to clipboard
+                  // Note: You'd need to add clipboard package for this
+                },
+              ),
+            ),
+          );
+        }
+      } else if (result.status == ShareResultStatus.dismissed) {
+        print('ℹ️ Share dialog dismissed by user');
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error sharing property: $e');
+      print('❌ Stack trace: $stackTrace');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sharing property: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   void _startTextRotation() {
@@ -694,17 +883,20 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                             // Share and favorite buttons
                             Row(
                               children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.share,
-                                    color: Color(0xFF426DC2),
-                                    size: 20,
+                                GestureDetector(
+                                  onTap: () => _shareProperty(context),
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.share,
+                                      color: Color(0xFF426DC2),
+                                      size: 20,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -809,7 +1001,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                             children: [
                               Expanded(
                                 child: Text(
-                                  property['title'] as String,
+                                  property['title'] as String? ?? 'Property',
                                   style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w700,
@@ -821,7 +1013,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               Row(
                                 children: [
                                   Text(
-                                    property['rating'] as String,
+                                    property['rating'] as String? ?? '(5.0)',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -853,7 +1045,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                property['location'] as String,
+                                property['location'] as String? ?? 'Location not specified',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF868686),
@@ -876,7 +1068,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                           
                           // Description
                           Text(
-                            property['description'] as String,
+                            property['description'] as String? ?? 'No description available',
                             style: TextStyle(
                               fontSize: 14,
                               height: 1.6,
@@ -1546,7 +1738,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
                         ),
                       ),
                       Text(
-                        _formatPrice(property['price'] as String),
+                        _formatPrice(property['price'] as String? ?? '0'),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,

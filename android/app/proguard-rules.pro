@@ -48,4 +48,13 @@
 # Prevent obfuscation of classes referenced via reflection
 -keep class com.proplinq.** { *; }
 
+# AppsFlyer
+-keep class com.appsflyer.** { *; }
+-dontwarn com.appsflyer.**
+-keep class kotlin.jvm.internal.** { *; }
+-dontwarn kotlin.jvm.internal.**
+-keepattributes *Annotation*
+-keepattributes Signature
+-keepattributes Exceptions
+
 

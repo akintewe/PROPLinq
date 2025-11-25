@@ -99,6 +99,15 @@ dependencies:
   
   # Push notifications with OneSignal
   onesignal_flutter: ^5.2.5
+  
+  # AppsFlyer for deep linking and deferred deep linking
+  appsflyer_sdk: ^6.15.2
+  
+  # UniLinks for handling deep links
+  uni_links: ^0.5.1
+
+  # Share functionality for deep links
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:

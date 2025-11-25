@@ -378,31 +378,28 @@ class PropertyService {
   }
 
   /// Fetch property details by ID
+  /// Note: Since backend doesn't have a single property endpoint, 
+  /// we fetch the list and find the property by ID
   Future<PropertyModel?> fetchPropertyDetails(int propertyId) async {
     try {
       print('🏠 Fetching property details for ID: $propertyId...');
+      print('⚠️ Note: Using workaround - fetching from list API and filtering by ID');
+      print('   Consider requesting backend to add /properties/{id} endpoint for better performance');
       
-      final response = await _apiService.get<Map<String, dynamic>>(
-        '${ApiConstants.listProperties}/$propertyId',
-        requiresAuth: true,
-        fromJson: (json) => json,
-      );
-
-      print('📋 Property Details API Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
-
-      if (response.success && response.data != null) {
-        final data = response.data!;
-        print('📊 Property Details Data:');
-        print(data);
-        
-        final property = PropertyModel.fromJson(data);
-        print('✅ Successfully parsed property details');
-        return property;
-      } else {
-        print('❌ Failed to fetch property details: ${response.message}');
+      // Fetch all properties from the list API
+      final properties = await fetchAllProperties();
+      
+      // Find the property by ID (property.id is int, propertyId parameter is int)
+      PropertyModel? foundProperty;
+      try {
+        foundProperty = properties.firstWhere(
+          (property) => property.id == propertyId,
+        );
+        print('✅ Found property: ${foundProperty.title} (ID: ${foundProperty.id})');
+        return foundProperty;
+      } catch (e) {
+        print('❌ Property with ID $propertyId not found in list');
+        print('   Total properties fetched: ${properties.length}');
         return null;
       }
     } catch (e) {

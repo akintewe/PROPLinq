@@ -72,5 +72,28 @@
 	</array>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
+	
+	<!-- Deep Linking URL Schemes -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.proplinq.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>proplinq</string>
+			</array>
+		</dict>
+	</array>
+	
+	<!-- AppsFlyer Configuration -->
+	<key>AppsFlyerDevKey</key>
+	<string>TBCWz6fvHsJ2xegPPzHGJH</string>
+	
+	<!-- Universal Links (Associated Domains) - To be configured in Xcode -->
+	<!-- Note: You need to add the Associated Domains capability in Xcode -->
+	<!-- Add your domain with applinks: prefix, e.g., applinks:proplinq.com -->
 </dict>
 </plist>
