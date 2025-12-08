@@ -20,7 +20,7 @@ class _OnboardingViewState extends State<OnboardingView> {
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       title: 'Verified Listings You Can Trust',
-      subtitle: 'Every property is listed by a KYC-\nverified agent or landlord.',
+      subtitle: 'Every listing is identity-verified and inspected\n for authenticity. Zero fake agents. Zero stress.',
       imagePath: 'assets/images/d768064b335bad732c926d8f2fe54e3c55eb343a.jpg', // Placeholder for house interior
       hasVerifiedBadge: true,
     ),
@@ -31,9 +31,9 @@ class _OnboardingViewState extends State<OnboardingView> {
       hasPlayButton: true,
     ),
     OnboardingPage(
-      title: 'Rent-now, Pay Later',
-      subtitle: 'Get the home you want and pay in\n flexible installments.',
-      imagePath: 'assets/images/Frame 148.png', // Updated image for third onboarding screen
+      title: 'Your safety comes first.',
+      subtitle: 'We verify all users with NIN to keep the\n community safe.',
+      imagePath: 'assets/images/Frame 148 (1).png', // Updated image for third onboarding screen
     ),
   ];
 

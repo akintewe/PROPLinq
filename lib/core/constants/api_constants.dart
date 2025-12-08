@@ -55,6 +55,37 @@ class ApiConstants {
   static const String chatWebhook = '/chat/webhook';
   static const String getUserChats = '/get-user-chats';
   
+  // AppsFlyer OneLink Configuration
+  // Template ID from AppsFlyer Dashboard: fOvE
+  // Custom domain: app.proplinq.com (CNAME → proplinq.customlinks.appsflyer.com)
+  static const String appsFlyerOneLinkTemplateId = 'fOvE';
+  static const String appsFlyerOneLinkBaseUrl = 'https://app.proplinq.com';
+  
+  /// Generate AppsFlyer OneLink URL for sharing properties
+  /// Format: https://proplinq.onelink.me/fOvE/{propertyId}?pid=referral&c=in_app_share&deep_link_value=property_page&deep_link_sub1={propertyId}
+  /// Alternative format (if path-based doesn't work): https://proplinq.onelink.me/fOvE/?pid=referral&c=in_app_share&deep_link_value=property_page&deep_link_sub1={propertyId}
+  static String generateShareLink({
+    required String propertyId,
+    String? propertyType,
+  }) {
+    // Map property type to deep_link_value
+    final deepLinkValue = 'property_page';
+    
+    // Build the OneLink URL with AppsFlyer parameters
+    // Using property ID as path segment for better compatibility
+    // Format: https://proplinq.onelink.me/fOvE/{propertyId}?params
+    final uri = Uri.parse('$appsFlyerOneLinkBaseUrl/$appsFlyerOneLinkTemplateId/$propertyId').replace(
+      queryParameters: {
+        'pid': 'referral',
+        'c': 'in_app_share',
+        'deep_link_value': deepLinkValue,
+        'deep_link_sub1': propertyId,
+      },
+    );
+    
+    return uri.toString();
+  }
+  
   // Headers
   static Map<String, String> get defaultHeaders => {
     'Accept': 'application/json',

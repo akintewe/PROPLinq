@@ -92,8 +92,13 @@
 	<key>AppsFlyerDevKey</key>
 	<string>TBCWz6fvHsJ2xegPPzHGJH</string>
 	
-	<!-- Universal Links (Associated Domains) - To be configured in Xcode -->
-	<!-- Note: You need to add the Associated Domains capability in Xcode -->
-	<!-- Add your domain with applinks: prefix, e.g., applinks:proplinq.com -->
+	<!-- Universal Links (Associated Domains) - Configure in Xcode -->
+	<!-- Steps:
+	     1. Open ios/Runner.xcworkspace in Xcode
+	     2. Select Runner target → Signing & Capabilities tab
+	     3. Click "+ Capability" → Add "Associated Domains"
+	     4. Add: applinks:app.proplinq.com
+	     5. Backend must host .well-known/apple-app-site-association at https://app.proplinq.com/.well-known/apple-app-site-association
+	-->
 </dict>
 </plist>

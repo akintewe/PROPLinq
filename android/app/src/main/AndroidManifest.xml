@@ -68,6 +68,17 @@
             </intent-filter>
             
             <!-- Universal links / App Links -->
+            <!-- Support for app.proplinq.com (AppsFlyer OneLink custom domain) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="app.proplinq.com"/>
+            </intent-filter>
+            
+            <!-- Support for proplinq.com (if still needed) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
+import 'package:proplinq/core/constants/api_constants.dart';
 import 'package:proplinq/core/widgets/google_map_widget.dart';
 import 'package:share_plus/share_plus.dart';
 import 'virtual_tour_360_view.dart';
@@ -149,25 +150,22 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
         return;
       }
       
-      // Get property type to determine deep link route
+      // Get property type for reference (not needed for OneLink, but kept for logging)
       final propertyType = (property['type'] as String? ?? 'Apartment').toLowerCase();
-      String deepLinkRoute;
       
-      if (propertyType == 'hotel') {
-        deepLinkRoute = 'proplinq://hotel/$propertyId';
-      } else if (propertyType == 'shortlet') {
-        deepLinkRoute = 'proplinq://shortlet/$propertyId';
-      } else {
-        // Default to listing (for apartments, houses, etc.)
-        deepLinkRoute = 'proplinq://listing/$propertyId';
-      }
+      // Generate AppsFlyer OneLink URL (HTTPS link that will be clickable)
+      // This link will redirect to the app if installed, or to web if not
+      final shareLinkUrl = ApiConstants.generateShareLink(
+        propertyId: propertyId,
+        propertyType: propertyType,
+      );
       
       // Get property details for share message
       final title = property['title'] as String? ?? 'Property';
       final location = property['location'] as String? ?? '';
       final price = property['price'] as String? ?? '';
       
-      // Create share text with deep link prominently displayed
+      // Create share text with HTTPS link prominently displayed
       final shareText = '''🏠 $title
 
 📍 Location: $location
@@ -175,16 +173,16 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
 
 ━━━━━━━━━━━━━━━━━━━━
 🔗 VIEW PROPERTY:
-$deepLinkRoute
+$shareLinkUrl
 ━━━━━━━━━━━━━━━━━━━━
 
-Tap the link above to open this property in the Proplinq app!
+Tap the link above to view this property in the Proplinq app!
 
-Download Proplinq if you don't have it installed yet.''';
+If you don't have the app, the link will open in your browser where you can download it.''';
       
       print('📤 Share: Property ID: $propertyId');
       print('📤 Share: Property Type: $propertyType');
-      print('📤 Share: Deep Link: $deepLinkRoute');
+      print('📤 Share: Share Link (OneLink): $shareLinkUrl');
       print('📤 Share: Full share text length: ${shareText.length} characters');
       
       // Show a preview dialog first to confirm the deep link is generated
@@ -200,12 +198,12 @@ Download Proplinq if you don't have it installed yet.''';
                 Text('Property: $title'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Deep Link URL:',
+                  'Share Link:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 SelectableText(
-                  deepLinkRoute,
+                  shareLinkUrl,
                   style: const TextStyle(
                     color: Color(0xFF426DC2),
                     fontFamily: 'monospace',
@@ -214,7 +212,7 @@ Download Proplinq if you don't have it installed yet.''';
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'This link will open the property directly in the Proplinq app.',
+                  'This HTTPS link will open the property in the Proplinq app if installed, or in your browser otherwise.',
                   style: TextStyle(fontSize: 12),
                 ),
               ],
@@ -253,12 +251,12 @@ Download Proplinq if you don't have it installed yet.''';
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Property shared! Deep link: $deepLinkRoute'),
+              content: Text('Property shared! Link: $shareLinkUrl'),
               duration: const Duration(seconds: 3),
               action: SnackBarAction(
                 label: 'Copy',
                 onPressed: () {
-                  // Copy deep link to clipboard
+                  // Copy share link to clipboard
                   // Note: You'd need to add clipboard package for this
                 },
               ),
@@ -886,16 +884,16 @@ Download Proplinq if you don't have it installed yet.''';
                                 GestureDetector(
                                   onTap: () => _shareProperty(context),
                                   child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.9),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.share,
-                                      color: Color(0xFF426DC2),
-                                      size: 20,
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.share,
+                                    color: Color(0xFF426DC2),
+                                    size: 20,
                                     ),
                                   ),
                                 ),
@@ -1339,7 +1337,7 @@ Download Proplinq if you don't have it installed yet.''';
                             ],
                           ],
                           
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 1),
                           
                           // What you'll get
                           const Text(
@@ -1359,8 +1357,6 @@ Download Proplinq if you don't have it installed yet.''';
                           ),
                           
                           const SizedBox(height: 40),
-                            
-                            const SizedBox(height: 40),
                           
                           // Virtual Tour - only show for non-hotel properties and if 360 images are available
                           if (!isHotel && property360Images.isNotEmpty) ...[

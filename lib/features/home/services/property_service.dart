@@ -377,33 +377,47 @@ class PropertyService {
     }
   }
 
-  /// Fetch property details by ID
-  /// Note: Since backend doesn't have a single property endpoint, 
-  /// we fetch the list and find the property by ID
+  /// Fetch property details by ID using the dedicated endpoint
   Future<PropertyModel?> fetchPropertyDetails(int propertyId) async {
     try {
       print('🏠 Fetching property details for ID: $propertyId...');
-      print('⚠️ Note: Using workaround - fetching from list API and filtering by ID');
-      print('   Consider requesting backend to add /properties/{id} endpoint for better performance');
+      print('🔗 Endpoint: ${ApiConstants.properties}/$propertyId');
       
-      // Fetch all properties from the list API
-      final properties = await fetchAllProperties();
-      
-      // Find the property by ID (property.id is int, propertyId parameter is int)
-      PropertyModel? foundProperty;
-      try {
-        foundProperty = properties.firstWhere(
-          (property) => property.id == propertyId,
-        );
-        print('✅ Found property: ${foundProperty.title} (ID: ${foundProperty.id})');
-        return foundProperty;
-      } catch (e) {
-        print('❌ Property with ID $propertyId not found in list');
-        print('   Total properties fetched: ${properties.length}');
+      final response = await _apiService.get<Map<String, dynamic>>(
+        '${ApiConstants.properties}/$propertyId',
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+
+      print('📋 Property Details API Response:');
+      print('✅ Success: ${response.success}');
+      print('📄 Status Code: ${response.statusCode}');
+      print('💬 Message: ${response.message}');
+
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        
+        // Check if the response has a 'data' wrapper or is direct
+        Map<String, dynamic> propertyData;
+        if (data.containsKey('data')) {
+          propertyData = data['data'] as Map<String, dynamic>;
+        } else {
+          propertyData = data;
+        }
+        
+        final property = PropertyModel.fromJson(propertyData);
+        print('✅ Found property: ${property.title} (ID: ${property.id})');
+        return property;
+      } else {
+        print('❌ Failed to fetch property details: ${response.message}');
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          print('❌ Errors: ${response.errors}');
+        }
         return null;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Error fetching property details: $e');
+      print('❌ Stack trace: $stackTrace');
       return null;
     }
   }

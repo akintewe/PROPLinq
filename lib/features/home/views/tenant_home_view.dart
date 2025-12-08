@@ -2755,8 +2755,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     
     return GestureDetector(
       onTap: () {
-        // If clicking on home tab (index 0) when already on home, scroll to top
+        // If clicking on home tab (index 0) when already on home, scroll to top and refresh
         if (index == 0 && _currentIndex == 0) {
+          // Refresh properties data
+          _fetchProperties();
+          // Scroll to top
           if (_homeScrollController.hasClients) {
             _homeScrollController.animateTo(
               0,

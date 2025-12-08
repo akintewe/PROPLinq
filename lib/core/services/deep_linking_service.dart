@@ -233,6 +233,9 @@ class DeepLinkingService {
       final campaign = data['campaign'];
       
       print('📋 Deep Link Value: $deepLinkValue');
+      print('📋 Deep Link Sub1: $deepLinkSub1');
+      print('📋 Deep Link Sub2: $deepLinkSub2');
+      print('📋 Deep Link Sub3: $deepLinkSub3');
       print('📋 Media Source: $mediaSource');
       print('📋 Campaign: $campaign');
       print('📋 Custom Payload: $customPayload');
@@ -240,8 +243,15 @@ class DeepLinkingService {
       String? propertyId;
       String? propertyType;
       
-      // Try to extract property ID from deep link value
-      if (deepLinkValue != null && deepLinkValue.toString().isNotEmpty) {
+      // Priority 1: If deep_link_value is "property_page", use deep_link_sub1 for property ID
+      if (deepLinkValue != null && deepLinkValue.toString() == 'property_page') {
+        print('📋 Detected property_page deep link - extracting from deep_link_sub1');
+        propertyId = deepLinkSub1?.toString();
+        // Property type can be determined from other parameters or default to listing
+        propertyType = 'listing'; // Default, will be updated if found elsewhere
+      }
+      // Priority 2: Try to extract property ID from deep link value if it's a URL
+      else if (deepLinkValue != null && deepLinkValue.toString().isNotEmpty) {
         // Check if it's a URL we can parse
         if (deepLinkValue.toString().startsWith('proplinq://')) {
           // Parse the URL
@@ -266,19 +276,19 @@ class DeepLinkingService {
         }
       }
       
-      // Try to extract from custom payload
+      // Priority 3: Try to extract from deep link sub parameters (fallback)
+      if (propertyId == null) {
+        propertyId = deepLinkSub1?.toString() ??
+                     deepLinkSub2?.toString() ??
+                     deepLinkSub3?.toString();
+      }
+      
+      // Priority 4: Try to extract from custom payload
       if (propertyId == null && customPayload != null) {
         propertyId = customPayload['property_id']?.toString() ??
                      customPayload['propertyId']?.toString();
         propertyType = customPayload['property_type']?.toString() ??
                        customPayload['propertyType']?.toString();
-      }
-      
-      // Try to extract from deep link sub parameters
-      if (propertyId == null) {
-        propertyId = deepLinkSub1?.toString() ??
-                     deepLinkSub2?.toString() ??
-                     deepLinkSub3?.toString();
       }
       
       if (propertyId != null && propertyId.isNotEmpty) {
