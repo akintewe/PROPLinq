@@ -27,7 +27,6 @@ class _PrivacyPolicyViewState extends State<PrivacyPolicyView> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading privacy policy: $e');
       setState(() {
         _policyContent = '''
 # Proplinq Terms & Conditions

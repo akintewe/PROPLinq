@@ -20,8 +20,6 @@ void main() async {
   
   // Set up deep link callback
   deepLinkingService.setDeepLinkCallback((deepLinkData) {
-    print('🔗 Main: Deep link callback received');
-    print('📋 Deep Link Data: $deepLinkData');
     
     // Use the router to handle navigation
     // Note: Context might not be available immediately, so we'll handle it after app initializes
@@ -30,7 +28,6 @@ void main() async {
       if (context != null) {
         deepLinkRouter.handleDeepLink(context, deepLinkData);
       } else {
-        print('⚠️ Main: Context not available yet, storing deep link data');
         // Deep link will be handled when app is ready
       }
     });
@@ -40,7 +37,6 @@ void main() async {
   await deepLinkingService.initialize(
     isDebug: kDebugMode,
     onDeepLinkReceived: (deepLinkData) {
-      print('🔗 Main: Deep link received in callback');
       deepLinkRouter.handleDeepLink(null, deepLinkData);
     },
   );
@@ -79,7 +75,6 @@ class _PropLinqAppState extends State<PropLinqApp> {
   void _checkPendingDeepLink() {
     final pendingData = widget.deepLinkingService.getPendingDeepLinkData();
     if (pendingData != null) {
-      print('📥 Main: Found pending deep link data, handling...');
       final context = widget.deepLinkRouter.navigatorKey.currentContext;
       if (context != null && context.mounted) {
         widget.deepLinkRouter.handleDeepLink(context, pendingData);

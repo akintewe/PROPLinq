@@ -42,7 +42,6 @@ class _SecondSplashViewState extends State<SecondSplashView> {
       final pendingDeepLink = deepLinkingService.getPendingDeepLinkData();
       
       if (pendingDeepLink != null) {
-        print('🔗 Splash: Found pending deep link, will handle after navigation');
       }
       
       // Check if user is logged in
@@ -55,7 +54,6 @@ class _SecondSplashViewState extends State<SecondSplashView> {
         
         if (isRememberMeValid) {
           // Remember me is valid, skip biometric and go directly to home
-          print('✅ Remember me is valid, navigating directly to home');
           _navigateToHome();
         } else {
           // Remember me is not valid or not enabled, check biometric
@@ -64,21 +62,17 @@ class _SecondSplashViewState extends State<SecondSplashView> {
         
         if (isBiometricEnabled && isBiometricAvailable) {
           // Navigate to biometric login
-            print('🔐 Remember me not valid, navigating to biometric login');
           _navigateToBiometricLogin();
         } else {
           // Navigate to regular login
-            print('🔑 Remember me not valid, navigating to regular login');
           _navigateToLogin();
           }
         }
       } else {
         // User is not logged in, navigate to onboarding
-        print('👋 User not logged in, navigating to onboarding');
         _navigateToOnboarding();
       }
     } catch (e) {
-      print('❌ Error checking authentication status: $e');
       // On error, navigate to onboarding
       _navigateToOnboarding();
     }
@@ -169,9 +163,6 @@ class _SecondSplashViewState extends State<SecondSplashView> {
       final pendingData = deepLinkingService.getPendingDeepLinkData();
       
       if (pendingData != null) {
-        print('📥 SecondSplashView: Found pending deep link, handling...');
-        print('   Property ID: ${pendingData['propertyId']}');
-        print('   Property Type: ${pendingData['propertyType']}');
         final deepLinkRouter = DeepLinkRouter();
         
         // Get context from navigator key - try multiple times
@@ -181,24 +172,20 @@ class _SecondSplashViewState extends State<SecondSplashView> {
           if (navContext != null && navContext.mounted) {
             break;
           }
-          print('⚠️ SecondSplashView: Waiting for context... (attempt ${i + 1}/5)');
           await Future.delayed(const Duration(milliseconds: 500));
         }
         
         if (navContext != null && navContext.mounted) {
-          print('✅ SecondSplashView: Context available, processing deep link');
           deepLinkRouter.handleDeepLink(navContext, pendingData);
           // Clear after a delay to allow error messages to show
           Future.delayed(const Duration(seconds: 1), () {
             deepLinkingService.clearPendingDeepLinkData();
           });
         } else {
-          print('⚠️ SecondSplashView: Could not get valid context, clearing deep link');
           // Clear the deep link so app doesn't get stuck
           deepLinkingService.clearPendingDeepLinkData();
         }
       } else {
-        print('ℹ️ SecondSplashView: No pending deep link found');
       }
     });
   }

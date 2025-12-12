@@ -40,17 +40,9 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   @override
   void initState() {
     super.initState();
-    print('🗺️ GoogleMapWidget: initState called');
-    print('🗺️ GoogleMapWidget: Widget properties:');
-    print('  - Latitude: ${widget.latitude}');
-    print('  - Longitude: ${widget.longitude}');
-    print('  - Property Title: ${widget.propertyTitle}');
-    print('  - Height: ${widget.height}');
-    print('  - Show Marker: ${widget.showMarker}');
     
     // Start timeout timer
     _timeoutTimer = Timer(const Duration(seconds: 3), () {
-      print('⏰ GoogleMapWidget: Timeout reached, showing static map');
       if (mounted && !_isMapReady) {
         setState(() {
           _forceShowMap = true;
@@ -60,23 +52,19 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     
     // Delay initialization to ensure proper setup
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('🗺️ GoogleMapWidget: Post frame callback triggered');
       _initializeMarkers();
     });
   }
 
   void _initializeMarkers() {
     try {
-      print('🗺️ GoogleMapWidget: Initializing markers...');
       _isInitializing = true;
       
       final lat = widget.latitude ?? _defaultLatitude;
       final lng = widget.longitude ?? _defaultLongitude;
       
-      print('🗺️ GoogleMapWidget: Using coordinates - Lat: $lat, Lng: $lng');
       
       if (widget.showMarker && mounted) {
-        print('🗺️ GoogleMapWidget: Creating marker...');
         setState(() {
           _markers = {
             Marker(
@@ -90,13 +78,10 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
             ),
           };
         });
-        print('🗺️ GoogleMapWidget: Marker created successfully');
       }
       
       _isInitializing = false;
-      print('🗺️ GoogleMapWidget: Marker initialization completed');
     } catch (e) {
-      print('❌ GoogleMapWidget: Error initializing markers: $e');
       _isInitializing = false;
       if (mounted) {
         setState(() {
@@ -284,7 +269,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
   void _openInGoogleMaps(double lat, double lng, String title) async {
     final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
-    print('🗺️ GoogleMapWidget: Opening Google Maps URL: $url');
     
     try {
       if (await canLaunchUrl(Uri.parse(url))) {
@@ -293,13 +277,11 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         _showErrorSnackBar('Could not open Google Maps');
       }
     } catch (e) {
-      print('❌ GoogleMapWidget: Error opening Google Maps: $e');
       _showErrorSnackBar('Error opening Google Maps');
     }
   }
 
   void _getDirections(double lat, double lng, String title) async {
-    print('🗺️ GoogleMapWidget: Opening in-app directions view');
     
     try {
       Navigator.of(context).push(
@@ -312,7 +294,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         ),
       );
     } catch (e) {
-      print('❌ GoogleMapWidget: Error opening directions: $e');
       _showErrorSnackBar('Error opening directions');
     }
   }
@@ -320,7 +301,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   void _copyCoordinates(double lat, double lng) {
     final coordinates = '$lat, $lng';
     // You can add clipboard functionality here
-    print('🗺️ GoogleMapWidget: Coordinates copied: $coordinates');
     _showSuccessSnackBar('Coordinates copied: $coordinates');
   }
 
@@ -346,23 +326,14 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
   @override
   Widget build(BuildContext context) {
-    print('🗺️ GoogleMapWidget: build() called');
-    print('🗺️ GoogleMapWidget: Current state:');
-    print('  - Has Error: $_hasError');
-    print('  - Is Map Ready: $_isMapReady');
-    print('  - Is Initializing: $_isInitializing');
-    print('  - Force Show Map: $_forceShowMap');
-    print('  - Markers Count: ${_markers.length}');
     
     if (_hasError) {
-      print('🗺️ GoogleMapWidget: Showing fallback UI due to error');
       return _buildFallbackUI();
     }
 
     final lat = widget.latitude ?? _defaultLatitude;
     final lng = widget.longitude ?? _defaultLongitude;
     
-    print('🗺️ GoogleMapWidget: Building map with coordinates - Lat: $lat, Lng: $lng');
 
     return Container(
       height: widget.height,
@@ -387,8 +358,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   }
 
   Widget _buildGoogleMap(double lat, double lng) {
-    print('🗺️ GoogleMapWidget: Building actual GoogleMap widget');
-    print('🗺️ GoogleMapWidget: Map ready: $_isMapReady, Force show: $_forceShowMap');
     
     try {
       return GoogleMap(
@@ -398,13 +367,11 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         ),
         markers: _markers,
         onMapCreated: (GoogleMapController controller) {
-          print('🗺️ GoogleMapWidget: onMapCreated callback triggered');
           if (mounted) {
             setState(() {
               _mapController = controller;
               _isMapReady = true;
             });
-            print('🗺️ GoogleMapWidget: Map controller set and ready state updated');
           }
         },
         myLocationEnabled: false,
@@ -414,20 +381,17 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         compassEnabled: false,
         mapType: MapType.normal,
         onTap: (_) {
-          print('🗺️ GoogleMapWidget: Map tapped');
         },
         onCameraMove: (position) {
           // Handle camera movement if needed
         },
       );
     } catch (e) {
-      print('❌ GoogleMapWidget: Error creating GoogleMap widget: $e');
       return _buildStaticMap(lat, lng);
     }
   }
 
   Widget _buildStaticMap(double lat, double lng) {
-    print('🗺️ GoogleMapWidget: Building static map');
     
     // Create static map URL with better styling
     final apiKey = 'AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ';
@@ -439,11 +403,9 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         'markers=color:blue%7Clabel:P%7C$lat,$lng&'
         'key=$apiKey';
     
-    print('🗺️ GoogleMapWidget: Static map URL: $staticMapUrl');
     
     return GestureDetector(
       onTap: () {
-        print('🗺️ GoogleMapWidget: Static map tapped - showing options');
         _showMapOptions();
       },
       child: Container(
@@ -469,7 +431,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                 height: widget.height,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  print('❌ GoogleMapWidget: Error loading static map: $error');
                   return _buildFallbackUI();
                 },
                 loadingBuilder: (context, child, loadingProgress) {
@@ -644,7 +605,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   }
 
   Widget _buildFallbackUI() {
-    print('🗺️ GoogleMapWidget: Building fallback UI');
     return Container(
       height: widget.height,
       width: double.infinity,
@@ -770,7 +730,6 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
 
   @override
   void dispose() {
-    print('🗺️ GoogleMapWidget: dispose() called');
     _timeoutTimer?.cancel();
     _mapController?.dispose();
     super.dispose();

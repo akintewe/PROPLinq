@@ -42,13 +42,10 @@ class PropertySearchService {
   /// Search properties by location
   List<PropertyModel> searchPropertiesByLocation(List<PropertyModel> properties, String location) {
     if (location.trim().isEmpty) {
-      print('🔍 Empty location query, returning all properties');
       return properties;
     }
 
     final query = location.toLowerCase().trim();
-    print('🔍 Searching properties by location: "$query"');
-    print('🔍 Total properties to search: ${properties.length}');
     
     final results = properties.where((property) {
       final propertyLocation = property.location.toLowerCase();
@@ -57,7 +54,6 @@ class PropertySearchService {
       // For "near me", this should not be called from PropertySearchService
       // The search bottom sheet should handle "near me" with LocationService directly
       if (query == 'near me') {
-        print('⚠️ PropertySearchService should not handle "near me" - this should be handled by LocationService');
         return false; // Don't match any properties here
       }
       
@@ -76,15 +72,12 @@ class PropertySearchService {
       final matches = matchesLocation || matchesTitle;
       
       if (matches) {
-        print('✅ Property matches: ${property.title} - ${property.location}');
       } else {
-        print('❌ Property does NOT match: ${property.title} - ${property.location}');
       }
       
       return matches;
     }).toList();
     
-    print('🔍 Search completed - found ${results.length} matching properties');
     return results;
   }
 

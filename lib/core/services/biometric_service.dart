@@ -16,7 +16,6 @@ class BiometricService {
       final bool isDeviceSupported = await _localAuth.isDeviceSupported();
       return isAvailable && isDeviceSupported;
     } catch (e) {
-      print('❌ BiometricService: Error checking biometric availability: $e');
       return false;
     }
   }
@@ -26,7 +25,6 @@ class BiometricService {
     try {
       return await _localAuth.getAvailableBiometrics();
     } catch (e) {
-      print('❌ BiometricService: Error getting available biometrics: $e');
       return [];
     }
   }
@@ -41,7 +39,6 @@ class BiometricService {
     try {
       final bool isAvailable = await isBiometricAvailable();
       if (!isAvailable) {
-        print('❌ BiometricService: Biometric authentication not available');
         return false;
       }
 
@@ -72,14 +69,11 @@ class BiometricService {
       );
 
       if (didAuthenticate) {
-        print('✅ BiometricService: Authentication successful');
       } else {
-        print('❌ BiometricService: Authentication failed or cancelled');
       }
 
       return didAuthenticate;
     } catch (e) {
-      print('❌ BiometricService: Error during authentication: $e');
       return false;
     }
   }
@@ -93,7 +87,6 @@ class BiometricService {
       final List<BiometricType> availableBiometrics = await getAvailableBiometrics();
       return availableBiometrics.isNotEmpty;
     } catch (e) {
-      print('❌ BiometricService: Error checking biometric enrollment: $e');
       return false;
     }
   }

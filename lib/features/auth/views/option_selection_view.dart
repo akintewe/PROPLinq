@@ -133,8 +133,6 @@ class _OptionSelectionViewState extends State<OptionSelectionView> {
     });
 
     try {
-      print('🚀 User selected option: $option');
-      print('🚀 Auto-login with email: ${widget.email}');
       
       // Auto-login the user with their credentials
       final response = await _authService.login(
@@ -143,7 +141,6 @@ class _OptionSelectionViewState extends State<OptionSelectionView> {
       );
 
       if (response.success && response.data != null) {
-        print('✅ Auto-login successful');
         
         // Determine initial filter based on selection
         final initialFilter = option == 'hotel' ? 'hotels' : 'non_hotels';
@@ -158,7 +155,6 @@ class _OptionSelectionViewState extends State<OptionSelectionView> {
           (route) => false,
         );
       } else {
-        print('❌ Auto-login failed: ${response.message}');
         // Show error and navigate to login screen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -171,7 +167,6 @@ class _OptionSelectionViewState extends State<OptionSelectionView> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      print('❌ Auto-login error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('An error occurred. Please login manually.'),

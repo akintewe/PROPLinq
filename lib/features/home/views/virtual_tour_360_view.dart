@@ -77,8 +77,6 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
   }
 
   void _initializeTourNodes() {
-    print('🖼️ VirtualTour360View: Initializing tour nodes...');
-    print('🖼️ VirtualTour360View: Property 360 images: ${widget.property360Images}');
     
     if (widget.property360Images != null && widget.property360Images!.isNotEmpty) {
       // Use actual property 360 images
@@ -94,7 +92,6 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
         );
       }).toList();
       
-      print('✅ VirtualTour360View: Created ${_tourNodes.length} tour nodes from property images');
     } else {
       // Fallback to dummy data if no property images
       _tourNodes = [
@@ -106,7 +103,6 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
         ),
       ];
       
-      print('⚠️ VirtualTour360View: No property 360 images found, using fallback data');
     }
   }
 
@@ -151,7 +147,6 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
         
         _preloadedImages[node.id] = image;
       } catch (e) {
-        print('❌ Failed to preload image: ${node.imageUrl} - $e');
       }
     }
     
@@ -159,7 +154,6 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
       _imagesPreloaded = true;
     });
     
-    print('✅ All images preloaded successfully');
   }
 
   void _onViewChanged(double longitude, double latitude, double tilt) {
@@ -402,7 +396,6 @@ class _VirtualTour360ViewState extends State<VirtualTour360View>
                          onViewChanged: _onViewChanged,
              onTap: (longitude, latitude, tilt) {
                       // This is the key - use Panorama's onTap to detect taps
-                      print('🎯 Panorama tapped at: $longitude, $latitude');
                       _moveToNextImage();
              },
              animSpeed: 1.0,

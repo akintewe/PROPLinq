@@ -30,17 +30,6 @@ class PropertyService {
     File? video,
   }) async {
     try {
-      print('🏠 Creating property...');
-      print('📋 Property Data:');
-      print('Type: $type');
-      print('Title: $title');
-      print('Category: $category');
-      print('Location: $location');
-      print('Price: $price');
-      print('Features: $features');
-      print('Images: ${images.length} files');
-      print('360 Images: ${images360?.length ?? 0} files');
-      print('Video: ${video != null ? "1 file" : "none"}');
 
       // Prepare form fields
       final Map<String, String> fields = {
@@ -70,7 +59,6 @@ class PropertyService {
         if (validatedImage != null) {
           files['images[$i]'] = validatedImage;
         } else {
-          print('❌ Skipping invalid image: ${images[i].path}');
         }
       }
       
@@ -81,7 +69,6 @@ class PropertyService {
           if (validatedImage != null) {
             files['360[$i]'] = validatedImage;
           } else {
-            print('❌ Skipping invalid 360 image: ${images360[i].path}');
           }
         }
       }
@@ -89,20 +76,15 @@ class PropertyService {
       // Add video
       if (video != null) {
         files['video'] = video;
-        print('📹 Added video file: ${video.path}');
       }
 
       if (files.isEmpty) {
-        print('❌ No valid files to upload');
         return ApiResponse.error(
           message: 'No valid files to upload',
           statusCode: 400,
         );
       }
 
-      print('📤 Sending request to API...');
-      print('Fields: $fields');
-      print('Files: ${files.keys}');
 
       final response = await _apiService.postFormData<Map<String, dynamic>>(
         ApiConstants.createProperty,
@@ -112,23 +94,15 @@ class PropertyService {
         fromJson: (json) => json,
       );
 
-      print('📋 Create Property API Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
 
       if (response.success && response.data != null) {
-        print('✅ Property created successfully');
-        print('📊 Response Data: ${response.data}');
         
         // Clean up temporary files
         await _cleanupTempFiles(files.values.toList());
         
         return response;
       } else {
-        print('❌ Failed to create property: ${response.message}');
         if (response.errors != null) {
-          print('❌ Errors: ${response.errors}');
         }
         
         // Clean up temporary files even on error
@@ -137,7 +111,6 @@ class PropertyService {
         return response;
       }
     } catch (e) {
-      print('❌ Error creating property: $e');
       return ApiResponse.error(
         message: 'Error creating property: $e',
         statusCode: 0,
@@ -151,10 +124,8 @@ class PropertyService {
       try {
         if (file.path.contains('resized_') && await file.exists()) {
           await file.delete();
-          print('🗑️ Cleaned up temp file: ${file.path}');
         }
       } catch (e) {
-        print('⚠️ Failed to cleanup temp file: ${file.path}, error: $e');
       }
     }
   }
@@ -183,11 +154,9 @@ class PropertyService {
       final img.Image? originalImage = img.decodeImage(bytes);
       
       if (originalImage == null) {
-        print('❌ Failed to decode image: ${imageFile.path}');
         return null;
       }
 
-      print('📏 Original image dimensions: ${originalImage.width}x${originalImage.height}');
 
       // Try different standard sizes that most APIs accept
       final List<Map<String, int>> standardSizes = [
@@ -206,7 +175,6 @@ class PropertyService {
             height: size['height']!,
           );
           
-          print('🔄 Trying size: ${resizedImage.width}x${resizedImage.height}');
           
           // Convert to PNG (better for APIs)
           final Uint8List resizedBytes = img.encodePng(resizedImage);
@@ -216,17 +184,13 @@ class PropertyService {
           final tempFile = File('${tempDir.path}/resized_${DateTime.now().millisecondsSinceEpoch}.png');
           await tempFile.writeAsBytes(resizedBytes);
           
-          print('✅ Image resized to: ${resizedImage.width}x${resizedImage.height}');
-          print('✅ Image saved as: ${tempFile.path}');
           
           return tempFile;
         } catch (e) {
-          print('❌ Failed to resize to ${size['width']}x${size['height']}: $e');
           continue;
         }
       }
       
-      print('❌ Failed to resize image to any standard size');
       
       // Fallback: try to use original image if it's reasonable
       if (originalImage.width >= 300 && originalImage.height >= 300 && 
@@ -237,16 +201,13 @@ class PropertyService {
           final tempFile = File('${tempDir.path}/original_${DateTime.now().millisecondsSinceEpoch}.png');
           await tempFile.writeAsBytes(originalBytes);
           
-          print('✅ Using original image as fallback: ${originalImage.width}x${originalImage.height}');
           return tempFile;
         } catch (e) {
-          print('❌ Failed to save original image: $e');
         }
       }
       
       return null;
     } catch (e) {
-      print('❌ Error processing image: $e');
       return null;
     }
   }
@@ -260,7 +221,6 @@ class PropertyService {
     String? category,
   }) async {
     try {
-      print('🏠 Fetching properties from API...');
       
       // Build query parameters
       final Map<String, String> queryParams = {};
@@ -270,7 +230,6 @@ class PropertyService {
       if (priceMax != null) queryParams['price_max'] = priceMax;
       if (category != null) queryParams['category'] = category;
 
-      print('📋 Query Parameters: $queryParams');
 
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiConstants.listProperties,
@@ -279,29 +238,21 @@ class PropertyService {
         fromJson: (json) => json,
       );
 
-      print('📋 Properties API Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
 
       if (response.success && response.data != null) {
         final data = response.data!;
         final List<dynamic> propertiesData = data['data'] as List<dynamic>;
         
-        print('📊 Found ${propertiesData.length} properties');
         
         final List<PropertyModel> properties = propertiesData
             .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
             .toList();
 
-        print('✅ Successfully parsed ${properties.length} properties');
         return properties;
       } else {
-        print('❌ Failed to fetch properties: ${response.message}');
         return [];
       }
     } catch (e) {
-      print('❌ Error fetching properties: $e');
       return [];
     }
   }
@@ -315,14 +266,12 @@ class PropertyService {
     String? category,
   }) async {
     try {
-      print('🔄 Fetching all properties with pagination...');
       
       List<PropertyModel> allProperties = [];
       int currentPage = 1;
       bool hasMorePages = true;
 
       while (hasMorePages) {
-        print('📄 Fetching page $currentPage...');
         
         // Build query parameters including page
         final Map<String, String> queryParams = {'page': currentPage.toString()};
@@ -345,13 +294,10 @@ class PropertyService {
           final int currentPageFromResponse = data['current_page'] as int;
           final int lastPage = data['last_page'] as int;
           
-          print('📊 Page $currentPageFromResponse: Found ${propertiesData.length} properties');
           
           // Debug: Check if API data includes images
           if (propertiesData.isNotEmpty) {
             final firstProperty = propertiesData.first as Map<String, dynamic>;
-            print('🔍 First property keys: ${firstProperty.keys.toList()}');
-            print('🔍 First property images: ${firstProperty['images']}');
           }
           
           final List<PropertyModel> pageProperties = propertiesData
@@ -364,15 +310,12 @@ class PropertyService {
           hasMorePages = currentPageFromResponse < lastPage;
           currentPage = currentPageFromResponse + 1;
         } else {
-          print('❌ Failed to fetch page $currentPage: ${response.message}');
           hasMorePages = false;
         }
       }
 
-      print('✅ Successfully fetched ${allProperties.length} properties from all pages');
       return allProperties;
     } catch (e) {
-      print('❌ Error fetching all properties: $e');
       return [];
     }
   }
@@ -380,8 +323,6 @@ class PropertyService {
   /// Fetch property details by ID using the dedicated endpoint
   Future<PropertyModel?> fetchPropertyDetails(int propertyId) async {
     try {
-      print('🏠 Fetching property details for ID: $propertyId...');
-      print('🔗 Endpoint: ${ApiConstants.properties}/$propertyId');
       
       final response = await _apiService.get<Map<String, dynamic>>(
         '${ApiConstants.properties}/$propertyId',
@@ -389,10 +330,6 @@ class PropertyService {
         fromJson: (json) => json,
       );
 
-      print('📋 Property Details API Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
 
       if (response.success && response.data != null) {
         final data = response.data!;
@@ -406,18 +343,13 @@ class PropertyService {
         }
         
         final property = PropertyModel.fromJson(propertyData);
-        print('✅ Found property: ${property.title} (ID: ${property.id})');
         return property;
       } else {
-        print('❌ Failed to fetch property details: ${response.message}');
         if (response.errors != null && response.errors!.isNotEmpty) {
-          print('❌ Errors: ${response.errors}');
         }
         return null;
       }
     } catch (e, stackTrace) {
-      print('❌ Error fetching property details: $e');
-      print('❌ Stack trace: $stackTrace');
       return null;
     }
   }
@@ -425,10 +357,6 @@ class PropertyService {
   /// Fetch agent's own properties
   Future<List<PropertyModel>> fetchMyProperties() async {
     try {
-      print('🏠 Fetching my properties from API...');
-      print('🔗 Endpoint: ${ApiConstants.myProperties}');
-      print('🔗 Full URL: ${ApiConstants.apiBaseUrl}${ApiConstants.myProperties}');
-      print('🔑 Using authentication: true');
       
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiConstants.myProperties,
@@ -436,67 +364,43 @@ class PropertyService {
         fromJson: (json) => json,
       );
 
-      print('\n📋 ===== MY PROPERTIES API RESPONSE =====');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
-      print('🔍 Raw Response Data: ${response.data}');
-      print('📊 Response Type: ${response.data.runtimeType}');
       
       if (response.errors != null && response.errors!.isNotEmpty) {
-        print('❌ Errors: ${response.errors}');
       }
 
       if (response.success && response.data != null) {
         final data = response.data!;
-        print('\n📦 Response Data Structure:');
-        print('🔸 Data keys: ${data.keys.toList()}');
-        print('🔸 Full data: $data');
         
         // Check if data has the expected structure
         if (data.containsKey('data')) {
           final List<dynamic> propertiesData = data['data'] as List<dynamic>;
-          print('📊 Properties array length: ${propertiesData.length}');
           
           if (propertiesData.isNotEmpty) {
-            print('\n🏠 Sample property data:');
-            print('🔸 First property: ${propertiesData.first}');
-            print('🔸 Property keys: ${(propertiesData.first as Map<String, dynamic>).keys.toList()}');
           }
           
           final List<PropertyModel> properties = propertiesData
               .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
               .toList();
 
-          print('✅ Successfully parsed ${properties.length} of my properties');
           
           if (properties.isNotEmpty) {
-            print('\n🏠 Parsed Properties Summary:');
             for (int i = 0; i < properties.length && i < 3; i++) {
               final prop = properties[i];
-              print('🔸 Property ${i + 1}: ${prop.title} - ${prop.location} - ₦${prop.price}');
             }
             if (properties.length > 3) {
-              print('🔸 ... and ${properties.length - 3} more properties');
             }
           }
           
           return properties;
         } else {
-          print('⚠️ Response data does not contain "data" key');
-          print('🔸 Available keys: ${data.keys.toList()}');
           return [];
         }
       } else {
-        print('❌ Failed to fetch my properties: ${response.message}');
         if (response.statusCode != null) {
-          print('🔸 HTTP Status Code: ${response.statusCode}');
         }
         return [];
       }
     } catch (e, stackTrace) {
-      print('❌ Error fetching my properties: $e');
-      print('📍 Stack trace: $stackTrace');
       return [];
     }
   }
@@ -516,18 +420,6 @@ class PropertyService {
     required String status,
   }) async {
     try {
-      print('🏠 Updating property ID: $propertyId');
-      print('📋 Update Data:');
-      print('Title: $title');
-      print('Description: $description');
-      print('Price: $price');
-      print('Location: $location');
-      print('Bedrooms: $bedrooms');
-      print('Bathrooms: $bathrooms');
-      print('Gated: $gated');
-      print('Parking: $parking');
-      print('Features: $features');
-      print('Status: $status');
 
       // Prepare request body
       final Map<String, dynamic> body = {
@@ -543,8 +435,6 @@ class PropertyService {
         'status': status,
       };
 
-      print('📤 Sending PUT request to: /properties/$propertyId');
-      print('📤 Request body: $body');
 
       final response = await _apiService.put(
         '/properties/$propertyId',
@@ -552,19 +442,13 @@ class PropertyService {
         requiresAuth: true,
       );
 
-      print('✅ Update response status: ${response.statusCode}');
       
       if (response.statusCode == 200 || response.statusCode == 204) {
-        print('✅ Property updated successfully');
         return true;
       } else {
-        print('❌ Update failed with status: ${response.statusCode}');
-        print('❌ Response data: ${response.data}');
         return false;
       }
     } catch (e, stackTrace) {
-      print('❌ Error updating property: $e');
-      print('📍 Stack trace: $stackTrace');
       return false;
     }
   }
@@ -572,29 +456,19 @@ class PropertyService {
   /// Delete a property
   Future<bool> deleteProperty(int propertyId) async {
     try {
-      print('🗑️ Deleting property ID: $propertyId');
 
       final response = await _apiService.delete(
         '/properties/$propertyId',
         requiresAuth: true,
       );
 
-      print('✅ Delete response status: ${response.statusCode}');
-      print('✅ Delete response success: ${response.success}');
-      print('✅ Delete response message: ${response.message}');
       
       if (response.success) {
-        print('✅ Property deleted successfully');
         return true;
       } else {
-        print('❌ Delete failed with status: ${response.statusCode}');
-        print('❌ Response message: ${response.message}');
-        print('❌ Response errors: ${response.errors}');
         return false;
       }
     } catch (e, stackTrace) {
-      print('❌ Error deleting property: $e');
-      print('📍 Stack trace: $stackTrace');
       return false;
     }
   }

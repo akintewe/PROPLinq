@@ -75,9 +75,6 @@ class _LoginViewState extends State<LoginView> {
     });
 
     try {
-      print('🔄 Making login request...');
-      print('📧 Email: ${_emailController.text.trim()}');
-      print('🔑 Password: [HIDDEN]');
       
       // Make API call
       final response = await _authService.login(
@@ -85,25 +82,11 @@ class _LoginViewState extends State<LoginView> {
         password: _passwordController.text,
       );
 
-      print('📋 Login Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
-      print('🔍 Raw Response Data: ${response.data?.toJson()}');
       
       if (response.data != null) {
-        print('👤 User Data:');
-        print('  - ID: ${response.data!.user.id}');
-        print('  - Name: ${response.data!.user.fullName}');
-        print('  - Email: ${response.data!.user.email}');
-        print('  - User Type: ${response.data!.user.userType}');
-        print('  - Location: ${response.data!.user.location}');
-        print('🔑 Token: ${response.data!.token}');
-        print('🕒 Token Type: ${response.data!.tokenType}');
       }
       
       if (response.errors != null && response.errors!.isNotEmpty) {
-        print('❌ Errors: ${response.errors}');
       }
 
       if (response.success && response.data != null) {
@@ -143,7 +126,6 @@ class _LoginViewState extends State<LoginView> {
         }
       }
     } catch (e) {
-      print('💥 Login Exception: $e');
       setState(() {
         _hasError = true;
         _errorMessage = 'An unexpected error occurred. Please try again.';
@@ -200,7 +182,6 @@ class _LoginViewState extends State<LoginView> {
   }
 
   void _navigateToHome([String? userType]) {
-    print('🏠 Navigating to home for user type: $userType');
     
     // Navigate based on user type from API response
     if (userType == 'agent') {

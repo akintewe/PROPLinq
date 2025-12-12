@@ -54,6 +54,13 @@ class ApiConstants {
   // Chat Endpoints
   static const String chatWebhook = '/chat/webhook';
   static const String getUserChats = '/get-user-chats';
+  static const String updateOnlineStatus = '/chat/update-online-status';
+  static const String checkOnlineStatus = '/chat/check-online-status';
+  static const String myOnlineStatus = '/chat/my-online-status';
+  static String markMessageReceived(int messageId) => '/chat/mark-received/$messageId';
+  
+  // Booking Endpoints
+  static const String bookings = '/bookings';
   
   // AppsFlyer OneLink Configuration
   // Template ID from AppsFlyer Dashboard: fOvE

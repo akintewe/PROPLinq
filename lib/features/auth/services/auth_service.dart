@@ -32,18 +32,13 @@ class AuthService {
       
       // Fetch complete profile data to get profile image URL
       try {
-        print('📸 Fetching complete profile data after registration...');
         final profileResponse = await getProfile();
         if (profileResponse.success && profileResponse.data != null) {
-          print('📸 Complete profile data fetched successfully');
-          print('📸 Profile image URL: ${profileResponse.data!.profilePicture}');
           await _storageService.saveUserData(profileResponse.data!.toJson());
         } else {
-          print('📸 Failed to fetch complete profile, using registration data');
           await _storageService.saveUserData(response.data!.user.toJson());
         }
       } catch (e) {
-        print('📸 Error fetching complete profile, using registration data: $e');
         await _storageService.saveUserData(response.data!.user.toJson());
       }
       
@@ -73,18 +68,13 @@ class AuthService {
       
       // Fetch complete profile data to get profile image URL
       try {
-        print('📸 Fetching complete profile data after login...');
         final profileResponse = await getProfile();
         if (profileResponse.success && profileResponse.data != null) {
-          print('📸 Complete profile data fetched successfully');
-          print('📸 Profile image URL: ${profileResponse.data!.profilePicture}');
           await _storageService.saveUserData(profileResponse.data!.toJson());
         } else {
-          print('📸 Failed to fetch complete profile, using login data');
           await _storageService.saveUserData(response.data!.user.toJson());
         }
       } catch (e) {
-        print('📸 Error fetching complete profile, using login data: $e');
         await _storageService.saveUserData(response.data!.user.toJson());
       }
       
@@ -222,7 +212,6 @@ class AuthService {
   // Upload profile image
   Future<ApiResponse<Map<String, dynamic>>> uploadProfileImage(File imageFile) async {
     try {
-      print('📸 Uploading profile image...');
       
       // Create FormData for multipart upload
       final dio = Dio();
@@ -235,7 +224,6 @@ class AuthService {
         ),
       });
       
-      print('📸 Uploading to: ${ApiConstants.apiBaseUrl}${ApiConstants.uploadProfileImage}');
       
       final response = await dio.post(
         '${ApiConstants.apiBaseUrl}${ApiConstants.uploadProfileImage}',
@@ -248,8 +236,6 @@ class AuthService {
         ),
       );
       
-      print('📸 Profile image upload response: ${response.statusCode}');
-      print('📸 Profile image upload data: ${response.data}');
       
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
@@ -280,7 +266,6 @@ class AuthService {
             
             // Save updated user data
             await _storageService.saveUserData(updatedUser.toJson());
-            print('📸 Updated local user data with new profile image URL: ${responseData['data']['profile_image_url']}');
           }
         }
         
@@ -299,7 +284,6 @@ class AuthService {
         );
       }
     } catch (e) {
-      print('❌ Error uploading profile image: $e');
       return ApiResponse<Map<String, dynamic>>(
         success: false,
         statusCode: 500,
@@ -328,10 +312,8 @@ class AuthService {
     // Get current user to determine their type
     final userType = await getUserType();
     
-    print('👤 User type detected: $userType');
     
     if (userType == 'agent') {
-      print('🏢 Using agent KYC endpoint: ${ApiConstants.kycAgentStatus}');
       final response = await _apiService.get<KycStatusResponse>(
         ApiConstants.kycAgentStatus,
         requiresAuth: true,
@@ -340,12 +322,10 @@ class AuthService {
       
       // If agent endpoint returns 404, try user endpoint as fallback
       if (response.statusCode == 404) {
-        print('⚠️ Agent endpoint not found, trying user endpoint as fallback');
         return await _getUserKycStatus();
       }
       return response;
     } else {
-      print('🏠 Using user KYC endpoint: ${ApiConstants.kycUserStatus}');
       return await _getUserKycStatus();
     }
   }
@@ -360,7 +340,6 @@ class AuthService {
     
     // If user endpoint also returns 404, treat as KYC incomplete (show dialog)
     if (response.statusCode == 404) {
-      print('⚠️ User endpoint not found - treating as KYC incomplete');
       return ApiResponse.success(
         data: null, // null data means KYC incomplete
         message: 'KYC not started - endpoint not available yet',
@@ -377,7 +356,6 @@ class AuthService {
 
   // Request phone verification code
   Future<ApiResponse<void>> requestPhoneVerification() async {
-    print('📞 Requesting phone verification code...');
     
     return await _apiService.post<void>(
       ApiConstants.phoneVerifyRequest,
@@ -388,7 +366,6 @@ class AuthService {
 
   // Verify phone with code
   Future<ApiResponse<void>> verifyPhone(String code) async {
-    print('📞 Verifying phone with code: $code');
     
     final requestData = {
       'code': code,
@@ -404,7 +381,6 @@ class AuthService {
 
   // Request email verification code (for the new verification flow)
   Future<ApiResponse<void>> requestNewEmailVerification() async {
-    print('📧 Requesting email verification code...');
     
     return await _apiService.post<void>(
       ApiConstants.emailVerifyRequest,
@@ -415,7 +391,6 @@ class AuthService {
 
   // Verify email with code (for the new verification flow)
   Future<ApiResponse<void>> verifyNewEmail(String code) async {
-    print('📧 Verifying email with code: $code');
     
     final requestData = {
       'code': code,
@@ -431,7 +406,6 @@ class AuthService {
 
   // Submit agent KYC
   Future<ApiResponse<void>> submitAgentKyc(AgentKycRequest request) async {
-    print('🏢 Submitting agent KYC...');
     
     try {
       final response = await _apiService.postFormData<void>(
@@ -442,14 +416,9 @@ class AuthService {
         fromJson: (json) => null, // No response body expected
       );
       
-      print('📋 Agent KYC Submission Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
       
       return response;
     } catch (e) {
-      print('❌ Error submitting agent KYC: $e');
       return ApiResponse.error(
         message: 'Failed to submit KYC: $e',
         statusCode: 0,
@@ -459,7 +428,6 @@ class AuthService {
 
   // Submit user KYC
   Future<ApiResponse<void>> submitUserKyc(UserKycRequest request) async {
-    print('🏠 Submitting user KYC...');
     
     try {
       final response = await _apiService.postFormData<void>(
@@ -470,14 +438,9 @@ class AuthService {
         fromJson: (json) => null, // No response body expected
       );
       
-      print('📋 User KYC Submission Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
       
       return response;
     } catch (e) {
-      print('❌ Error submitting user KYC: $e');
       return ApiResponse.error(
         message: 'Failed to submit KYC: $e',
         statusCode: 0,

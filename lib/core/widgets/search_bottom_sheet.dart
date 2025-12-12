@@ -66,7 +66,6 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
         });
       }
     } catch (e) {
-      print('❌ Error loading nearby locations: $e');
       setState(() {
         _locations = LocationService.instance.getDefaultNearbyAreas();
         _isLoadingLocation = false;
@@ -418,39 +417,30 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
       onTap: () async {
         Navigator.of(context).pop();
         
-        print('📍 Location tapped: ${location['title']}');
-        print('📍 Location query: ${location['locationQuery']}');
         
         // First, set the location name
         widget.onLocationSelected?.call(location['title']);
-        print('📍 Location selected callback called with: ${location['title']}');
         
         // Then filter properties by location
         List<PropertyModel> filteredProperties;
         
         // Check if this is "Near You" location
         if (location['locationQuery'] == 'near me' || location['isNearYou'] == true) {
-          print('📍 Filtering properties by distance for "Near You"');
           // Use location service to filter by distance
           filteredProperties = await LocationService.instance.filterPropertiesByDistance(
             widget.properties,
             10.0, // 10km radius
           );
         } else {
-          print('📍 Filtering properties by specific location: ${location['locationQuery'] ?? location['title']}');
-          print('📍 Total properties to filter: ${widget.properties.length}');
           // Use regular location search for specific locations
           filteredProperties = PropertySearchService.instance.searchPropertiesByLocation(
             widget.properties,
             location['locationQuery'] ?? location['title'],
           );
         }
-        print('📍 Filtered properties count: ${filteredProperties.length}');
         for (var prop in filteredProperties) {
-          print('📍 Filtered property: ${prop.title} - ${prop.location}');
         }
         widget.onPropertiesSelected?.call(filteredProperties);
-        print('📍 Properties selected callback called with ${filteredProperties.length} properties');
       },
       child: Container(
         padding: const EdgeInsets.all(16),

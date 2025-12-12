@@ -24,10 +24,14 @@ import 'property_details_view.dart';
 class _PropertyImageCarousel extends StatefulWidget {
   final List<String> imageUrls;
   final List<dynamic> badges;
+  final String? category;
+  final String? type;
 
   const _PropertyImageCarousel({
     required this.imageUrls,
     required this.badges,
+    this.category,
+    this.type,
   });
 
   @override
@@ -94,37 +98,60 @@ class _PropertyImageCarouselState extends State<_PropertyImageCarousel> {
             top: 16,
             left: 16,
             child: Row(
-              children: widget.badges.map((badge) {
-                final badgeText = badge.toString();
-                return Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (badgeText == 'Verified Agent')
-                        const Icon(
-                          Icons.verified,
-                          size: 14,
-                          color: Colors.green,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Verification badges
+                ...widget.badges.map((badge) {
+                  final badgeText = badge.toString();
+                  return Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (badgeText == 'Verified Agent')
+                          const Icon(
+                            Icons.verified,
+                            size: 14,
+                            color: Colors.green,
+                          ),
+                        if (badgeText == 'Verified Agent') const SizedBox(width: 4),
+                        Text(
+                          badgeText,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black,
+                          ),
                         ),
-                      if (badgeText == 'Verified Agent') const SizedBox(width: 4),
-                      Text(
-                        badgeText,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.black,
-                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                // For Rent / For Sale badge
+                if ((widget.category == 'for_rent' || widget.category == 'for_sale') &&
+                    widget.type?.toLowerCase() != 'hotel') ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      widget.category == 'for_rent' ? 'For Rent' : 'For Sale',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF868686),
                       ),
-                    ],
+                    ),
                   ),
-                );
-              }).toList(),
+                ],
+              ],
             ),
           ),
           // Favorite button
@@ -243,14 +270,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Future<void> _fetchUserProfile() async {
     try {
-      print('🔄 Fetching user profile...');
       
       final response = await _authService.getProfile();
       
-      print('📋 Profile Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
       
       if (response.success && response.data != null) {
         setState(() {
@@ -258,40 +280,28 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           _isLoadingProfile = false;
         });
         
-        print('👤 User Profile Data:');
-        print('  - ID: ${_currentUser!.id}');
-        print('  - Name: ${_currentUser!.fullName}');
-        print('  - Email: ${_currentUser!.email}');
-        print('  - User Type: "${_currentUser!.userType}"');
-        print('  - Location: ${_currentUser!.location}');
-        print('  - Phone: ${_currentUser!.phoneNumber}');
       } else {
         setState(() {
           _isLoadingProfile = false;
         });
-        print('❌ Failed to fetch profile: ${response.message}');
         if (response.errors != null && response.errors!.isNotEmpty) {
-          print('❌ Errors: ${response.errors}');
         }
       }
     } catch (e) {
       setState(() {
         _isLoadingProfile = false;
       });
-      print('❌ Profile fetch error: $e');
     }
   }
 
   Future<void> _fetchProperties() async {
     try {
-      print('🔄 Fetching properties...');
       setState(() {
         _isLoadingProperties = true;
       });
 
       final properties = await _propertyService.fetchAllProperties();
       
-      print('✅ Properties fetched successfully: ${properties.length} properties');
       
       setState(() {
         _properties = properties;
@@ -302,7 +312,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       _startFeaturedAutoScroll();
       _maybeShowInitialBottomSheet();
     } catch (e) {
-      print('❌ Error fetching properties: $e');
       setState(() {
         _isLoadingProperties = false;
       });
@@ -430,19 +439,12 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
 
     try {
-      print('🔄 Checking KYC status for tenant/home seeker...');
       final response = await _authService.getKycStatus();
       
-      print('📋 KYC Status Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
       
       if (response.success) {
         // If data is null, it means KYC is not started/incomplete - show dialog
         if (response.data == null) {
-          print('🎯 KYC Status: No data returned - KYC not started or incomplete');
-          print('✅ Showing KYC dialog because data is null (KYC incomplete)');
           
           _hasShownKycDialog = true;
           KycDialog.show(
@@ -476,11 +478,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           // We have actual KYC status data - check if dialog should be shown
           final kycStatus = response.data!;
           
-          print('🎯 KYC Status Data:');
-          print('  - Status: ${kycStatus.status}');
-          print('  - Is Required: ${kycStatus.isRequired}');
-          print('  - Should Show Dialog: ${kycStatus.shouldShowKycDialog()}');
-          print('  - Message: ${kycStatus.message}');
           
           if (kycStatus.shouldShowKycDialog()) {
             _hasShownKycDialog = true;
@@ -512,21 +509,15 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
               },
             );
           } else {
-            print('✅ KYC is verified or not required - dialog not shown');
           }
         }
       } else {
-        print('❌ API call failed - Status Code: ${response.statusCode}');
-        print('❌ Failed to get KYC status: ${response.message}');
         if (response.errors != null && response.errors!.isNotEmpty) {
-          print('❌ Errors: ${response.errors}');
         }
         
         // If API call fails, don't show dialog to avoid spam
-        print('⚠️ KYC status check failed - dialog not shown');
       }
     } catch (e) {
-      print('❌ KYC status check error: $e');
       // If there's an error, don't show dialog
     }
   }
@@ -534,19 +525,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   // Refresh KYC status after returning from KYC submission
   Future<void> _refreshKycStatus() async {
     try {
-      print('🔄 Refreshing KYC status after submission...');
       final response = await _authService.getKycStatus();
       
-      print('📋 KYC Status Refresh Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
       
       if (response.success && response.data != null) {
         final kycStatus = response.data!;
-        print('🎯 Updated KYC Status:');
-        print('  - Status: ${kycStatus.status}');
-        print('  - Message: ${kycStatus.message}');
         
         // Show success message if KYC was submitted
         if (kycStatus.status == 'pending') {
@@ -559,32 +542,18 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         }
       }
     } catch (e) {
-      print('❌ Error refreshing KYC status: $e');
     }
   }
 
   // Test method to fetch property details
   Future<void> _testPropertyDetails(int propertyId) async {
     try {
-      print('🧪 Testing property details for ID: $propertyId');
       final propertyDetails = await _propertyService.fetchPropertyDetails(propertyId);
       
       if (propertyDetails != null) {
-        print('✅ Property details fetched successfully:');
-        print('Title: ${propertyDetails.title}');
-        print('Location: ${propertyDetails.location}');
-        print('Price: ${propertyDetails.price}');
-        print('Type: ${propertyDetails.type}');
-        print('Category: ${propertyDetails.category}');
-        print('Description: ${propertyDetails.description}');
-        print('Bedrooms: ${propertyDetails.bedrooms}');
-        print('Bathrooms: ${propertyDetails.bathrooms}');
-        print('Image URL: ${propertyDetails.imageUrl}');
       } else {
-        print('❌ Failed to fetch property details');
       }
     } catch (e) {
-      print('❌ Error testing property details: $e');
     }
   }
 
@@ -661,7 +630,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         }
       }
     } catch (e) {
-      print('❌ Error toggling favorite: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -681,16 +649,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       builder: (context) => SearchBottomSheet(
         properties: _properties,
         onLocationSelected: (location) {
-          print('🏠 onLocationSelected called with: $location');
           setState(() {
             _isShowingSearchResults = true;
             _selectedLocation = location;
             _selectedCategory = 'All';
           });
-          print('🏠 Location set to: $_selectedLocation');
         },
         onPropertiesSelected: (properties) {
-          print('🏠 onPropertiesSelected called with ${properties.length} properties');
           setState(() {
             _isShowingSearchResults = true;
             // Don't clear location - it should be set by onLocationSelected
@@ -698,12 +663,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             // Store selected properties for display
             _selectedProperties = properties;
           });
-          print('🏠 Properties set, _selectedProperties.length: ${_selectedProperties.length}');
-          print('🏠 _isShowingSearchResults: $_isShowingSearchResults');
           
           // Force UI rebuild by calling _getFilteredProperties to verify state
           final filteredProps = _getFilteredProperties();
-          print('🏠 After setState, _getFilteredProperties returns ${filteredProps.length} properties');
         },
       ),
     );
@@ -956,10 +918,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         Builder(
           builder: (context) {
             final filteredResults = _getFilteredSearchResults();
-            print('🏠 Tenant Search results - filteredResults.length: ${filteredResults.length}');
-            print('🏠 Tenant Search results - _selectedLocation: $_selectedLocation');
-            print('🏠 Tenant Search results - _selectedCategory: $_selectedCategory');
-            print('🏠 Tenant Search results - _isShowingSearchResults: $_isShowingSearchResults');
             
             return filteredResults.isEmpty
                 ? _buildNoPropertiesFound()
@@ -1088,36 +1046,27 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   List<Map<String, dynamic>> _getFilteredSearchResults() {
-    print('🔍 Tenant _getFilteredSearchResults called:');
-    print('🔍 Tenant _selectedProperties.length: ${_selectedProperties.length}');
-    print('🔍 Tenant _selectedCategory: $_selectedCategory');
-    print('🔍 Tenant _isShowingSearchResults: $_isShowingSearchResults');
     
     // Use the same filtering logic as _getFilteredProperties
     List<PropertyModel> propertiesToFilter;
     
     // If showing search results, use selected properties as base (even if empty)
     if (_isShowingSearchResults) {
-      print('🔍 Tenant Search results using selected properties as base: ${_selectedProperties.length} properties');
       propertiesToFilter = _selectedProperties; // Use selected properties even if empty
     } else {
       // Otherwise, use all properties
-      print('🔍 Tenant Search results using all properties as base: ${_properties.length} properties');
       propertiesToFilter = _properties;
     }
     
     // Apply category filtering to the base properties
     List<PropertyModel> filteredProperties;
     if (_selectedCategory == 'All') {
-      print('🔍 Tenant Search results no category filter, returning ${propertiesToFilter.length} properties');
       filteredProperties = propertiesToFilter;
     } else {
       filteredProperties = propertiesToFilter.where((property) {
         final categoryFilter = _selectedCategory.toLowerCase();
-        print('🏠 Tenant Search results filtering property: "${property.title}" - Type: "${property.type}" - Category: "${property.category}" against filter: "$categoryFilter"');
         return _doesPropertyMatchCategory(property, categoryFilter);
       }).toList();
-      print('🔍 Tenant Search results final filtered properties: ${filteredProperties.length} properties');
     }
     
     // Convert PropertyModel to Map format for compatibility with existing UI
@@ -1161,40 +1110,29 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       };
     }).toList();
 
-    print('🔍 Tenant Search results returning ${mapProperties.length} map properties');
     return mapProperties;
   }
 
   List<PropertyModel> _getFilteredProperties() {
-    print('🔍 _getFilteredProperties called:');
-    print('🔍 _isShowingSearchResults: $_isShowingSearchResults');
-    print('🔍 _selectedProperties.length: ${_selectedProperties.length}');
-    print('🔍 _selectedCategory: $_selectedCategory');
-    print('🔍 _properties.length: ${_properties.length}');
     
     List<PropertyModel> propertiesToFilter;
     
     // If showing search results, use selected properties as base
     if (_isShowingSearchResults && _selectedProperties.isNotEmpty) {
-      print('🔍 Using search results as base: ${_selectedProperties.length} properties');
       propertiesToFilter = _selectedProperties;
     } else {
       // Otherwise, use all properties
-      print('🔍 Using all properties as base: ${_properties.length} properties');
       propertiesToFilter = _properties;
     }
     
     // Apply category filtering to the base properties
     if (_selectedCategory == 'All') {
-      print('🔍 No category filter, returning ${propertiesToFilter.length} properties');
       return propertiesToFilter;
     } else {
       final filtered = propertiesToFilter.where((property) {
         final categoryFilter = _selectedCategory.toLowerCase();
-        print('🏠 Filtering property: "${property.title}" - Type: "${property.type}" - Category: "${property.category}" against filter: "$categoryFilter"');
         return _doesPropertyMatchCategory(property, categoryFilter);
       }).toList();
-      print('🔍 Final filtered properties: ${filtered.length} properties');
       return filtered;
     }
   }
@@ -1592,86 +1530,92 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Widget _buildVerificationBadge(PropertyModel property) {
     final user = property.user;
-    if (user == null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.pending,
-              size: 14,
-              color: Colors.orange,
-            ),
-            const SizedBox(width: 4),
-            const Text(
-              'Unverified',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-                color: Colors.black,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
+    
+    // Check if we should show "For Rent" or "For Sale"
+    final showForRentSale = (property.category == 'for_rent' || property.category == 'for_sale') &&
+        property.type.toLowerCase() != 'hotel';
+    final forRentSaleText = property.category == 'for_rent' ? 'For Rent' : 'For Sale';
+    
     IconData icon;
     Color iconColor;
     String text;
 
-    switch (user.verificationStatus) {
-      case 'Verified':
-        icon = Icons.verified;
-        iconColor = Colors.green;
-        text = 'Verified';
-        break;
-      case 'Pending':
-        icon = Icons.pending;
-        iconColor = Colors.orange;
-        text = 'Pending';
-        break;
-      case 'Rejected':
-        icon = Icons.cancel;
-        iconColor = Colors.red;
-        text = 'Rejected';
-        break;
-      default:
-        icon = Icons.pending;
-        iconColor = Colors.orange;
-        text = 'Unverified';
+    if (user == null) {
+      icon = Icons.pending;
+      iconColor = Colors.orange;
+      text = 'Unverified';
+    } else {
+      switch (user.verificationStatus) {
+        case 'Verified':
+          icon = Icons.verified;
+          iconColor = Colors.green;
+          text = 'Verified';
+          break;
+        case 'Pending':
+          icon = Icons.pending;
+          iconColor = Colors.orange;
+          text = 'Pending';
+          break;
+        case 'Rejected':
+          icon = Icons.cancel;
+          iconColor = Colors.red;
+          text = 'Rejected';
+          break;
+        default:
+          icon = Icons.pending;
+          iconColor = Colors.orange;
+          text = 'Unverified';
+      }
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: iconColor,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w400,
-              color: Colors.black,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: iconColor,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (showForRentSale) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              forRentSaleText,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF868686),
+              ),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 
@@ -1720,8 +1664,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         await _testPropertyDetails(property.id);
         
         // DEBUG: Check what imageUrl we're passing
-        print('🚀 TENANT FEATURED HOUSES DEBUG: property.imageUrl = ${property.imageUrl}');
-        print('🚀 TENANT FEATURED HOUSES DEBUG: property.title = ${property.title}');
         
         // Then navigate to property details with actual API data
         Navigator.of(context).push(
@@ -1901,7 +1843,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         setState(() {
           _selectedCategory = title;
         });
-        print('🏠 Category selected: $title');
       },
       child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2026,11 +1967,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         await _testPropertyDetails(property.id);
         
         // DEBUG: Check what imageUrl we're passing
-        print('🚀 TENANT CATEGORIES DEBUG: property.imageUrl = ${property.imageUrl}');
-        print('🚀 TENANT CATEGORIES DEBUG: property.title = ${property.title}');
         
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
+            'id': property.id,
             'badges': [property.user?.verificationStatus ?? 'Unverified'],
             'title': property.title,
             'location': property.location,
@@ -2146,9 +2086,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                             ),
                           ),
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -2163,21 +2100,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                               color: Color(0xFF426DC2),
                             ),
                           ),
-                            ),
-                            if ((property.category == 'for_rent' || property.category == 'for_sale') &&
-                                property.type.toLowerCase() != 'hotel')
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  property.category == 'for_rent' ? 'For Rent' : 'For Sale',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF868686),
-                                  ),
-                                ),
-                              ),
-                          ],
                         ),
                       ],
                     ),
@@ -2273,6 +2195,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     return _PropertyImageCarousel(
       imageUrls: imageUrls,
       badges: property['badges'] as List<dynamic>? ?? [],
+      category: property['category'] as String?,
+      type: property['type'] as String?,
     );
   }
 
@@ -2713,7 +2637,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         });
       }
     } catch (e) {
-      print('❌ Error fetching unread message count: $e');
       if (mounted) {
         setState(() {
           _unreadMessageCount = 0;
@@ -2862,10 +2785,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Widget _buildNoPropertiesFound() {
     // Debug logging
-    print('😔 Tenant Building no properties found message');
-    print('😔 Tenant _isShowingSearchResults: $_isShowingSearchResults');
-    print('😔 Tenant _selectedLocation: $_selectedLocation');
-    print('😔 Tenant _selectedCategory: $_selectedCategory');
     
     return Container(
       width: double.infinity,

@@ -45,7 +45,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
 
   Future<void> _getCurrentLocation() async {
     try {
-      print('📍 Getting current location...');
       setState(() {
         _isLoadingLocation = true;
         _errorMessage = null;
@@ -87,15 +86,12 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
       try {
         position = await Geolocator.getLastKnownPosition();
         if (position != null) {
-          print('✅ Using last known location: ${position.latitude}, ${position.longitude}');
         }
       } catch (e) {
-        print('⚠️ Could not get last known position: $e');
       }
 
       // If no last known position, get current position
       if (position == null) {
-        print('📍 Getting fresh GPS location...');
         try {
           // Use longer timeout and better accuracy settings
           position = await Geolocator.getCurrentPosition(
@@ -104,15 +100,12 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
           ).timeout(
             const Duration(seconds: 20),
           );
-          print('✅ Got fresh GPS location: ${position.latitude}, ${position.longitude}');
         } catch (timeoutError) {
-          print('⏰ Location request timed out, trying last known position again...');
           // Try last known position as fallback
           position = await Geolocator.getLastKnownPosition();
           if (position == null) {
             throw Exception('Could not get location. Please ensure location services are enabled and try again.');
           }
-          print('✅ Using last known position as fallback: ${position.latitude}, ${position.longitude}');
         }
       }
 
@@ -124,10 +117,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
         throw Exception('Invalid location coordinates. Please ensure GPS is enabled.');
       }
 
-      print('✅ Final location coordinates: ${currentPosition.latitude}, ${currentPosition.longitude}');
-      print('📍 Location accuracy: ${currentPosition.accuracy} meters');
-      print('📍 Destination coordinates: ${widget.destinationLatitude}, ${widget.destinationLongitude}');
-      print('📍 Property title: ${widget.propertyTitle}');
 
       if (!mounted) return;
 
@@ -139,8 +128,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
       // Add markers
       _addMarkers();
       
-      print('📍 Markers added - Current: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}');
-      print('📍 Markers added - Destination: ${widget.destinationLatitude}, ${widget.destinationLongitude}');
 
       // Get directions
       await _getDirections();
@@ -150,7 +137,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
         _fitMapToRoute();
       }
     } catch (e) {
-      print('❌ Error getting location: $e');
       setState(() {
         _errorMessage = 'Failed to get current location: ${e.toString()}';
         _isLoadingLocation = false;
@@ -197,7 +183,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
     });
 
     try {
-      print('🗺️ Getting directions...');
       
       final origin = '${_currentPosition!.latitude},${_currentPosition!.longitude}';
       final destination = '${widget.destinationLatitude},${widget.destinationLongitude}';
@@ -207,23 +192,18 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
           'destination=$destination&'
           'key=$_googleMapsApiKey';
 
-      print('🌐 Directions API URL: $url');
 
       final response = await http.get(Uri.parse(url)).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          print('⏰ Directions API request timed out');
           throw TimeoutException('Request timed out');
         },
       );
 
-      print('📥 Response status code: ${response.statusCode}');
-      print('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        print('🔍 API Status: ${data['status']}');
         
         if (data['status'] == 'OK' && data['routes'] != null && data['routes'].isNotEmpty) {
           final route = data['routes'][0];
@@ -240,7 +220,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
             _duration = duration;
           });
 
-          print('✅ Distance: $_distance, Duration: $_duration');
 
           // Decode polyline safely
           final overviewPolyline = route['overview_polyline'];
@@ -268,28 +247,20 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
               }
             });
 
-            print('✅ Polyline created with ${_polylineCoordinates.length} points');
           }
         } else {
-          print('❌ Directions API error: ${data['status']}');
-          print('❌ Error message: ${data['error_message'] ?? 'No error message'}');
           
           // Calculate straight-line distance as fallback
           _calculateStraightLineDistance();
         }
       } else {
-        print('❌ HTTP error: ${response.statusCode}');
-        print('❌ Response body: ${response.body}');
         
         // Calculate straight-line distance as fallback
         _calculateStraightLineDistance();
       }
     } on TimeoutException catch (e) {
-      print('❌ Timeout error: $e');
       _calculateStraightLineDistance();
     } catch (e, stackTrace) {
-      print('❌ Error getting directions: $e');
-      print('❌ Stack trace: $stackTrace');
       _calculateStraightLineDistance();
     } finally {
       if (mounted) {
@@ -343,10 +314,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
         };
       });
 
-      print('📏 Straight-line distance: $_distance');
-      print('⏱️ Estimated duration: $_duration');
     } catch (e) {
-      print('❌ Error calculating distance: $e');
     }
   }
 
@@ -377,7 +345,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
         CameraUpdate.newLatLngBounds(bounds, 100),
       );
     } catch (e) {
-      print('❌ Error fitting map to route: $e');
       // Fallback: just center on destination
       try {
         _mapController!.animateCamera(
@@ -387,7 +354,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
           ),
         );
       } catch (e2) {
-        print('❌ Error with fallback camera move: $e2');
       }
     }
   }
@@ -450,7 +416,6 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
                   }
                 });
               } catch (e) {
-                print('❌ Error in onMapCreated: $e');
               }
             },
           ),

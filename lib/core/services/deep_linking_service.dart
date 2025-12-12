@@ -26,12 +26,10 @@ class DeepLinkingService {
     Function(Map<String, dynamic>)? onDeepLinkReceived,
   }) async {
     if (_isInitialized) {
-      print('⚠️ DeepLinkingService: Already initialized');
       return;
     }
 
     try {
-      print('🚀 Initializing AppsFlyer SDK...');
       
       // Set up deep link callback
       _onDeepLinkReceived = onDeepLinkReceived;
@@ -48,33 +46,23 @@ class DeepLinkingService {
       
       // Set up deep link listener
       _appsflyerSdk?.onInstallConversionData((data) {
-        print('📥 AppsFlyer: Install conversion data received');
-        print('📋 Data: $data');
         
         // Check if this is a deferred deep link (user installed after clicking link)
         final status = data['status'];
         if (status == 'NON_ORGANIC' && data['is_first_launch'] == true) {
-          print('✅ Deferred deep link detected - first launch after install');
           _handleDeepLinkData(data);
         } else if (status == 'ORGANIC') {
-          print('ℹ️ Organic install - no deep link data');
         }
       });
 
       // Set up deep link listener for when app is already installed
       _appsflyerSdk?.onDeepLinking((DeepLinkResult result) {
-        print('🔗 AppsFlyer: Deep link callback triggered');
-        print('📋 Status: ${result.status}');
-        print('📋 Deep Link: ${result.deepLink}');
         
         // Handle AppsFlyer OneLinks (FOUND status)
         if (result.deepLink != null && result.status == Status.FOUND) {
-          print('✅ AppsFlyer: Processing AppsFlyer OneLink deep link');
           final clickEvent = result.deepLink!.clickEvent;
           _handleDeepLinkData(clickEvent);
         } else {
-          print('ℹ️ AppsFlyer: NOT_FOUND - Custom URL scheme or non-AppsFlyer link');
-          print('   This is expected for proplinq:// links - uni_links will handle it');
         }
       });
 
@@ -85,84 +73,57 @@ class DeepLinkingService {
         registerOnDeepLinkingCallback: true,
       );
 
-      print('✅ AppsFlyer SDK initialized successfully');
       
       // Set up uni_links listener for custom URL schemes
       await _initUniLinks();
       
       _isInitialized = true;
     } catch (e) {
-      print('❌ Error initializing AppsFlyer SDK: $e');
     }
   }
 
   /// Initialize uni_links for custom URL scheme handling
   Future<void> _initUniLinks() async {
     try {
-      print('🔗 Initializing uni_links for custom URL schemes...');
       
       // Handle initial link (when app is opened via deep link)
       try {
-        print('🔍 Checking for initial deep link...');
         final initialLink = await getInitialUri();
-        print('🔍 Initial link check result: $initialLink');
         if (initialLink != null) {
-          print('📥 Initial deep link found: $initialLink');
-          print('   Full URI: $initialLink');
-          print('   Scheme: ${initialLink.scheme}');
-          print('   Host: ${initialLink.host}');
-          print('   Path: ${initialLink.path}');
           _handleDeepLink(initialLink.toString());
         } else {
-          print('ℹ️ No initial deep link found');
         }
       } catch (e) {
-        print('⚠️ Error getting initial link: $e');
       }
 
       // Listen for incoming links when app is already running
       _uriLinkSubscription = uriLinkStream.listen(
         (Uri? uri) {
-          print('🔔 uni_links: Received URI in stream: $uri');
           if (uri != null) {
-            print('📥 Deep link received while app is running: $uri');
-            print('   Scheme: ${uri.scheme}');
-            print('   Host: ${uri.host}');
-            print('   Path: ${uri.path}');
-            print('   Path segments: ${uri.pathSegments}');
             _handleDeepLink(uri.toString());
           } else {
-            print('⚠️ uni_links: Received null URI');
           }
         },
         onError: (err) {
-          print('❌ Error listening to deep links: $err');
         },
         cancelOnError: false,
       );
 
-      print('✅ uni_links initialized successfully');
     } catch (e) {
-      print('❌ Error initializing uni_links: $e');
     }
   }
 
   /// Handle deep link URL
   void _handleDeepLink(String url) {
-    print('🔗 Processing deep link: $url');
     
     try {
       final uri = Uri.parse(url);
-      print('   Parsed URI - Scheme: ${uri.scheme}, Host: ${uri.host}, Path: ${uri.path}');
-      print('   Path segments: ${uri.pathSegments}');
-      print('   Query params: ${uri.queryParameters}');
       
       final scheme = uri.scheme; // proplinq
       final host = uri.host; // listing, shortlet, hotel
       final pathSegments = uri.pathSegments; // [propertyId]
       
       if (scheme != 'proplinq') {
-        print('⚠️ Unsupported deep link scheme: $scheme');
         return;
       }
 
@@ -170,27 +131,20 @@ class DeepLinkingService {
       String? propertyId;
       if (pathSegments.isNotEmpty) {
         propertyId = pathSegments.first;
-        print('   Extracted property ID from pathSegments: $propertyId');
       } else if (uri.queryParameters.containsKey('id')) {
         propertyId = uri.queryParameters['id'];
-        print('   Extracted property ID from query params: $propertyId');
       } else {
         // Try to extract from the path directly if pathSegments is empty
         final path = uri.path;
         if (path.isNotEmpty && path.startsWith('/')) {
           propertyId = path.substring(1); // Remove leading slash
-          print('   Extracted property ID from path: $propertyId');
         }
       }
 
       if (propertyId == null || propertyId.isEmpty) {
-        print('⚠️ No property ID found in deep link');
-        print('   URL: $url');
-        print('   Scheme: $scheme, Host: $host, Path: ${uri.path}');
         return;
       }
 
-      print('✅ Parsed deep link - Type: $host, Property ID: $propertyId');
 
       // Determine property type based on host
       String propertyType = 'listing'; // default
@@ -212,14 +166,12 @@ class DeepLinkingService {
         _onDeepLinkReceived!(_pendingDeepLinkData!);
       }
     } catch (e) {
-      print('❌ Error parsing deep link: $e');
     }
   }
 
   /// Handle AppsFlyer deep link data
   void _handleDeepLinkData(Map<String, dynamic> data) {
     try {
-      print('📋 Processing AppsFlyer deep link data...');
       
       // Extract deep link value from AppsFlyer data
       final deepLinkValue = data['deep_link_value'];
@@ -232,20 +184,12 @@ class DeepLinkingService {
       final mediaSource = data['media_source'];
       final campaign = data['campaign'];
       
-      print('📋 Deep Link Value: $deepLinkValue');
-      print('📋 Deep Link Sub1: $deepLinkSub1');
-      print('📋 Deep Link Sub2: $deepLinkSub2');
-      print('📋 Deep Link Sub3: $deepLinkSub3');
-      print('📋 Media Source: $mediaSource');
-      print('📋 Campaign: $campaign');
-      print('📋 Custom Payload: $customPayload');
       
       String? propertyId;
       String? propertyType;
       
       // Priority 1: If deep_link_value is "property_page", use deep_link_sub1 for property ID
       if (deepLinkValue != null && deepLinkValue.toString() == 'property_page') {
-        print('📋 Detected property_page deep link - extracting from deep_link_sub1');
         propertyId = deepLinkSub1?.toString();
         // Property type can be determined from other parameters or default to listing
         propertyType = 'listing'; // Default, will be updated if found elsewhere
@@ -292,7 +236,6 @@ class DeepLinkingService {
       }
       
       if (propertyId != null && propertyId.isNotEmpty) {
-        print('✅ Extracted Property ID: $propertyId, Type: $propertyType');
         
         // Store pending deep link data
         _pendingDeepLinkData = {
@@ -308,10 +251,8 @@ class DeepLinkingService {
           _onDeepLinkReceived!(_pendingDeepLinkData!);
         }
       } else {
-        print('⚠️ Could not extract property ID from AppsFlyer data');
       }
     } catch (e) {
-      print('❌ Error handling AppsFlyer deep link data: $e');
     }
   }
 
@@ -335,10 +276,8 @@ class DeepLinkingService {
     try {
       if (_appsflyerSdk != null) {
         await _appsflyerSdk?.logEvent(eventName, eventValues);
-        print('📊 AppsFlyer: Logged event $eventName');
       }
     } catch (e) {
-      print('❌ Error logging AppsFlyer event: $e');
     }
   }
 
@@ -346,9 +285,7 @@ class DeepLinkingService {
   void setUserId(String userId) {
     try {
       _appsflyerSdk?.setCustomerUserId(userId);
-      print('👤 AppsFlyer: Set user ID to $userId');
     } catch (e) {
-      print('❌ Error setting AppsFlyer user ID: $e');
     }
   }
 

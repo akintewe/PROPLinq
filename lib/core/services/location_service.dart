@@ -20,7 +20,6 @@ class LocationService {
     _cachedPosition = null;
     _cachedNearbyAreas = null;
     _cacheTimestamp = null;
-    print('🗑️ Location cache cleared');
   }
 
   /// Get current location of the user (with caching)
@@ -30,14 +29,12 @@ class LocationService {
       if (_cachedPosition != null && 
           _cacheTimestamp != null && 
           DateTime.now().difference(_cacheTimestamp!) < _cacheExpiry) {
-        print('✅ Using cached location');
         return _cachedPosition;
       }
 
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print('❌ Location services are disabled');
         return null;
       }
 
@@ -46,13 +43,11 @@ class LocationService {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          print('❌ Location permissions are denied');
           return null;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print('❌ Location permissions are permanently denied');
         return null;
       }
 
@@ -65,10 +60,8 @@ class LocationService {
       _cachedPosition = position;
       _cacheTimestamp = DateTime.now();
 
-      print('✅ Current location: ${position.latitude}, ${position.longitude}');
       return position;
     } catch (e) {
-      print('❌ Error getting current location: $e');
       return null;
     }
   }
@@ -81,14 +74,12 @@ class LocationService {
       if (_cachedNearbyAreas != null && 
           _cacheTimestamp != null && 
           DateTime.now().difference(_cacheTimestamp!) < _cacheExpiry) {
-        print('✅ Using cached nearby areas');
         return _cachedNearbyAreas!;
       }
 
       final lat = position.latitude;
       final lng = position.longitude;
       
-      print('📍 Current location: $lat, $lng');
       
       // Determine which region the user is in and return real location names
       final region = _determineRegion(lat, lng);
@@ -124,10 +115,8 @@ class LocationService {
       _cachedNearbyAreas = nearbyAreas;
       _cacheTimestamp = DateTime.now();
       
-      print('📍 Generated ${nearbyAreas.length} nearby areas for region: $region');
       return nearbyAreas;
     } catch (e) {
-      print('❌ Error getting nearby areas: $e');
       return [];
     }
   }
@@ -359,11 +348,9 @@ class LocationService {
     try {
       final position = await getCurrentLocation();
       if (position == null) {
-        print('❌ Cannot filter by distance: No current location available');
         return properties; // Return all properties if no location
       }
 
-      print('📍 Filtering properties within ${maxDistanceKm}km of ${position.latitude}, ${position.longitude}');
       
       final filteredProperties = <PropertyModel>[];
       
@@ -379,22 +366,17 @@ class LocationService {
           );
           
           if (distance <= maxDistanceKm) {
-            print('✅ Property within range (${distance.toStringAsFixed(1)}km): ${property.title} - ${property.location}');
             filteredProperties.add(property);
           } else {
-            print('❌ Property too far (${distance.toStringAsFixed(1)}km): ${property.title} - ${property.location}');
           }
         } else {
           // If we can't determine coordinates, include the property (fallback)
-          print('⚠️ Cannot determine coordinates for: ${property.title} - ${property.location}, including anyway');
           filteredProperties.add(property);
         }
       }
       
-      print('📍 Filtered ${filteredProperties.length} properties within ${maxDistanceKm}km');
       return filteredProperties;
     } catch (e) {
-      print('❌ Error filtering properties by distance: $e');
       return properties; // Return all properties if there's an error
     }
   }

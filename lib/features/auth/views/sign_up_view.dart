@@ -105,44 +105,17 @@ class _SignUpViewState extends State<SignUpView> {
         whatsappNumber: !_isHomeSeeker ? _whatsappNumberController.text.trim() : null,
       );
 
-      print('🔄 Making registration request...');
-      print('📝 Registration Data:');
-      print('  - Full Name: ${registerRequest.fullName}');
-      print('  - Email: ${registerRequest.email}');
-      print('  - User Type: ${registerRequest.userType}');
-      print('  - Phone: ${registerRequest.phoneNumber}');
-      print('  - Location: ${registerRequest.location}');
-      print('  - Terms Accepted: ${registerRequest.termsAccepted}');
       if (!_isHomeSeeker) {
-        print('  - Agency Name: ${registerRequest.agencyName}');
-        print('  - Agent Type: ${registerRequest.agentType}');
-        print('  - WhatsApp: ${registerRequest.whatsappNumber}');
       }
 
       // Make API call
       final response = await _authService.register(registerRequest);
 
-      print('📋 Registration Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
-      print('🔍 Raw Response Data: ${response.data?.toJson()}');
       
       if (response.data != null) {
-        print('👤 User Data:');
-        print('  - ID: ${response.data!.user.id}');
-        print('  - Name: ${response.data!.user.fullName}');
-        print('  - Email: ${response.data!.user.email}');
-        print('  - User Type: "${response.data!.user.userType}"');
-        print('  - Location: ${response.data!.user.location}');
-        print('  - Agency Name: ${response.data!.user.agencyName}');
-        print('  - Agent Type: ${response.data!.user.agentType}');
-        print('🔑 Token: ${response.data!.token}');
-        print('🕒 Token Type: ${response.data!.tokenType}');
       }
       
       if (response.errors != null && response.errors!.isNotEmpty) {
-        print('❌ Errors: ${response.errors}');
       }
 
       if (response.success && response.data != null) {

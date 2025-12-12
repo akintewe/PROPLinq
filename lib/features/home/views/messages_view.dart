@@ -28,33 +28,102 @@ class _MessagesViewState extends State<MessagesView> {
   bool _isFetching = false;
   bool _isFirstLoad = true;
   Map<String, bool> _unreadStatusCache = {}; // Cache for unread status
+  Map<String, bool> _onlineStatusCache = {}; // Cache for online status
+  Timer? _onlineStatusRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
     _searchController.addListener(_filterConversations);
+    _updateOnlineStatus(); // Update current user's online status
+    _checkOnlineStatuses(); // Check online statuses for all conversations
+    
     // Periodically refresh conversations list (faster)
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (!mounted) return;
       _loadConversations();
     });
+    
+    // Periodically check online statuses
+    _onlineStatusRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!mounted) return;
+      _checkOnlineStatuses();
+    });
+    
+    // Update current user's online status every 30 seconds
+    Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      _updateOnlineStatus();
+    });
+  }
+
+  Future<void> _updateOnlineStatus() async {
+    print('💚 [MessagesView] Updating current user online status...');
+    final success = await _chatService.updateOnlineStatus();
+    print('💚 [MessagesView] Update online status result: $success');
+  }
+
+  Future<void> _checkOnlineStatuses() async {
+    if (_conversations.isEmpty) {
+      print('💚 [MessagesView] No conversations to check online status');
+      return;
+    }
+    
+    try {
+      // Extract user IDs from conversations
+      final userIds = _conversations
+          .map((conv) => conv['other_person_id']?.toString())
+          .where((id) => id != null && id.isNotEmpty)
+          .map((id) => int.tryParse(id!))
+          .where((id) => id != null)
+          .cast<int>()
+          .toList();
+      
+      print('💚 [MessagesView] Checking online status for user IDs: $userIds');
+      if (userIds.isEmpty) {
+        print('⚠️ [MessagesView] No valid user IDs found');
+        return;
+      }
+      
+      final statusMap = await _chatService.checkOnlineStatus(userIds);
+      print('💚 [MessagesView] Received status map: $statusMap');
+      
+      if (mounted) {
+        setState(() {
+          // Update cache with string keys (matching other_person_id format)
+          statusMap.forEach((key, value) {
+            _onlineStatusCache[key] = value;
+            print('💚 [MessagesView] Cached online status for user $key: $value');
+          });
+        });
+        print('💚 [MessagesView] Updated online status cache. Total cached: ${_onlineStatusCache.length}');
+      }
+    } catch (e, stackTrace) {
+      print('❌ [MessagesView] Error checking online statuses: $e');
+      print('❌ [MessagesView] Stack trace: $stackTrace');
+    }
+  }
+
+  bool _isUserOnline(String? userId) {
+    if (userId == null || userId.isEmpty) return false;
+    return _onlineStatusCache[userId] ?? false;
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _refreshTimer?.cancel();
+    _onlineStatusRefreshTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _loadConversations() async {
     if (_isFetching) return;
-    if (!mounted) return; // Check mounted before starting
+    if (!mounted) return;
     
     _isFetching = true;
     try {
-      print('📥 Loading conversations from API...');
       if (_isFirstLoad && mounted) {
         setState(() {
           _isLoading = true;
@@ -62,17 +131,14 @@ class _MessagesViewState extends State<MessagesView> {
       }
       
       final chatData = await _chatService.getUserChats();
-      if (!mounted) return; // Check mounted after async operation
       
-      print('📥 Received ${chatData.length} conversations from API');
-      print('📥 Chat data: $chatData');
+      if (!mounted) return;
       
       // Get current user to determine who is sender vs receiver
       final currentUser = await _authService.getCurrentUser();
-      if (!mounted) return; // Check mounted after async operation
+      if (!mounted) return;
       
       final currentUserId = currentUser?.id.toString();
-      print('📥 Current user ID: $currentUserId');
       
       // Group conversations by receiver_id (for home seekers) or sender_id (for agents)
       Map<String, Map<String, dynamic>> conversationMap = {};
@@ -93,12 +159,6 @@ class _MessagesViewState extends State<MessagesView> {
         final userName = user?['name'] as String?;
         final userProfileImage = user?['profile_image_url'] as String?;
         
-        print('📥 Processing chat - Other Person ID: $otherPersonId, Property: $propertyId');
-        print('📥 Chat - Message: $message, Received at: $receivedAt');
-        print('📥 Chat - Sender ID: $senderId, Current User ID: $currentUserId');
-        print('📥 Chat - Is sent by current user: $isSentByCurrentUser');
-        print('📥 Chat - User: $userName, Profile Image: $userProfileImage');
-        
         // Use the other person's ID as the conversation key
         String conversationKey = otherPersonId;
         
@@ -108,7 +168,6 @@ class _MessagesViewState extends State<MessagesView> {
         // Unread = received_at is null AND current user is NOT the sender
         // (meaning the message was sent TO the current user and they haven't read it yet)
         final isUnread = receivedAt == null && !isSentByCurrentUser;
-        print('📥 Chat - Is unread: $isUnread (receivedAt: $receivedAt, sentByMe: $isSentByCurrentUser)');
         
         // Create or update conversation entry
         if (!conversationMap.containsKey(conversationKey)) {
@@ -174,23 +233,10 @@ class _MessagesViewState extends State<MessagesView> {
         return bTime.compareTo(aTime); // Most recent conversations at the top
       });
       
-      print('📥 Processed ${conversations.length} unique conversations');
-      print('📥 Conversations sorted by sent_at (newest first)');
-      
-      // Debug: Print conversation timestamps and unread status to verify sorting
-      for (int i = 0; i < conversations.length; i++) {
-        final conv = conversations[i];
-        final time = conv['last_message_time'] as DateTime;
-        final message = conv['message']?.toString() ?? '';
-        final unreadCount = conv['unread_count'] as int;
-        final hasUnread = conv['has_unread'] as bool;
-        print('📥 Conversation $i: $time - ${message.length > 20 ? "${message.substring(0, 20)}..." : message} - Unread: $unreadCount (has_unread: $hasUnread)');
-      }
-      
       // Precompute unread status for all conversations
       await _updateUnreadStatusCache(conversations);
       
-      if (!mounted) return; // Check mounted before setState
+      if (!mounted) return;
       
       setState(() {
         _conversations = conversations;
@@ -200,8 +246,7 @@ class _MessagesViewState extends State<MessagesView> {
       });
       
     } catch (e) {
-      print('❌ Error loading conversations: $e');
-      if (!mounted) return; // Check mounted before setState in catch
+      if (!mounted) return;
       
       setState(() {
         _conversations = [];
@@ -378,8 +423,6 @@ class _MessagesViewState extends State<MessagesView> {
     final otherPersonId = conversation['other_person_id']?.toString() ?? '';
     final propertyId = conversation['property_id']?.toString() ?? '';
     
-    print('🚀 Opening chat with user: $otherPersonId, property: $propertyId');
-    print('🚀 Conversation data: $conversation');
     
     // Mark conversation as read when opened
     _markConversationAsRead(conversation);
@@ -416,8 +459,6 @@ class _MessagesViewState extends State<MessagesView> {
       }
     }
     
-    print('🚀 Extracted phone number: $phoneNumber');
-    print('🚀 Extracted email: $email');
     
     final agentData = {
       'id': otherPersonId,
@@ -450,7 +491,6 @@ class _MessagesViewState extends State<MessagesView> {
     final lastSeenKey = 'last_seen_$conversationKey';
     await prefs.setString(lastSeenKey, DateTime.now().toIso8601String());
     
-    print('✅ Marked conversation $conversationKey as read at ${DateTime.now().toIso8601String()}');
     
     // Update local state and cache to immediately remove the unread indicator
     setState(() {
@@ -713,10 +753,10 @@ class _MessagesViewState extends State<MessagesView> {
                                     ],
                                   ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                                ),
+                              );
+                            },
+                          ),
             ),
           ],
         ),

@@ -566,7 +566,6 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                               apiKey: 'AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ',
           onLocationSelected: (location) {
             // Optional: Add any additional logic when location is selected
-            print('📍 Location selected: $location');
           },
         ),
         

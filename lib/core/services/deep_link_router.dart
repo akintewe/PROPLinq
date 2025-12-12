@@ -19,12 +19,10 @@ class DeepLinkRouter {
     String? propertyType,
   }) async {
     try {
-      print('🔗 DeepLinkRouter: Navigating to property $propertyId');
       
       // Parse property ID as integer
       final int? parsedId = int.tryParse(propertyId);
       if (parsedId == null) {
-        print('❌ DeepLinkRouter: Invalid property ID: $propertyId');
         _showError(context, 'Invalid property ID');
         return;
       }
@@ -42,12 +40,10 @@ class DeepLinkRouter {
       }
 
       // Fetch property details from API
-      print('📥 DeepLinkRouter: Fetching property details for ID: $parsedId...');
       PropertyModel? propertyModel;
       try {
         propertyModel = await _propertyService.fetchPropertyDetails(parsedId);
       } catch (e) {
-        print('❌ DeepLinkRouter: Exception fetching property: $e');
         propertyModel = null;
       }
 
@@ -56,17 +52,10 @@ class DeepLinkRouter {
         try {
           Navigator.of(loadingContext, rootNavigator: true).pop();
         } catch (e) {
-          print('⚠️ DeepLinkRouter: Could not dismiss loading indicator: $e');
         }
       }
 
       if (propertyModel == null) {
-        print('❌ DeepLinkRouter: Property not found');
-        print('   Property ID $propertyId does not exist or could not be loaded');
-        print('   This might mean:');
-        print('   1. The property ID doesn\'t exist in the database');
-        print('   2. The property fetch failed (network issue)');
-        print('   3. The workaround fetch is not finding the property');
         
         // Show error message with helpful info
         final navContext = context ?? navigatorKey.currentContext;
@@ -88,10 +77,6 @@ class DeepLinkRouter {
         return;
       }
       
-      print('✅ DeepLinkRouter: Property found successfully');
-      print('   Property Title: ${propertyModel.title}');
-      print('   Property Type: ${propertyModel.type}');
-      print('   Property ID: ${propertyModel.id}');
 
       // Convert PropertyModel to Map for PropertyDetailsView
       final propertyData = _propertyModelToMap(propertyModel);
@@ -99,7 +84,6 @@ class DeepLinkRouter {
       // Navigate to property details - use root navigator to ensure it works from any screen
       final navContext = context ?? navigatorKey.currentContext;
       if (navContext != null && navContext.mounted) {
-        print('✅ DeepLinkRouter: Navigating to PropertyDetailsView');
         try {
           // Use rootNavigator and pushReplacement if we're coming from deep link
           // This ensures we can navigate even if there's no valid context on current screen
@@ -111,10 +95,7 @@ class DeepLinkRouter {
               ),
             ),
           );
-          print('✅ DeepLinkRouter: Successfully navigated to PropertyDetailsView');
         } catch (e, stackTrace) {
-          print('❌ DeepLinkRouter: Error during navigation: $e');
-          print('❌ Stack trace: $stackTrace');
           // Try with regular navigator as fallback
           try {
             Navigator.of(navContext).push(
@@ -125,15 +106,11 @@ class DeepLinkRouter {
                 ),
               ),
             );
-            print('✅ DeepLinkRouter: Navigated using regular navigator');
           } catch (e2) {
-            print('❌ DeepLinkRouter: Both navigation methods failed: $e2');
             _showError(context, 'Failed to open property. Please try again.');
           }
         }
       } else {
-        print('⚠️ DeepLinkRouter: No valid context for navigation');
-        print('   Attempting to use navigatorKey...');
         // Try to use navigatorKey directly
         if (navigatorKey.currentContext != null && navigatorKey.currentContext!.mounted) {
           try {
@@ -145,33 +122,25 @@ class DeepLinkRouter {
                 ),
               ),
             );
-            print('✅ DeepLinkRouter: Navigated using navigatorKey');
           } catch (e) {
-            print('❌ DeepLinkRouter: Navigation with navigatorKey failed: $e');
             _showError(context, 'Failed to open property. Please try again.');
           }
         } else {
-          print('❌ DeepLinkRouter: navigatorKey.currentContext is also null');
           _showError(context, 'Unable to navigate. Please restart the app.');
         }
       }
     } catch (e, stackTrace) {
-      print('❌ DeepLinkRouter: Error navigating to property: $e');
-      print('❌ Full stack trace:');
-      print(stackTrace);
       
       // Dismiss loading indicator if still showing
       if (context != null && context.mounted) {
         try {
           Navigator.of(context, rootNavigator: true).pop();
         } catch (popError) {
-          print('⚠️ DeepLinkRouter: Could not dismiss loading: $popError');
         }
       }
       
       // Show detailed error
       final errorMessage = 'Failed to load property: ${e.toString()}';
-      print('❌ Showing error message: $errorMessage');
       _showError(context, errorMessage);
     }
   }
@@ -274,15 +243,11 @@ class DeepLinkRouter {
     try {
       final propertyId = deepLinkData['propertyId']?.toString();
       if (propertyId == null || propertyId.isEmpty) {
-        print('⚠️ DeepLinkRouter: No property ID in deep link data');
         return;
       }
 
       final propertyType = deepLinkData['propertyType']?.toString();
       
-      print('🔗 DeepLinkRouter: Handling deep link');
-      print('  - Property ID: $propertyId');
-      print('  - Property Type: $propertyType');
 
       await navigateToProperty(
         context: context,
@@ -290,7 +255,6 @@ class DeepLinkRouter {
         propertyType: propertyType,
       );
     } catch (e) {
-      print('❌ DeepLinkRouter: Error handling deep link: $e');
     }
   }
 }

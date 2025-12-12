@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/api_constants.dart';
 import 'storage_service.dart';
@@ -79,8 +78,6 @@ class ApiService {
   // Handle API response
   ApiResponse<T> _handleResponse<T>(http.Response response, T Function(Map<String, dynamic>) fromJson) {
     try {
-      print('🌐 Raw API Response Body: ${response.body}');
-      
       // Handle empty or whitespace-only responses (common for DELETE requests)
       final body = response.body.trim();
       if (body.isEmpty) {

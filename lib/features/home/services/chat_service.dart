@@ -20,18 +20,11 @@ class ChatService {
   }) async {
     try {
       final currentUser = await _authService.getCurrentUser();
-      print('📤 Sending chat message: $message');
-      print('📤 From: $senderId To: $receiverId Property: $propertyId');
-      print('📤 Current authenticated user ID: ${currentUser?.id}');
-      print('📤 Sender ID being sent: $senderId');
-      print('📤 Are they the same? ${currentUser?.id.toString() == senderId}');
       
       final token = await _storageService.getToken();
       
       // If file is provided, use form-data
       if (file != null && file.isNotEmpty) {
-        print('📤 File path being sent: $file');
-        print('📤 Sending as form-data with file path as string');
         
         final dio = Dio();
         final Map<String, dynamic> formFields = {
@@ -46,8 +39,6 @@ class ChatService {
         }
         final formData = FormData.fromMap(formFields);
 
-        print('📤 Form data: ${formData.fields}');
-        print('📤 File field: ${formData.files}');
 
         final response = await dio.post(
           '${ApiConstants.apiBaseUrl}${ApiConstants.chatWebhook}',
@@ -60,12 +51,9 @@ class ChatService {
           ),
         );
 
-        print('📤 Chat webhook response: ${response.statusCode}');
-        print('📤 Chat webhook data: ${response.data}');
         return response.statusCode == 200 || response.statusCode == 201;
       } else {
         // No file, send as regular JSON
-        print('📤 Sending as JSON without file');
         
         final Map<String, dynamic> body = {
           'sender_id': int.parse(senderId),
@@ -78,7 +66,6 @@ class ChatService {
           body['property_id'] = parsedPropertyId;
         }
 
-        print('📤 Chat request body: $body');
 
         final response = await _apiService.post(
           ApiConstants.chatWebhook,
@@ -86,22 +73,12 @@ class ChatService {
           requiresAuth: true, // This will add the Bearer token
         );
 
-        print('📤 Chat webhook response: ${response.statusCode}');
-        print('📤 Chat webhook data: ${response.data}');
         return response.statusCode == 200 || response.statusCode == 201;
       }
     } catch (e) {
-      print('❌ Error sending chat message: $e');
       
       // Print more detailed error information
       if (e is DioException) {
-        print('❌ DioException details:');
-        print('  - Type: ${e.type}');
-        print('  - Message: ${e.message}');
-        print('  - Response: ${e.response?.data}');
-        print('  - Status Code: ${e.response?.statusCode}');
-        print('  - Request Path: ${e.requestOptions.path}');
-        print('  - Request Data: ${e.requestOptions.data}');
       }
       
       return false;
@@ -112,13 +89,6 @@ class ChatService {
   Future<List<Map<String, dynamic>>> getConversation(String receiverId) async {
     try {
       final token = await _storageService.getToken();
-      final currentUser = await _authService.getCurrentUser();
-      
-      print('📥 Fetching conversation with receiver: $receiverId');
-      print('📥 Current user ID (from auth): ${currentUser?.id}');
-      print('📥 Current user email: ${currentUser?.email}');
-      print('📥 Full token: $token');
-      print('📥 Full URL: ${ApiConstants.apiBaseUrl}/chats/conversation/$receiverId');
       
       // Use Dio directly to get raw response
       final dio = Dio();
@@ -133,34 +103,39 @@ class ChatService {
           },
         ),
       );
-
-      print('📥 Get conversation response: ${response.statusCode}');
-      print('📥 Raw response data: ${response.data}');
       
       if (response.statusCode == 200) {
         final data = response.data;
-        print('📥 Parsing conversation data: $data');
         
         if (data is Map<String, dynamic> && data.containsKey('data')) {
-          final chatData = data['data'] as List<dynamic>?;
-          print('📥 Found conversation with ${chatData?.length ?? 0} messages');
-          if (chatData != null && chatData.isNotEmpty) {
-            print('📥 First message: ${chatData.first}');
+          final innerData = data['data'];
+          
+          // Check if innerData contains 'messages' key (new API structure: data.data.messages)
+          if (innerData is Map<String, dynamic>) {
+            if (innerData.containsKey('messages')) {
+              final messagesValue = innerData['messages'];
+              
+              if (messagesValue is List) {
+                final chatData = messagesValue;
+                return List<Map<String, dynamic>>.from(chatData);
+              }
+            }
           }
-          return List<Map<String, dynamic>>.from(chatData ?? []);
+          
+          // Fallback: check if data['data'] is directly a List (old API structure)
+          if (innerData is List) {
+            return List<Map<String, dynamic>>.from(innerData);
+          }
+        } else if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
         }
-        print('📥 No data key found in conversation response');
         return [];
       }
       
       return [];
     } catch (e) {
-      print('❌ Error fetching conversation: $e');
-      print('❌ Full error details: $e');
-      
       // If it's a 404, it means no conversation exists yet - this is normal
       if (e.toString().contains('404')) {
-        print('📥 No conversation found (404) - this is normal for new conversations');
         return [];
       }
       
@@ -171,11 +146,9 @@ class ChatService {
   // Get user chats (legacy method - keeping for compatibility)
   Future<List<Map<String, dynamic>>> getUserChats() async {
     try {
-      print('📥 Fetching user chats...');
-      
       // Use Dio directly to get raw response since ApiService has issues with array data
       final dio = Dio();
-      final token = await _authService.getCurrentUser();
+      final token = await _storageService.getToken();
       
       final response = await dio.get(
         '${ApiConstants.apiBaseUrl}${ApiConstants.getUserChats}',
@@ -183,34 +156,25 @@ class ChatService {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            if (token != null) 'Authorization': 'Bearer ${await _storageService.getToken()}',
+            if (token != null) 'Authorization': 'Bearer $token',
           },
         ),
       );
-
-      print('📥 Get user chats response: ${response.statusCode}');
-      print('📥 Raw response data: ${response.data}');
-      print('📥 Response data type: ${response.data.runtimeType}');
       
       if (response.statusCode == 200) {
         final data = response.data;
-        print('📥 Parsing response data: $data');
         
         if (data is Map<String, dynamic> && data.containsKey('data')) {
           final chatData = data['data'] as List<dynamic>?;
-          print('📥 Found data key with ${chatData?.length ?? 0} chats');
-          if (chatData != null && chatData.isNotEmpty) {
-            print('📥 First chat item: ${chatData.first}');
-          }
           return List<Map<String, dynamic>>.from(chatData ?? []);
+        } else if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
         }
-        print('📥 No data key found in response');
         return [];
       }
       
       return [];
     } catch (e) {
-      print('❌ Error fetching user chats: $e');
       return [];
     }
   }
@@ -225,11 +189,9 @@ class ChatService {
     try {
       final currentUser = await _authService.getCurrentUser();
       if (currentUser == null) {
-        print('❌ User not authenticated');
         return false;
       }
 
-      print('📤 Sending in-app message to $recipientId about property $propertyId');
       
       return await sendMessage(
         message: message,
@@ -239,7 +201,6 @@ class ChatService {
         file: file,
       );
     } catch (e) {
-      print('❌ Error sending in-app message: $e');
       return false;
     }
   }
@@ -250,46 +211,115 @@ class ChatService {
     required String propertyId,
   }) async {
     try {
-      print('📥 Fetching chat history for agent $agentId, property $propertyId');
-      
       // Use the new conversation endpoint with receiver_id
       final conversation = await getConversation(agentId);
-      print('📥 Conversation received: ${conversation.length} messages');
-      print('📥 Conversation data: $conversation');
       
       // Filter by property_id if needed (since conversation is already filtered by receiver_id)
       final filteredChats = conversation.where((chat) {
         final chatPropertyId = chat['property_id']?.toString();
-        print('📥 Checking chat - Property: $chatPropertyId');
-        print('📥 Looking for - Property: $propertyId');
         
         // If no property_id in chat, show all messages for this agent
         if (chatPropertyId == null || chatPropertyId.isEmpty) {
-          print('📥 Chat has no property_id, showing all messages for this agent');
           return true;
         }
         
         return chatPropertyId == propertyId;
       }).toList();
       
-      print('📥 Filtered chats: ${filteredChats.length} messages');
       return filteredChats;
     } catch (e) {
-      print('❌ Error fetching chat history: $e');
       return [];
     }
   }
 
-  // Mark message as read
+  // Mark message as received
   Future<bool> markMessageAsRead(String messageId) async {
     try {
-      // This would depend on your API structure
-      // For now, we'll just return true as a placeholder
-      print('✅ Marking message $messageId as read');
-      return true;
-    } catch (e) {
-      print('❌ Error marking message as read: $e');
+      print('💚 [ChatService] Marking message as received: messageId=$messageId');
+      final messageIdInt = int.tryParse(messageId);
+      if (messageIdInt == null) {
+        print('⚠️ [ChatService] Invalid message ID: $messageId');
+        return false;
+      }
+      
+      // Use Dio directly to make the request
+      final dio = Dio();
+      final token = await _storageService.getToken();
+      
+      print('💚 [ChatService] Making request to: ${ApiConstants.apiBaseUrl}${ApiConstants.markMessageReceived(messageIdInt)}');
+      
+      final response = await dio.post(
+        '${ApiConstants.apiBaseUrl}${ApiConstants.markMessageReceived(messageIdInt)}',
+        options: Options(
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      
+      print('💚 [ChatService] Mark message received response: statusCode=${response.statusCode}');
+      print('💚 [ChatService] Mark message received response data: ${response.data}');
+      
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e, stackTrace) {
+      print('❌ [ChatService] Error marking message as received: $e');
+      print('❌ [ChatService] Stack trace: $stackTrace');
+      if (e is DioException) {
+        print('❌ [ChatService] DioException response: ${e.response?.data}');
+        print('❌ [ChatService] DioException status: ${e.response?.statusCode}');
+      }
       return false;
+    }
+  }
+
+  // Get current user's online status
+  Future<Map<String, dynamic>?> getMyOnlineStatus() async {
+    try {
+      print('💚 [ChatService] Getting current user online status...');
+      
+      // Use Dio directly to make the request
+      final dio = Dio();
+      final token = await _storageService.getToken();
+      
+      print('💚 [ChatService] Making request to: ${ApiConstants.apiBaseUrl}${ApiConstants.myOnlineStatus}');
+      
+      final response = await dio.get(
+        '${ApiConstants.apiBaseUrl}${ApiConstants.myOnlineStatus}',
+        options: Options(
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      
+      print('💚 [ChatService] Get my online status response: statusCode=${response.statusCode}');
+      print('💚 [ChatService] Get my online status response data: ${response.data}');
+      print('💚 [ChatService] Response data type: ${response.data.runtimeType}');
+      
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        
+        // Handle different response structures
+        if (data is Map<String, dynamic>) {
+          // Check for nested data
+          if (data.containsKey('data')) {
+            return data['data'] as Map<String, dynamic>?;
+          }
+          return data;
+        }
+      }
+      
+      return null;
+    } catch (e, stackTrace) {
+      print('❌ [ChatService] Error getting my online status: $e');
+      print('❌ [ChatService] Stack trace: $stackTrace');
+      if (e is DioException) {
+        print('❌ [ChatService] DioException response: ${e.response?.data}');
+        print('❌ [ChatService] DioException status: ${e.response?.statusCode}');
+      }
+      return null;
     }
   }
 
@@ -307,20 +337,166 @@ class ChatService {
       
       return unreadCount;
     } catch (e) {
-      print('❌ Error getting unread message count: $e');
       return 0;
+    }
+  }
+
+  // Update current user's online status
+  Future<bool> updateOnlineStatus() async {
+    try {
+      print('💚 [ChatService] Updating online status...');
+      final response = await _apiService.post(
+        ApiConstants.updateOnlineStatus,
+        body: {},
+        requiresAuth: true,
+      );
+      print('💚 [ChatService] Update online status response: statusCode=${response.statusCode}');
+      print('💚 [ChatService] Update online status response data: ${response.data}');
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e, stackTrace) {
+      print('❌ [ChatService] Error updating online status: $e');
+      print('❌ [ChatService] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
+  // Check online status for multiple users
+  Future<Map<String, bool>> checkOnlineStatus(List<int> userIds) async {
+    try {
+      print('💚 [ChatService] Checking online status for user IDs: $userIds');
+      print('💚 [ChatService] Request body: {user_ids: $userIds}');
+      
+      // Use Dio directly to see raw response, similar to chat endpoints
+      final dio = Dio();
+      final token = await _storageService.getToken();
+      
+      print('💚 [ChatService] Making request to: ${ApiConstants.apiBaseUrl}${ApiConstants.checkOnlineStatus}');
+      
+      final response = await dio.post(
+        '${ApiConstants.apiBaseUrl}${ApiConstants.checkOnlineStatus}',
+        data: {
+          'user_ids': userIds,
+        },
+        options: Options(
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      
+      print('💚 [ChatService] Raw response statusCode: ${response.statusCode}');
+      print('💚 [ChatService] Raw response data: ${response.data}');
+      print('💚 [ChatService] Raw response data type: ${response.data.runtimeType}');
+      print('💚 [ChatService] Raw response headers: ${response.headers}');
+      
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        
+        // Check if response has nested data structure
+        if (data is Map<String, dynamic>) {
+          // Check for nested 'data' key first
+          if (data.containsKey('data')) {
+            final innerData = data['data'];
+            print('💚 [ChatService] Found nested data key: $innerData (type: ${innerData.runtimeType})');
+            
+            // Handle List format: data: [{id: 19, is_online: false}, ...]
+            if (innerData is List) {
+              print('💚 [ChatService] Data is a List, processing items...');
+              final Map<String, bool> statusMap = {};
+              for (var item in innerData) {
+                if (item is Map<String, dynamic>) {
+                  final userId = item['id']?.toString();
+                  final isOnline = item['is_online'];
+                  if (userId != null) {
+                    statusMap[userId] = isOnline == true || isOnline == 1;
+                    print('💚 [ChatService] User $userId: is_online=$isOnline -> ${statusMap[userId]}');
+                  }
+                }
+              }
+              print('💚 [ChatService] Final status map (from List): $statusMap');
+              return statusMap;
+            }
+            
+            // Handle Map format: data: {19: {is_online: true}, ...}
+            if (innerData is Map<String, dynamic>) {
+              final Map<String, bool> statusMap = {};
+              innerData.forEach((key, value) {
+                print('💚 [ChatService] Processing user $key: value=$value (type: ${value.runtimeType})');
+                // Handle both {user_id: {is_online: true}} and {user_id: true} formats
+                if (value is Map<String, dynamic> && value.containsKey('is_online')) {
+                  statusMap[key] = value['is_online'] == true;
+                } else if (value is bool) {
+                  statusMap[key] = value;
+                } else if (value is int) {
+                  statusMap[key] = value == 1;
+                }
+              });
+              print('💚 [ChatService] Final status map (from nested Map): $statusMap');
+              return statusMap;
+            }
+          }
+          
+          // Direct map structure (fallback)
+          final Map<String, bool> statusMap = {};
+          data.forEach((key, value) {
+            // Skip non-user keys
+            if (key == 'status' || key == 'message' || key == 'data') return;
+            
+            print('💚 [ChatService] Processing user $key: value=$value (type: ${value.runtimeType})');
+            // Handle both {user_id: {is_online: true}} and {user_id: true} formats
+            if (value is Map<String, dynamic> && value.containsKey('is_online')) {
+              statusMap[key] = value['is_online'] == true;
+            } else if (value is bool) {
+              statusMap[key] = value;
+            } else if (value is int) {
+              // Handle case where API returns 1/0 instead of true/false
+              statusMap[key] = value == 1;
+            }
+          });
+          print('💚 [ChatService] Final status map (direct map): $statusMap');
+          return statusMap;
+        } else if (data is List) {
+          print('💚 [ChatService] Response data is a List: $data');
+          // If response is a list, convert to map
+          final Map<String, bool> statusMap = {};
+          for (var item in data) {
+            if (item is Map<String, dynamic>) {
+              final userId = item['user_id']?.toString() ?? item['id']?.toString();
+              if (userId != null) {
+                final isOnline = item['is_online'] == true || item['is_online'] == 1;
+                statusMap[userId] = isOnline;
+                print('💚 [ChatService] Found user $userId: is_online=$isOnline');
+              }
+            }
+          }
+          print('💚 [ChatService] Final status map (from List): $statusMap');
+          return statusMap;
+        } else {
+          print('⚠️ [ChatService] Response data is not a Map or List: ${data.runtimeType}');
+        }
+      } else {
+        print('⚠️ [ChatService] Non-200 status or null data: statusCode=${response.statusCode}, data=${response.data}');
+      }
+      return {};
+    } catch (e, stackTrace) {
+      print('❌ [ChatService] Error checking online status: $e');
+      print('❌ [ChatService] Stack trace: $stackTrace');
+      if (e is DioException) {
+        print('❌ [ChatService] DioException response: ${e.response?.data}');
+        print('❌ [ChatService] DioException status: ${e.response?.statusCode}');
+      }
+      return {};
     }
   }
 
   // Get property details by ID
   Future<Map<String, dynamic>?> getPropertyDetails(String propertyId) async {
     try {
-      print('🏠 Fetching property details for ID: $propertyId');
-      print('🏠 API URL: ${ApiConstants.apiBaseUrl}/properties/$propertyId');
       
       final dio = Dio();
       final token = await _storageService.getToken();
-      print('🏠 Using token: ${token != null ? "Yes" : "No"}');
       
       final response = await dio.get(
         '${ApiConstants.apiBaseUrl}/properties/$propertyId',
@@ -333,43 +509,30 @@ class ChatService {
         ),
       );
 
-      print('🏠 Property details response status: ${response.statusCode}');
-      print('🏠 Property details response headers: ${response.headers}');
-      print('🏠 Property details data: ${response.data}');
-      print('🏠 Property details data type: ${response.data.runtimeType}');
       
       if (response.statusCode == 200) {
         final data = response.data;
-        print('🏠 Property details received successfully');
         
         // Handle different response formats
         if (data is Map<String, dynamic>) {
           // Direct object response
           if (data.containsKey('data')) {
             final propertyData = data['data'] as Map<String, dynamic>?;
-            print('🏠 Found property data in response.data: $propertyData');
             return propertyData;
           } else {
-            print('🏠 Using direct response data: $data');
             return data;
           }
         } else if (data is List && data.isNotEmpty) {
           // Array response - take first item
-          print('🏠 Array response, taking first item: ${data.first}');
           return data.first as Map<String, dynamic>?;
         } else {
-          print('🏠 Unexpected response format: $data');
           return null;
         }
       }
       
-      print('🏠 Non-200 response: ${response.statusCode}');
       return null;
     } catch (e) {
-      print('❌ Error fetching property details: $e');
-      print('❌ Error type: ${e.runtimeType}');
       if (e.toString().contains('404')) {
-        print('🏠 Property not found (404) - this is normal for non-existent properties');
       }
       return null;
     }

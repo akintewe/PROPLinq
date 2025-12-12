@@ -9,6 +9,7 @@ import 'virtual_tour_360_view.dart';
 import 'hotel_reservation_view.dart';
 import 'in_app_chat_view.dart';
 import '../../auth/services/auth_service.dart';
+import '../services/recently_viewed_service.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   final Map<String, dynamic>? propertyData;
@@ -31,6 +32,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   int _currentTextIndex = 0;
   Timer? _textTimer;
   final AuthService _authService = AuthService();
+  final RecentlyViewedService _recentlyViewedService = RecentlyViewedService();
   bool _isOwner = false;
   
   // Default fallback images for when property has no images
@@ -52,11 +54,30 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   @override
   void initState() {
     super.initState();
-    print('🎯 PropertyDetailsView: Initializing rotating text banner...');
     _initializeTextAnimation();
     _startTextRotation();
     _checkPropertyOwnership();
-    print('🎯 PropertyDetailsView: Rotating text banner initialized');
+    _addToRecentlyViewed();
+  }
+
+  /// Add property to recently viewed when opened
+  Future<void> _addToRecentlyViewed() async {
+    try {
+      final property = widget.propertyData ?? _getDefaultProperty();
+      print('👁️ [PropertyDetailsView] Adding to recently viewed: property=${property['id']}, title=${property['title']}');
+      
+      // Ensure property has an ID
+      if (property['id'] == null) {
+        print('⚠️ [PropertyDetailsView] Property has no ID, cannot add to recently viewed');
+        return;
+      }
+      
+      await _recentlyViewedService.addToRecentlyViewed(property);
+      print('✅ [PropertyDetailsView] Successfully added to recently viewed');
+    } catch (e, stackTrace) {
+      print('❌ [PropertyDetailsView] Error adding to recently viewed: $e');
+      print('❌ [PropertyDetailsView] Stack trace: $stackTrace');
+    }
   }
   
   Future<void> _checkPropertyOwnership() async {
@@ -66,34 +87,22 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
       final propertyUser = property['user'] as Map<String, dynamic>?;
       final propertyUserId = propertyUser?['id']?.toString();
       
-      print('🔍 Checking property ownership...');
-      print('  - Current User ID: ${currentUser?.id}');
-      print('  - Property User ID: $propertyUserId');
-      print('  - Property User Data: $propertyUser');
-      print('  - Property Data Keys: ${property.keys.toList()}');
       
       if (currentUser != null && propertyUserId != null) {
         setState(() {
           _isOwner = currentUser.id.toString() == propertyUserId;
         });
-        print('✅ Property ownership check complete: isOwner = $_isOwner');
-        print('  - Current User: ${currentUser.fullName} (${currentUser.email})');
-        print('  - Property Owner: ${propertyUser?['full_name']} (${propertyUser?['email']})');
       } else {
-        print('⚠️ Cannot determine ownership: currentUser or propertyUserId is null');
       }
     } catch (e) {
-      print('❌ Error checking property ownership: $e');
     }
   }
 
   void _initializeTextAnimation() {
-    print('🎯 Initializing text animation controller...');
     _textAnimationController = AnimationController(
       duration: const Duration(seconds: 15),
       vsync: this,
     )..repeat();
-    print('🎯 Text animation controller initialized');
   }
 
   /// Share property with deep link
@@ -101,8 +110,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     try {
       final property = widget.propertyData ?? _getDefaultProperty();
       
-      print('📤 Share: Starting share process...');
-      print('📤 Share: Property data keys: ${property.keys.toList()}');
       
       // Get property ID - property.id is an int, so handle both int and string
       String? propertyId;
@@ -112,13 +119,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
         // Handle both int and string IDs
         if (idValue is int) {
           propertyId = idValue.toString();
-          print('📤 Share: Found ID as int: $propertyId');
         } else if (idValue is String) {
           propertyId = idValue;
-          print('📤 Share: Found ID as string: $propertyId');
         } else {
           propertyId = idValue.toString();
-          print('📤 Share: Found ID (converted to string): $propertyId');
         }
       }
       
@@ -129,15 +133,11 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
           final first = images.first;
           if (first is Map<String, dynamic> && first['property_id'] != null) {
             propertyId = first['property_id'].toString();
-            print('📤 Share: Found ID from images property_id: $propertyId');
           }
         }
       }
       
       if (propertyId == null || propertyId.isEmpty) {
-        print('❌ Share: Property ID not found!');
-        print('   Available keys: ${property.keys.toList()}');
-        print('   ID value: $idValue (type: ${idValue.runtimeType})');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -180,10 +180,6 @@ Tap the link above to view this property in the Proplinq app!
 
 If you don't have the app, the link will open in your browser where you can download it.''';
       
-      print('📤 Share: Property ID: $propertyId');
-      print('📤 Share: Property Type: $propertyType');
-      print('📤 Share: Share Link (OneLink): $shareLinkUrl');
-      print('📤 Share: Full share text length: ${shareText.length} characters');
       
       // Show a preview dialog first to confirm the deep link is generated
       if (context.mounted) {
@@ -235,7 +231,6 @@ If you don't have the app, the link will open in your browser where you can down
         );
         
         if (shouldShare != true) {
-          print('ℹ️ Share cancelled by user');
           return;
         }
       }
@@ -247,7 +242,6 @@ If you don't have the app, the link will open in your browser where you can down
       );
       
       if (result.status == ShareResultStatus.success) {
-        print('✅ Property shared successfully');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -264,11 +258,8 @@ If you don't have the app, the link will open in your browser where you can down
           );
         }
       } else if (result.status == ShareResultStatus.dismissed) {
-        print('ℹ️ Share dialog dismissed by user');
       }
     } catch (e, stackTrace) {
-      print('❌ Error sharing property: $e');
-      print('❌ Stack trace: $stackTrace');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -282,17 +273,13 @@ If you don't have the app, the link will open in your browser where you can down
   }
 
   void _startTextRotation() {
-    print('🎯 Starting text rotation...');
     _textTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (mounted) {
-        print('🎯 Rotating to next text - Current index: $_currentTextIndex');
         setState(() {
           _currentTextIndex = (_currentTextIndex + 1) % _promotionalMessages.length;
         });
-        print('🎯 New text index: $_currentTextIndex');
       }
     });
-    print('🎯 Text rotation timer started');
   }
 
   @override
@@ -499,23 +486,17 @@ If you don't have the app, the link will open in your browser where you can down
 
   /// Get agent profile image from property data
   String? _getAgentProfileImage(Map<String, dynamic> property) {
-    print('🖼️ PropertyDetailsView: Getting agent profile image...');
-    print('🖼️ PropertyDetailsView: Property keys: ${property.keys.toList()}');
     
     final user = property['user'] as Map<String, dynamic>?;
-    print('🖼️ PropertyDetailsView: User data: $user');
     
     if (user != null && user['profile_image_full_url'] != null) {
       final profileImageUrl = user['profile_image_full_url'] as String;
-      print('🖼️ PropertyDetailsView: Found profile image URL: $profileImageUrl');
       return profileImageUrl;
     }
     
-    print('🖼️ PropertyDetailsView: No profile image found in user data');
     
     // Fallback to agent data if user data not available
     final agent = property['agent'] as Map<String, dynamic>?;
-    print('🖼️ PropertyDetailsView: Agent data: $agent');
     return agent?['profile_image'] as String?;
   }
 
@@ -601,30 +582,20 @@ If you don't have the app, the link will open in your browser where you can down
   List<String> _getProperty360Images() {
     final property = widget.propertyData ?? _getDefaultProperty();
     
-    print('🖼️ DEBUG: Getting 360 images...');
-    print('🖼️ Property data keys: ${property.keys.toList()}');
-    print('🖼️ Property360 images value: ${property['property360_images']}');
-    print('🖼️ Property360 images type: ${property['property360_images']?.runtimeType}');
     
     // Check if property has property360_images array
     if (property['property360_images'] != null && property['property360_images'] is List) {
       final images = property['property360_images'] as List<dynamic>;
-      print('🖼️ Found 360 images array with ${images.length} items');
       
       if (images.isNotEmpty) {
         final imageUrls = images.map((image) {
-          print('🖼️ Processing 360 image item: $image');
           
           if (image is Map<String, dynamic> && image['full_url'] != null) {
-            print('✅ Extracting 360 full_url: ${image['full_url']}');
             return image['full_url'].toString();
           }
-          print('❌ Invalid 360 image format');
           return '';
         }).where((url) => url.isNotEmpty).toList();
         
-        print('🖼️ Final 360 image URLs count: ${imageUrls.length}');
-        print('🖼️ Final 360 image URLs: $imageUrls');
         return imageUrls;
       }
     }
@@ -632,22 +603,16 @@ If you don't have the app, the link will open in your browser where you can down
     // Check alternative field: property_360_images_full_urls
     if (property['property_360_images_full_urls'] != null && property['property_360_images_full_urls'] is List) {
       final images = property['property_360_images_full_urls'] as List<dynamic>;
-      print('🖼️ Found property_360_images_full_urls array with ${images.length} items');
       
       if (images.isNotEmpty) {
         final imageUrls = images.map((image) {
-          print('🖼️ Processing 360 image item: $image');
           
           if (image is Map<String, dynamic> && image['url'] != null) {
-            print('✅ Extracting 360 url: ${image['url']}');
             return image['url'].toString();
           }
-          print('❌ Invalid 360 image format');
           return '';
         }).where((url) => url.isNotEmpty).toList();
         
-        print('🖼️ Final 360 image URLs count: ${imageUrls.length}');
-        print('🖼️ Final 360 image URLs: $imageUrls');
         return imageUrls;
       }
     }
@@ -655,33 +620,25 @@ If you don't have the app, the link will open in your browser where you can down
     // Check regular images array for 360 images (based on URL path)
     if (property['images'] != null && property['images'] is List) {
       final images = property['images'] as List<dynamic>;
-      print('🖼️ Checking regular images array for 360 images...');
-      print('🖼️ Found ${images.length} regular images');
       
       final imageUrls = <String>[];
       for (final image in images) {
         if (image is Map<String, dynamic> && image['full_url'] != null) {
           final url = image['full_url'].toString();
-          print('🖼️ Checking image URL: $url');
           
           // Check if this is a 360 image based on the URL path
           if (url.contains('property-360-images/')) {
-            print('✅ Found 360 image in regular images: $url');
             imageUrls.add(url);
           } else {
-            print('❌ Regular image (not 360): $url');
           }
         }
       }
       
       if (imageUrls.isNotEmpty) {
-        print('🖼️ Final 360 image URLs count: ${imageUrls.length}');
-        print('🖼️ Final 360 image URLs: $imageUrls');
         return imageUrls;
       }
     }
     
-    print('❌ No 360 images found');
     return [];
   }
 
@@ -689,16 +646,12 @@ If you don't have the app, the link will open in your browser where you can down
   String? _getPropertyVideo() {
     final property = widget.propertyData ?? _getDefaultProperty();
     
-    print('🎥 DEBUG: Getting video URL...');
-    print('🎥 Property video_url value: ${property['video_url']}');
     
     final videoUrl = property['video_url'] as String?;
     if (videoUrl != null && videoUrl.isNotEmpty) {
-      print('✅ Found video URL: $videoUrl');
       return videoUrl;
     }
     
-    print('❌ No video found');
     return null;
   }
 
@@ -706,47 +659,32 @@ If you don't have the app, the link will open in your browser where you can down
   List<String> _getPropertyImages() {
     final property = widget.propertyData ?? _getDefaultProperty();
     
-    print('🖼️ DEBUG: Getting property images...');
-    print('🖼️ Property data keys: ${property.keys.toList()}');
-    print('🖼️ Property imageUrl value: ${property['imageUrl']}');
-    print('🖼️ Property images value: ${property['images']}');
-    print('🖼️ Property images type: ${property['images']?.runtimeType}');
     
     // Check if property has multiple images array first (prioritize multiple images)
     if (property['images'] != null && property['images'] is List) {
       final images = property['images'] as List<dynamic>;
-      print('🖼️ Found images array with ${images.length} items');
       
       if (images.isNotEmpty) {
         final imageUrls = images.map((image) {
-          print('🖼️ Processing image item: $image');
-          print('🖼️ Image item type: ${image.runtimeType}');
           
           if (image is Map<String, dynamic> && image['full_url'] != null) {
-            print('✅ Extracting full_url: ${image['full_url']}');
             return image['full_url'].toString();
           } else if (image is String) {
-            print('✅ Using string image: $image');
             return image;
           }
-          print('❌ Invalid image format, using fallback');
           return _fallbackImages.first;
         }).toList();
         
-        print('🖼️ Final image URLs count: ${imageUrls.length}');
-        print('🖼️ Final image URLs: $imageUrls');
         return imageUrls;
       }
     }
     
     // Check if property has imageUrl (fallback for single image)
     if (property['imageUrl'] != null && property['imageUrl'].toString().isNotEmpty) {
-      print('✅ Found imageUrl fallback: ${property['imageUrl']}');
       // If we have a real property image, use it as the primary image
       return [property['imageUrl'].toString()];
     }
     
-    print('❌ No images found, using fallback images');
     // Fallback to default images
     return _fallbackImages;
   }
@@ -795,22 +733,12 @@ If you don't have the app, the link will open in your browser where you can down
     final isShortlet = normalizedType == 'shortlet';
     
     // Debug: Print property data to see what's available
-    print('🏠 PropertyDetailsView: Property data keys: ${property.keys.toList()}');
-    print('🏠 PropertyDetailsView: Property ID: ${property['id']}');
     
     // Get actual property images
     final propertyImages = _getPropertyImages();
     final property360Images = _getProperty360Images();
     
     // Debug logging
-    print('🏠 Property Details Debug:');
-    print('Property Type: $propertyType');
-    print('Normalized Type: $normalizedType');
-    print('Is Hotel: $isHotel');
-    print('Is Shortlet: $isShortlet');
-    print('Property Images: $propertyImages');
-    print('Property 360 Images: $property360Images');
-    print('Property Data Keys: ${property.keys.toList()}');
     
     final badges = property['badges'];
     final isForSale = (badges is List && badges.isNotEmpty) 
@@ -1593,10 +1521,6 @@ If you don't have the app, the link will open in your browser where you can down
                             builder: (context) {
                               try {
                                 final coordinates = _getPropertyCoordinates(property);
-                                print('🗺️ PropertyDetailsView: Calling GoogleMapWidget with coordinates:');
-                                print('  - Latitude: ${coordinates['latitude']}');
-                                print('  - Longitude: ${coordinates['longitude']}');
-                                print('  - Property Title: ${property['title']}');
                                 
                                 return GoogleMapWidget(
                                   latitude: coordinates['latitude'],
@@ -1606,7 +1530,6 @@ If you don't have the app, the link will open in your browser where you can down
                                   showMarker: true,
                                 );
                               } catch (e) {
-                                print('❌ PropertyDetailsView: Error loading Google Maps: $e');
                                 // Fallback to placeholder if map fails
                                 return Container(
                                   height: 200,
@@ -1903,9 +1826,6 @@ If you don't have the app, the link will open in your browser where you can down
     
     // Get features from API data
     final List<dynamic> apiFeatures = property['features'] as List<dynamic>? ?? [];
-    print('🏠 Features from API: $apiFeatures');
-    print('🏠 Property data keys: ${property.keys.toList()}');
-    print('🏠 Features type: ${property['features']?.runtimeType}');
     
     if (isHotel || type == 'hotel') {
       // Hotel features - use API data if available, otherwise fallback to defaults
@@ -2061,13 +1981,10 @@ If you don't have the app, the link will open in your browser where you can down
   }
 
   Map<String, double> _getPropertyCoordinates(Map<String, dynamic> property) {
-    print('🗺️ PropertyDetailsView: _getPropertyCoordinates called');
-    print('🗺️ PropertyDetailsView: Property data keys: ${property.keys.toList()}');
     
     // Try to get coordinates from property data
     final coordinates = property['coordinates'] as Map<String, dynamic>?;
     if (coordinates != null) {
-      print('🗺️ PropertyDetailsView: Found coordinates in property data: $coordinates');
       return {
         'latitude': (coordinates['latitude'] as num?)?.toDouble() ?? 6.5244,
         'longitude': (coordinates['longitude'] as num?)?.toDouble() ?? 3.3792,
@@ -2077,7 +1994,6 @@ If you don't have the app, the link will open in your browser where you can down
     // Try to get coordinates from location string (fallback)
     final location = property['location'] as String?;
     if (location != null) {
-      print('🗺️ PropertyDetailsView: No coordinates found, using location: $location');
       // Parse location string to extract coordinates if available
       // For now, return default Lagos coordinates
       return {
@@ -2086,7 +2002,6 @@ If you don't have the app, the link will open in your browser where you can down
       };
     }
 
-    print('🗺️ PropertyDetailsView: No location found, using default coordinates');
     // Default coordinates (Lagos, Nigeria)
     return {
       'latitude': 6.5244,
@@ -2096,7 +2011,6 @@ If you don't have the app, the link will open in your browser where you can down
 
   /// Build scrolling promotional banner (like home screen)
   Widget _buildScrollingPromotionalBanner() {
-    print('🎯 Building scrolling promotional banner');
     
     return Container(
       width: double.infinity,

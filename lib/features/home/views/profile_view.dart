@@ -64,14 +64,9 @@ class _ProfileViewState extends State<ProfileView> {
 
   Future<void> _fetchUserProfile() async {
     try {
-      print('🔄 Fetching user profile for profile screen...');
       
       final response = await _authService.getProfile();
       
-      print('📋 Profile Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
       
       if (response.success && response.data != null) {
         setState(() {
@@ -79,50 +74,32 @@ class _ProfileViewState extends State<ProfileView> {
           _isLoadingProfile = false;
         });
         
-        print('👤 User Profile Data for Profile Screen:');
-        print('  - ID: ${_currentUser!.id}');
-        print('  - Name: ${_currentUser!.fullName}');
-        print('  - Email: ${_currentUser!.email}');
-        print('  - User Type: "${_currentUser!.userType}"');
-        print('  - Location: ${_currentUser!.location}');
-        print('  - Phone: ${_currentUser!.phoneNumber}');
         if (_currentUser!.agencyName != null) {
-          print('  - Agency: ${_currentUser!.agencyName}');
         }
         if (_currentUser!.agentType != null) {
-          print('  - Agent Type: ${_currentUser!.agentType}');
         }
         if (_currentUser!.whatsappNumber != null) {
-          print('  - WhatsApp: ${_currentUser!.whatsappNumber}');
         }
       } else {
         setState(() {
           _isLoadingProfile = false;
         });
-        print('❌ Failed to fetch profile: ${response.message}');
         if (response.errors != null && response.errors!.isNotEmpty) {
-          print('❌ Errors: ${response.errors}');
         }
       }
     } catch (e) {
       setState(() {
         _isLoadingProfile = false;
       });
-      print('❌ Profile fetch error: $e');
     }
   }
 
   Future<void> _fetchKycStatus() async {
     try {
       final userType = widget.isAgent ? 'agent' : 'tenant/home seeker';
-      print('🔄 Fetching KYC status for $userType...');
       
       final response = await _authService.getKycStatus();
       
-      print('📋 KYC Status Response:');
-      print('✅ Success: ${response.success}');
-      print('📄 Status Code: ${response.statusCode}');
-      print('💬 Message: ${response.message}');
       
       if (response.success) {
         setState(() {
@@ -131,31 +108,23 @@ class _ProfileViewState extends State<ProfileView> {
         });
         
         if (_kycStatus != null) {
-          print('🎯 KYC Status Data:');
-          print('  - Status: ${_kycStatus!.status}');
-          print('  - Is Required: ${_kycStatus!.isRequired}');
-          print('  - Message: ${_kycStatus!.message}');
         } else {
-          print('⚠️ KYC Status: No data returned - KYC not started or incomplete');
         }
       } else {
         setState(() {
           _isLoadingKycStatus = false;
         });
-        print('❌ Failed to fetch KYC status: ${response.message}');
       }
     } catch (e) {
       setState(() {
         _isLoadingKycStatus = false;
       });
-      print('❌ KYC status fetch error: $e');
     }
   }
 
   // Refresh KYC status when profile view becomes visible
   Future<void> _refreshKycStatusIfNeeded() async {
     try {
-      print('🔄 Refreshing KYC status in profile view...');
       final response = await _authService.getKycStatus();
       
       if (response.success) {
@@ -169,9 +138,6 @@ class _ProfileViewState extends State<ProfileView> {
           });
           
           if (newKycStatus != null) {
-            print('🎯 Updated KYC Status in Profile:');
-            print('  - Status: ${newKycStatus.status}');
-            print('  - Message: ${newKycStatus.message}');
             
             // Show success message if KYC was just submitted
             if (newKycStatus.status == 'pending') {
@@ -186,7 +152,6 @@ class _ProfileViewState extends State<ProfileView> {
         }
       }
     } catch (e) {
-      print('❌ Error refreshing KYC status in profile: $e');
     }
   }
 
@@ -194,7 +159,6 @@ class _ProfileViewState extends State<ProfileView> {
     if (!mounted) return; // Check mounted before starting
     
     try {
-      print('🏠 Fetching my properties for profile view...');
       if (mounted) {
         setState(() {
           _isLoadingMyProperties = true;
@@ -205,7 +169,6 @@ class _ProfileViewState extends State<ProfileView> {
       
       if (!mounted) return; // Check mounted after async operation
       
-      print('✅ My properties fetched successfully: ${properties.length} properties');
       
       if (mounted) {
         setState(() {
@@ -214,7 +177,6 @@ class _ProfileViewState extends State<ProfileView> {
         });
       }
     } catch (e) {
-      print('❌ Error fetching my properties: $e');
       if (!mounted) return; // Check mounted before setState
       
       setState(() {
@@ -256,7 +218,6 @@ class _ProfileViewState extends State<ProfileView> {
 
   /// Refresh all data (profile, KYC status, and properties)
   Future<void> _refreshAllData() async {
-    print('🔄 Refreshing all profile data...');
     
     // Refresh user profile
     await _fetchUserProfile();
@@ -269,7 +230,6 @@ class _ProfileViewState extends State<ProfileView> {
       await _fetchMyProperties();
     }
     
-    print('✅ Profile data refresh completed');
   }
 
   /// Show image picker options (camera or gallery)
@@ -377,7 +337,6 @@ class _ProfileViewState extends State<ProfileView> {
   /// Pick image from camera
   void _pickImageFromCamera() async {
     try {
-      print('📸 Taking photo with camera...');
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
@@ -386,13 +345,10 @@ class _ProfileViewState extends State<ProfileView> {
       );
       
       if (image != null) {
-        print('📸 Photo taken: ${image.path}');
         await _uploadProfileImage(File(image.path));
       } else {
-        print('📸 No photo taken');
       }
     } catch (e) {
-      print('❌ Error taking photo: $e');
       _showErrorMessage('Failed to take photo');
     }
   }
@@ -400,7 +356,6 @@ class _ProfileViewState extends State<ProfileView> {
   /// Pick image from gallery
   void _pickImageFromGallery() async {
     try {
-      print('📸 Picking image from gallery...');
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
@@ -409,13 +364,10 @@ class _ProfileViewState extends State<ProfileView> {
       );
       
       if (image != null) {
-        print('📸 Image selected: ${image.path}');
         await _uploadProfileImage(File(image.path));
       } else {
-        print('📸 No image selected');
       }
     } catch (e) {
-      print('❌ Error picking image from gallery: $e');
       _showErrorMessage('Failed to pick image from gallery');
     }
   }
@@ -427,22 +379,18 @@ class _ProfileViewState extends State<ProfileView> {
     });
 
     try {
-      print('📸 Uploading profile image...');
       final response = await _authService.uploadProfileImage(imageFile);
       
       if (response.success) {
-        print('✅ Profile image uploaded successfully');
         
         // Refresh user profile to get updated data
         await _fetchUserProfile();
         
         _showSuccessMessage('Profile picture updated successfully!');
       } else {
-        print('❌ Failed to upload profile image: ${response.message}');
         _showErrorMessage(response.message ?? 'Failed to upload profile image');
       }
     } catch (e) {
-      print('❌ Error uploading profile image: $e');
       _showErrorMessage('Failed to upload profile image');
     } finally {
       setState(() {

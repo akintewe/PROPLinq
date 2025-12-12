@@ -38,7 +38,6 @@ class HomeViewModel extends BaseViewModel {
   /// Fetch properties from API
   Future<void> _fetchProperties() async {
     try {
-      print('🔄 Fetching properties from API...');
       
       // Fetch all properties from API
       final properties = await _propertyService.fetchAllProperties();
@@ -48,17 +47,13 @@ class HomeViewModel extends BaseViewModel {
         // Set featured properties (first 3)
         _featuredProperties = _properties.take(3).toList();
         
-        print('✅ Successfully loaded ${_properties.length} properties');
-        print('✅ Featured properties: ${_featuredProperties.length}');
       } else {
-        print('⚠️ No properties found');
         _properties = [];
         _featuredProperties = [];
       }
       
       safeNotifyListeners();
     } catch (e) {
-      print('❌ Error fetching properties: $e');
       _properties = [];
       _featuredProperties = [];
       safeNotifyListeners();

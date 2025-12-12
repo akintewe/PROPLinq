@@ -42,20 +42,21 @@ class _InAppChatViewState extends State<InAppChatView> {
   String? _currentUserName;
   bool _isTypingVisible = false;
   int _lastConversationLength = 0;
+  bool? _isAgentOnline;
+  Timer? _onlineStatusTimer;
 
   @override
   void initState() {
     super.initState();
-    print('🎯 InAppChatView: initState called');
-    print('🎯 InAppChatView: Agent data: ${widget.agentData}');
-    print('🎯 InAppChatView: Property ID: ${widget.propertyId}');
-    print('🎯 InAppChatView: Property Title: ${widget.propertyTitle}');
     
     _loadChatHistory();
     _loadPropertyDetails();
     _loadCurrentUserProfile();
     _startWhatsAppTimer();
     _markMessagesAsRead(); // Mark messages as read when chat is opened
+    _updateOnlineStatus(); // Update current user's online status
+    _checkAgentOnlineStatus(); // Check agent's online status
+    _startOnlineStatusTimer(); // Periodically check online status
 
     // Poll for new messages periodically while this screen is open (faster)
     _chatRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
@@ -68,22 +69,14 @@ class _InAppChatViewState extends State<InAppChatView> {
 
   Future<void> _loadChatHistory() async {
     try {
-      print('🔄 Loading chat history...');
-      print('🔄 Agent data: ${widget.agentData}');
-      print('🔄 Property ID: ${widget.propertyId}');
-      
       // Extract agent ID from user data
       final user = widget.agentData['user'] as Map<String, dynamic>?;
       final agentId = user?['id']?.toString() ?? widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
-      print('🔄 Extracted agent ID: $agentId');
       
       final chatHistory = await _chatService.getChatHistory(
         agentId: agentId ?? '',
         propertyId: widget.propertyId ?? '',
       );
-      
-      print('🔄 Chat history result: ${chatHistory.length} messages');
-      print('🔄 Chat history data: $chatHistory');
       
       // Extract phone number from chat history if not already available
       String? phoneNumber;
@@ -107,8 +100,6 @@ class _InAppChatViewState extends State<InAppChatView> {
         }
       }
       
-      print('🔄 Extracted phone number from chat history: $phoneNumber');
-      print('🔄 Extracted email from chat history: $email');
       
       // Update agent data with phone number if found
       if (phoneNumber != null || email != null) {
@@ -116,7 +107,6 @@ class _InAppChatViewState extends State<InAppChatView> {
           widget.agentData['user']['phone_number'] = phoneNumber;
           widget.agentData['user']['email'] = email;
         });
-        print('🔄 Updated agent data with phone number: $phoneNumber');
       }
       
       // Get current user ID once for all messages
@@ -124,14 +114,14 @@ class _InAppChatViewState extends State<InAppChatView> {
       final currentUserId = currentUser?.id.toString();
       
       final previousCount = _messages.length;
+      
       setState(() {
         _messages.clear();
         
         // Convert API chat history to ChatMessage objects
         for (final chat in chatHistory) {
-          print('🔄 Processing chat: $chat');
-          
           // Extract sender_id and message data from the new API format
+          final messageId = chat['id']?.toString();
           final senderId = chat['sender_id']?.toString();
           final message = chat['message'] ?? '';
           // Use updated_at for sorting as it reflects the latest activity
@@ -140,13 +130,9 @@ class _InAppChatViewState extends State<InAppChatView> {
           final filePath = chat['file_url'] as String? ?? chat['file'] as String?;
           final receivedAt = chat['received_at'] as String?;
           
-          print('🔄 Chat - Sender: $senderId, Current User: $currentUserId');
-          print('🔄 Chat - Message: $message, File: $filePath');
-          
           // Determine if this message is from the current authenticated user
           // The authenticated user is always the sender, so if sender_id matches current user, it's from user
           final isFromCurrentUser = senderId == currentUserId;
-          print('🔄 Chat - Is from current user: $isFromCurrentUser');
           
           // Determine file type from file path
           String? fileType;
@@ -172,24 +158,15 @@ class _InAppChatViewState extends State<InAppChatView> {
             fileType: fileType,
             isRead: isRead,
             receivedAt: receivedAt,
+            messageId: messageId,
           ));
         }
         
         // Sort messages by timestamp (oldest first, newest last for chat display)
         _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
         
-        print('🔄 Final messages count: ${_messages.length}');
-        print('🔄 Messages sorted by timestamp (oldest to newest)');
-        
-        // Debug: Print message timestamps to verify sorting
-        for (int i = 0; i < _messages.length; i++) {
-          final msg = _messages[i];
-          print('🔄 Message $i: ${msg.timestamp} - ${msg.text.length > 20 ? "${msg.text.substring(0, 20)}..." : msg.text}');
-        }
-        
         // If no chat history, add welcome message
         if (_messages.isEmpty) {
-          print('🔄 No chat history found, adding welcome message');
           _addWelcomeMessage();
         }
         
@@ -197,10 +174,9 @@ class _InAppChatViewState extends State<InAppChatView> {
       });
       
       if (_messages.length > previousCount) {
-      _scrollToBottom();
+        _scrollToBottom();
       }
     } catch (e) {
-      print('❌ Error loading chat history: $e');
       setState(() {
         _messages.clear();
         _addWelcomeMessage();
@@ -255,6 +231,7 @@ class _InAppChatViewState extends State<InAppChatView> {
         isFromUser: false,
         timestamp: DateTime.now(),
         isTyping: true,
+        messageId: null, // Typing indicator doesn't have a message ID
       ));
     });
     _scrollToBottom();
@@ -288,6 +265,7 @@ class _InAppChatViewState extends State<InAppChatView> {
         text: "Hi! I'm interested in the ${widget.propertyTitle} property. Could you please provide more details?",
         isFromUser: true,
         timestamp: DateTime.now(),
+        messageId: null, // Welcome message doesn't have a message ID
       ));
     });
     
@@ -296,7 +274,6 @@ class _InAppChatViewState extends State<InAppChatView> {
 
   Future<void> _loadPropertyDetails() async {
     if (widget.propertyId == null || widget.propertyId!.isEmpty) {
-      print('🏠 No property ID provided, skipping property details fetch');
       setState(() {
         _isLoadingProperty = false;
       });
@@ -304,7 +281,6 @@ class _InAppChatViewState extends State<InAppChatView> {
     }
 
     try {
-      print('🏠 Loading property details for ID: ${widget.propertyId}');
       final propertyData = await _chatService.getPropertyDetails(widget.propertyId!);
       
       setState(() {
@@ -312,11 +288,9 @@ class _InAppChatViewState extends State<InAppChatView> {
         _isLoadingProperty = false;
       });
       
-      print('🏠 Property details loaded: ${propertyData != null ? "Success" : "Failed"}');
       
       // If no data from API, create mock data for testing
       if (propertyData == null) {
-        print('🏠 Creating mock property data for testing');
         setState(() {
           _propertyDetails = {
             'id': widget.propertyId,
@@ -329,7 +303,6 @@ class _InAppChatViewState extends State<InAppChatView> {
         });
       }
     } catch (e) {
-      print('❌ Error loading property details: $e');
       setState(() {
         _isLoadingProperty = false;
         // Create fallback data
@@ -352,7 +325,6 @@ class _InAppChatViewState extends State<InAppChatView> {
         setState(() {
           _showWhatsAppBanner = true;
         });
-        print('⏰ 3 minutes elapsed, showing WhatsApp banner');
       }
     });
   }
@@ -371,6 +343,7 @@ class _InAppChatViewState extends State<InAppChatView> {
         timestamp: DateTime.now(),
         filePath: _selectedFilePath,
         fileType: _selectedFileType,
+        messageId: null, // New message doesn't have ID yet, will be set when response comes back
       ));
       _messageController.clear();
     });
@@ -381,7 +354,6 @@ class _InAppChatViewState extends State<InAppChatView> {
     // Send message via ChatService (file path sent to backend but not displayed)
     final user = widget.agentData['user'] as Map<String, dynamic>?;
     final agentId = user?['id']?.toString() ?? widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
-    print('📤 Sending message with file: $_selectedFilePath');
     
     final success = await _chatService.sendInAppMessage(
       message: messageText.isEmpty ? '📎 File attachment' : messageText,
@@ -397,9 +369,7 @@ class _InAppChatViewState extends State<InAppChatView> {
     });
     
     if (success) {
-      print('✅ Message sent successfully via webhook');
     } else {
-      print('❌ Failed to send message via webhook');
       // Show error to user
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -415,24 +385,19 @@ class _InAppChatViewState extends State<InAppChatView> {
     if (phoneNumber.isNotEmpty) {
       final whatsappUrl = "https://wa.me/$phoneNumber?text=Hi! I'm interested in the ${widget.propertyTitle} property.";
       
-      print('🔗 Opening WhatsApp with: $whatsappUrl');
       
       try {
         // Try to launch WhatsApp
         final Uri whatsappUri = Uri.parse(whatsappUrl);
         if (await canLaunchUrl(whatsappUri)) {
           await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
-          print('✅ WhatsApp launched successfully');
         } else {
-          print('❌ Cannot launch WhatsApp URL');
           _showErrorSnackBar('WhatsApp is not installed or cannot be opened');
         }
       } catch (e) {
-        print('❌ Error launching WhatsApp: $e');
         _showErrorSnackBar('Failed to open WhatsApp. Please try again.');
       }
     } else {
-      print('❌ No WhatsApp number found for agent');
       _showErrorSnackBar('Agent WhatsApp number not available');
     }
   }
@@ -448,7 +413,6 @@ class _InAppChatViewState extends State<InAppChatView> {
   }
 
   void _attachFile() {
-    print('📎 File attachment button tapped');
     
     // Show bottom sheet with file options
     showModalBottomSheet(
@@ -569,7 +533,6 @@ class _InAppChatViewState extends State<InAppChatView> {
 
   void _pickImageFromGallery() async {
     try {
-      print('📷 Picking image from gallery...');
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
@@ -578,23 +541,19 @@ class _InAppChatViewState extends State<InAppChatView> {
       );
       
       if (image != null) {
-        print('📷 Image selected: ${image.path}');
         setState(() {
           _selectedFilePath = image.path;
           _selectedFileType = 'image';
         });
       } else {
-        print('📷 No image selected');
       }
     } catch (e) {
-      print('❌ Error picking image from gallery: $e');
       _showErrorMessage('Failed to pick image from gallery');
     }
   }
 
   void _pickImageFromCamera() async {
     try {
-      print('📷 Taking photo with camera...');
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
@@ -603,46 +562,38 @@ class _InAppChatViewState extends State<InAppChatView> {
       );
       
       if (image != null) {
-        print('📷 Photo taken: ${image.path}');
         setState(() {
           _selectedFilePath = image.path;
           _selectedFileType = 'image';
         });
       } else {
-        print('📷 No photo taken');
       }
     } catch (e) {
-      print('❌ Error taking photo: $e');
       _showErrorMessage('Failed to take photo');
     }
   }
 
   void _pickVideo() async {
     try {
-      print('🎥 Picking video...');
       final XFile? video = await _imagePicker.pickVideo(
         source: ImageSource.gallery,
         maxDuration: const Duration(minutes: 5),
       );
       
       if (video != null) {
-        print('🎥 Video selected: ${video.path}');
         setState(() {
           _selectedFilePath = video.path;
           _selectedFileType = 'video';
         });
       } else {
-        print('🎥 No video selected');
       }
     } catch (e) {
-      print('❌ Error picking video: $e');
       _showErrorMessage('Failed to pick video');
     }
   }
 
   void _pickDocument() async {
     try {
-      print('📄 Picking document...');
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'],
@@ -651,7 +602,6 @@ class _InAppChatViewState extends State<InAppChatView> {
       
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
-        print('📄 Document selected: ${file.name}');
         
         if (file.path != null) {
           setState(() {
@@ -663,10 +613,8 @@ class _InAppChatViewState extends State<InAppChatView> {
           _showErrorMessage('File upload not supported on web platform');
         }
       } else {
-        print('📄 No document selected');
       }
     } catch (e) {
-      print('❌ Error picking document: $e');
       _showErrorMessage('Failed to pick document');
     }
   }
@@ -683,75 +631,81 @@ class _InAppChatViewState extends State<InAppChatView> {
 
   Future<void> _loadCurrentUserProfile() async {
     try {
-      print('👤 Loading current user profile...');
       final currentUser = await _authService.getCurrentUser();
       if (currentUser != null) {
         setState(() {
           _currentUserProfileImage = currentUser.profilePicture;
           _currentUserName = currentUser.fullName;
         });
-        print('👤 Current user profile image: $_currentUserProfileImage');
-        print('👤 Current user name: $_currentUserName');
       }
     } catch (e) {
-      print('❌ Error loading current user profile: $e');
     }
   }
 
-  void _markMessagesAsRead() {
-    // Mark all received messages as read when chat is opened
-    setState(() {
-      for (int i = 0; i < _messages.length; i++) {
-        if (!_messages[i].isFromUser && !_messages[i].isRead) {
+  Future<void> _markMessagesAsRead() async {
+    // Mark all unread received messages as read via API
+    for (int i = 0; i < _messages.length; i++) {
+      final message = _messages[i];
+      if (!message.isFromUser && !message.isRead && message.messageId != null) {
+        // Mark message as received via API
+        await _markMessageAsReceived(message.messageId!);
+        
+        // Update local state to show as read immediately
+        setState(() {
           _messages[i] = ChatMessage(
-            text: _messages[i].text,
-            isFromUser: _messages[i].isFromUser,
-            timestamp: _messages[i].timestamp,
-            filePath: _messages[i].filePath,
-            fileType: _messages[i].fileType,
-            isRead: true, // Mark as read
-            receivedAt: _messages[i].receivedAt,
+            text: message.text,
+            isFromUser: message.isFromUser,
+            timestamp: message.timestamp,
+            filePath: message.filePath,
+            fileType: message.fileType,
+            isRead: true,
+            receivedAt: message.receivedAt,
+            messageId: message.messageId,
           );
-        }
+        });
       }
-    });
+    }
+  }
+
+  Future<void> _markMessageAsReceived(String messageId) async {
+    try {
+      final success = await _chatService.markMessageAsRead(messageId);
+      if (success) {
+        print('✅ [InAppChatView] Message $messageId marked as received successfully');
+      } else {
+        print('⚠️ [InAppChatView] Failed to mark message $messageId as received');
+      }
+    } catch (e) {
+      print('❌ [InAppChatView] Error marking message as received: $e');
+    }
   }
 
   String _getAgentWhatsApp() {
-    print('🔍 _getAgentWhatsApp: Getting WhatsApp number from agent data...');
-    print('🔍 _getAgentWhatsApp: Agent data keys: ${widget.agentData.keys.toList()}');
     
     // Extract WhatsApp number from agent data
     final user = widget.agentData['user'] as Map<String, dynamic>?;
-    print('🔍 _getAgentWhatsApp: User data: $user');
     
     if (user != null && user['whatsapp_number'] != null) {
       final whatsappNumber = user['whatsapp_number'].toString().replaceAll(RegExp(r'[^\d]'), '');
-      print('🔍 _getAgentWhatsApp: Found whatsapp_number: $whatsappNumber');
       return whatsappNumber;
     }
     if (user != null && user['phone_number'] != null) {
       final phoneNumber = user['phone_number'].toString().replaceAll(RegExp(r'[^\d]'), '');
-      print('🔍 _getAgentWhatsApp: Found phone_number: $phoneNumber');
       return phoneNumber;
     }
     
     // Fallback to agent data
     final agent = widget.agentData['agent'] as Map<String, dynamic>?;
-    print('🔍 _getAgentWhatsApp: Agent data: $agent');
     
     if (agent != null && agent['whatsapp'] != null) {
       final whatsappNumber = agent['whatsapp'].toString().replaceAll(RegExp(r'[^\d]'), '');
-      print('🔍 _getAgentWhatsApp: Found agent whatsapp: $whatsappNumber');
       return whatsappNumber;
     }
     if (agent != null && agent['phone'] != null) {
       final phoneNumber = agent['phone'].toString().replaceAll(RegExp(r'[^\d]'), '');
-      print('🔍 _getAgentWhatsApp: Found agent phone: $phoneNumber');
       return phoneNumber;
     }
     
-    print('🔍 _getAgentWhatsApp: No WhatsApp or phone number found');
     return '';
   }
 
@@ -1322,12 +1276,20 @@ class _InAppChatViewState extends State<InAppChatView> {
                 color: Colors.black,
               ),
             ),
-            const Text(
-              'Online',
+            Text(
+              _isAgentOnline == true 
+                ? 'Online' 
+                : _isAgentOnline == false 
+                  ? 'Offline' 
+                  : '',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF00C851),
+                color: _isAgentOnline == true 
+                  ? const Color(0xFF00C851) 
+                  : _isAgentOnline == false
+                    ? const Color(0xFF868686)
+                    : const Color(0xFF868686),
               ),
             ),
           ],
@@ -1734,12 +1696,67 @@ class _InAppChatViewState extends State<InAppChatView> {
     );
   }
 
+  Future<void> _updateOnlineStatus() async {
+    print('💚 [InAppChatView] Updating current user online status...');
+    final success = await _chatService.updateOnlineStatus();
+    print('💚 [InAppChatView] Update online status result: $success');
+  }
+
+  Future<void> _checkAgentOnlineStatus() async {
+    try {
+      final agentId = _getAgentId();
+      print('💚 [InAppChatView] Checking agent online status for agentId: $agentId');
+      if (agentId == null || agentId.isEmpty) {
+        print('⚠️ [InAppChatView] Agent ID is null or empty');
+        return;
+      }
+      
+      final agentIdInt = int.tryParse(agentId);
+      if (agentIdInt == null) {
+        print('⚠️ [InAppChatView] Failed to parse agent ID as int: $agentId');
+        return;
+      }
+      
+      print('💚 [InAppChatView] Calling checkOnlineStatus with agentIdInt: $agentIdInt');
+      final statusMap = await _chatService.checkOnlineStatus([agentIdInt]);
+      print('💚 [InAppChatView] Received status map: $statusMap');
+      
+      final onlineStatus = statusMap[agentId] ?? statusMap[agentIdInt.toString()];
+      print('💚 [InAppChatView] Agent online status: $onlineStatus');
+      
+      if (mounted) {
+        setState(() {
+          _isAgentOnline = onlineStatus;
+        });
+        print('💚 [InAppChatView] Updated _isAgentOnline to: $_isAgentOnline');
+      }
+    } catch (e, stackTrace) {
+      print('❌ [InAppChatView] Error checking agent online status: $e');
+      print('❌ [InAppChatView] Stack trace: $stackTrace');
+    }
+  }
+
+  void _startOnlineStatusTimer() {
+    // Update current user's online status every 30 seconds
+    _onlineStatusTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (!mounted) return;
+      await _updateOnlineStatus();
+    });
+    
+    // Check agent's online status every 10 seconds
+    Timer.periodic(const Duration(seconds: 10), (_) async {
+      if (!mounted) return;
+      await _checkAgentOnlineStatus();
+    });
+  }
+
   @override
   void dispose() {
     _chatRefreshTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     _whatsAppTimer?.cancel();
+    _onlineStatusTimer?.cancel();
     super.dispose();
   }
 }
@@ -1753,6 +1770,7 @@ class ChatMessage {
   final bool isRead;
   final String? receivedAt;
   final bool isTyping;
+  final String? messageId; // Message ID from API
 
   ChatMessage({
     required this.text,
@@ -1763,5 +1781,6 @@ class ChatMessage {
     this.isRead = true,
     this.receivedAt,
     this.isTyping = false,
+    this.messageId,
   });
 }

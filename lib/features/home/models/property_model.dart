@@ -121,7 +121,6 @@ class PropertyModel {
     List<Map<String, dynamic>>? images;
     if (json['images'] != null && json['images'] is List && (json['images'] as List).isNotEmpty) {
       final imagesList = json['images'] as List<dynamic>;
-      print('🖼️ PropertyModel: Found ${imagesList.length} images in API data');
       
       // Store all images
       images = imagesList.map((image) {
@@ -147,17 +146,13 @@ class PropertyModel {
           imageUrl = rawImageUrl;
         }
       }
-      print('✅ PropertyModel: Extracted imageUrl: $imageUrl');
-      print('✅ PropertyModel: Stored ${images.length} images');
     } else {
-      print('❌ PropertyModel: No images found in API data');
     }
     
     // Parse property360_images array
     List<Map<String, dynamic>>? property360Images;
     if (json['property360_images'] != null && json['property360_images'] is List && (json['property360_images'] as List).isNotEmpty) {
       final property360ImagesList = json['property360_images'] as List<dynamic>;
-      print('🖼️ PropertyModel: Found ${property360ImagesList.length} 360 images in API data');
       
       // Store all 360 images
       property360Images = property360ImagesList.map((image) {
@@ -172,11 +167,9 @@ class PropertyModel {
         return imageMap;
       }).toList();
       
-      print('✅ PropertyModel: Stored ${property360Images.length} 360 images');
     } else if (json['property_360_images_full_urls'] != null && json['property_360_images_full_urls'] is List && (json['property_360_images_full_urls'] as List).isNotEmpty) {
       // Handle alternative field structure
       final property360ImagesList = json['property_360_images_full_urls'] as List<dynamic>;
-      print('🖼️ PropertyModel: Found ${property360ImagesList.length} 360 images in property_360_images_full_urls');
       
       // Store all 360 images with proper structure
       property360Images = property360ImagesList.map((image) {
@@ -192,7 +185,6 @@ class PropertyModel {
         };
       }).toList();
       
-      print('✅ PropertyModel: Stored ${property360Images.length} 360 images from property_360_images_full_urls');
     } else {
       // Check if 360 images are stored in the regular images array
       if (images != null && images.isNotEmpty) {
@@ -203,19 +195,15 @@ class PropertyModel {
           
           // Check if this is a 360 image based on the URL path
           if (fullUrl != null && fullUrl.contains('property-360-images/')) {
-            print('🖼️ PropertyModel: Found 360 image in regular images: $fullUrl');
             image360List.add(imageMap);
           }
         }
         
         if (image360List.isNotEmpty) {
           property360Images = image360List;
-          print('✅ PropertyModel: Stored ${property360Images.length} 360 images from regular images array');
         } else {
-          print('❌ PropertyModel: No 360 images found in API data');
         }
       } else {
-        print('❌ PropertyModel: No 360 images found in API data');
       }
     }
     
@@ -223,16 +211,13 @@ class PropertyModel {
     String? videoUrl;
     if (json['video_url'] != null && json['video_url'].toString().isNotEmpty) {
       videoUrl = json['video_url'] as String;
-      print('🎥 PropertyModel: Found video URL: $videoUrl');
     } else {
-      print('❌ PropertyModel: No video URL found in API data');
     }
     
     // Parse user data
     PropertyUser? user;
     if (json['user'] != null) {
       user = PropertyUser.fromJson(json['user'] as Map<String, dynamic>);
-      print('👤 PropertyModel: Parsed user data - KYC Status: ${user.verificationStatus}');
     }
     
     return PropertyModel(
