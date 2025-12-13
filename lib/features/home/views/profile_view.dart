@@ -1416,7 +1416,8 @@ class _ProfileViewState extends State<ProfileView> {
                 'badges': ['Verified Agent'],
                 'title': property.title,
                 'location': property.location,
-                'rating': '(5.0)',
+                'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+                'rating_count': property.rawJson?['rating_count'] ?? 0,
                 'price': property.price,
                 'type': property.type,
                 'category': property.category,
@@ -1645,19 +1646,30 @@ class _ProfileViewState extends State<ProfileView> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                        const Text(
-                          '(5.0)',
-                          style: TextStyle(
+                      Text(
+                        property.rawJson?['average_rating']?.toString() ?? '0.0',
+                        style: const TextStyle(
                           fontSize: 11,
                           color: Color(0xFF666666),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(width: 4),
                       const Icon(
                         Icons.star,
                         size: 12,
-                        color: Colors.green,
+                        color: Colors.amber,
                       ),
+                      if (property.rawJson?['rating_count'] != null) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '(${property.rawJson!['rating_count']})',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       Flexible(
                         child: Text(

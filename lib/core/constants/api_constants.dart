@@ -32,6 +32,7 @@ class ApiConstants {
   static const String favoriteProperties = '/properties/favorites';
   static const String listProperties = '/get-properties-list';
   static const String myProperties = '/agent/properties';
+  static String rateProperty(int propertyId) => '/properties/$propertyId/rate';
   
   // KYC Endpoints
   static const String kycSubmission = '/kyc/submit';

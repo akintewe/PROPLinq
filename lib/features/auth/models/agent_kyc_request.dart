@@ -1,49 +1,113 @@
 import 'dart:io';
 
 class AgentKycRequest {
-  final String bvn;
-  final String nin;
-  final File utilityBill;
-  final File bankStatement;
-  final String businessName;
-  final String tin;
-  final File cacDoc;
-  final String employmentStatus;
-  final String occupation;
-  final String companyName;
+  final String nin; // Required
+  final String? bvn; // Optional - either BVN or TIN required
+  final String? tin; // Optional - either BVN or TIN required
+  final String companyName; // Required
+  final File cacDoc; // Required
+  final String? businessName; // Optional
+  final String? employmentStatus; // Optional
+  final String? occupation; // Optional
+  final File? utilityBill; // Optional
+  final File? bankStatement; // Optional
 
   AgentKycRequest({
-    required this.bvn,
     required this.nin,
-    required this.utilityBill,
-    required this.bankStatement,
-    required this.businessName,
-    required this.tin,
-    required this.cacDoc,
-    required this.employmentStatus,
-    required this.occupation,
+    this.bvn,
+    this.tin,
     required this.companyName,
+    required this.cacDoc,
+    this.businessName,
+    this.employmentStatus,
+    this.occupation,
+    this.utilityBill,
+    this.bankStatement,
   });
 
   // Convert to form data fields (text fields)
   Map<String, String> toFormFields() {
-    return {
-      'bvn': bvn,
+    print('🔵 [AGENT KYC] Creating form fields...');
+    print('🔵 [AGENT KYC] Raw values:');
+    print('  - nin: "$nin"');
+    print('  - bvn: "${bvn ?? 'NULL'}"');
+    print('  - tin: "${tin ?? 'NULL'}"');
+    print('  - companyName: "$companyName"');
+    print('  - businessName: "${businessName ?? 'NULL'}"');
+    print('  - employmentStatus: "${employmentStatus ?? 'NULL'}"');
+    print('  - occupation: "${occupation ?? 'NULL'}"');
+    
+    final fields = <String, String>{
       'nin': nin,
-      'business_name': businessName,
-      'tin': tin,
-      'employment_status': employmentStatus,
-      'occupation': occupation,
       'company_name': companyName,
     };
+
+    // Add BVN if provided
+    if (bvn != null && bvn!.isNotEmpty) {
+      fields['bvn'] = bvn!;
+      print('  ✅ Added BVN: "${bvn!}"');
+    } else {
+      print('  ⚠️ BVN not provided');
+    }
+
+    // Add TIN if provided
+    if (tin != null && tin!.isNotEmpty) {
+      fields['tin'] = tin!;
+      print('  ✅ Added TIN: "${tin!}"');
+    } else {
+      print('  ⚠️ TIN not provided');
+    }
+
+    // Business name is REQUIRED by API - use businessName if provided, otherwise use companyName
+    if (businessName != null && businessName!.isNotEmpty) {
+      fields['business_name'] = businessName!;
+      print('  ✅ Added business_name: "${businessName!}" (explicitly provided)');
+    } else {
+      // API requires business_name, so use company_name as fallback
+      fields['business_name'] = companyName;
+      print('  ✅ Added business_name: "$companyName" (using company_name as fallback)');
+    }
+    
+    if (employmentStatus != null && employmentStatus!.isNotEmpty) {
+      fields['employment_status'] = employmentStatus!;
+      print('  ✅ Added employment_status: "${employmentStatus!}"');
+    } else {
+      print('  ⚠️ employment_status not provided');
+    }
+    if (occupation != null && occupation!.isNotEmpty) {
+      fields['occupation'] = occupation!;
+      print('  ✅ Added occupation: "${occupation!}"');
+    } else {
+      print('  ⚠️ occupation not provided');
+    }
+
+    print('🔵 [AGENT KYC] Final form fields: $fields');
+    return fields;
   }
 
   // Convert to form data files
   Map<String, File> toFormFiles() {
-    return {
-      'utility_bill': utilityBill,
-      'bank_statement': bankStatement,
+    print('🔵 [AGENT KYC] Creating form files...');
+    final files = <String, File>{
       'cac_doc': cacDoc,
     };
+    print('  ✅ Added cac_doc: ${cacDoc.path}');
+
+    // Add optional files only if provided
+    if (utilityBill != null) {
+      files['utility_bill'] = utilityBill!;
+      print('  ✅ Added utility_bill: ${utilityBill!.path}');
+    } else {
+      print('  ⚠️ utility_bill not provided');
+    }
+    if (bankStatement != null) {
+      files['bank_statement'] = bankStatement!;
+      print('  ✅ Added bank_statement: ${bankStatement!.path}');
+    } else {
+      print('  ⚠️ bank_statement not provided');
+    }
+
+    print('🔵 [AGENT KYC] Total files: ${files.length}');
+    return files;
   }
 } 

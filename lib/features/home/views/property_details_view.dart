@@ -10,6 +10,7 @@ import 'hotel_reservation_view.dart';
 import 'in_app_chat_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../services/recently_viewed_service.dart';
+import '../services/property_service.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   final Map<String, dynamic>? propertyData;
@@ -33,7 +34,12 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   Timer? _textTimer;
   final AuthService _authService = AuthService();
   final RecentlyViewedService _recentlyViewedService = RecentlyViewedService();
+  final PropertyService _propertyService = PropertyService();
   bool _isOwner = false;
+  Map<String, dynamic>? _currentPropertyData;
+  int _inlineRating = 0;
+  final TextEditingController _inlineCommentController = TextEditingController();
+  bool _isSubmittingRating = false;
   
   // Default fallback images for when property has no images
   final List<String> _fallbackImages = [
@@ -58,6 +64,26 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     _startTextRotation();
     _checkPropertyOwnership();
     _addToRecentlyViewed();
+    _refreshPropertyData();
+  }
+  
+  /// Refresh property data to get latest ratings
+  Future<void> _refreshPropertyData() async {
+    try {
+      final property = widget.propertyData ?? _getDefaultProperty();
+      final propertyId = property['id'];
+      
+      if (propertyId != null) {
+        final updatedProperty = await _propertyService.fetchPropertyDetails(int.parse(propertyId.toString()));
+        if (updatedProperty != null && mounted) {
+          setState(() {
+            _currentPropertyData = updatedProperty.rawJson;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error refreshing property data: $e');
+    }
   }
 
   /// Add property to recently viewed when opened
@@ -287,6 +313,7 @@ If you don't have the app, the link will open in your browser where you can down
     _pageController.dispose();
     _textAnimationController.dispose();
     _textTimer?.cancel();
+    _inlineCommentController.dispose();
     super.dispose();
   }
 
@@ -513,6 +540,855 @@ If you don't have the app, the link will open in your browser where you can down
   }
 
   /// Show report listing dialog
+  void _showRatingDialog() {
+    int selectedRating = 0;
+    final TextEditingController commentController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                'Rate Property',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'How would you rate this property?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF666666),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Star rating
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final starIndex = index + 1;
+                        return GestureDetector(
+                          onTap: () {
+                            setDialogState(() {
+                              selectedRating = starIndex;
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              starIndex <= selectedRating
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              size: 40,
+                              color: starIndex <= selectedRating
+                                  ? Colors.amber
+                                  : Colors.grey[300],
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        selectedRating > 0
+                            ? _getRatingText(selectedRating)
+                            : 'Tap a star to rate',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Comment field
+                    const Text(
+                      'Add a comment (optional)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF666666),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: commentController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'Share your experience...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF426DC2),
+                            width: 2,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting || selectedRating == 0
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isSubmitting = true;
+                          });
+
+                          final property = _currentPropertyData ?? widget.propertyData ?? _getDefaultProperty();
+                          final propertyId = property['id'];
+
+                          if (propertyId == null) {
+                            setDialogState(() {
+                              isSubmitting = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Error: Property ID not found'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          try {
+                            final response = await _propertyService.rateProperty(
+                              propertyId: int.parse(propertyId.toString()),
+                              rating: selectedRating,
+                              comment: commentController.text.trim(),
+                            );
+
+                            if (!mounted) return;
+
+                            if (response.success) {
+                              // Refresh property data to get updated ratings list
+                              await _refreshPropertyData();
+
+                              Navigator.of(dialogContext).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    response.message ?? 'Rating submitted successfully!',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            } else {
+                              setDialogState(() {
+                                isSubmitting = false;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    response.message ?? 'Failed to submit rating',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (!mounted) return;
+                            setDialogState(() {
+                              isSubmitting = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF426DC2),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey[300],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Submit',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _getRatingText(int rating) {
+    switch (rating) {
+      case 1:
+        return 'Poor';
+      case 2:
+        return 'Fair';
+      case 3:
+        return 'Good';
+      case 4:
+        return 'Very Good';
+      case 5:
+        return 'Excellent';
+      default:
+        return '';
+    }
+  }
+
+  Widget _buildRatingsSection(Map<String, dynamic> property) {
+    // Use updated property data if available
+    final displayProperty = _currentPropertyData ?? property;
+    
+    // Debug: Print property data to check for ratings
+    print('🔍 [RatingsSection] Property keys: ${displayProperty.keys.toList()}');
+    print('🔍 [RatingsSection] Has ratings key: ${displayProperty.containsKey('ratings')}');
+    print('🔍 [RatingsSection] Ratings value: ${displayProperty['ratings']}');
+    print('🔍 [RatingsSection] Average rating: ${displayProperty['average_rating']}');
+    print('🔍 [RatingsSection] Rating count: ${displayProperty['rating_count']}');
+    
+    // Extract ratings - handle different possible structures
+    dynamic ratingsRaw = displayProperty['ratings'];
+    List<dynamic> ratings = [];
+    
+    if (ratingsRaw != null) {
+      if (ratingsRaw is List) {
+        ratings = ratingsRaw;
+        print('🔍 [RatingsSection] Found ${ratings.length} ratings');
+      } else {
+        print('🔍 [RatingsSection] Ratings is not a List, type: ${ratingsRaw.runtimeType}');
+      }
+    } else {
+      print('🔍 [RatingsSection] No ratings found in property data');
+    }
+    
+    final averageRating = displayProperty['average_rating']?.toString() ?? 
+                         displayProperty['rating']?.toString() ?? 
+                         '0.0';
+    final ratingCount = displayProperty['rating_count']?.toString() ?? 
+                       ratings.length.toString();
+    
+    print('🔍 [RatingsSection] Final ratings count: ${ratings.length}, average: $averageRating, count: $ratingCount');
+
+    // Always show the section, even if empty
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ratings & Reviews',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.star,
+                      size: 18,
+                      color: Colors.amber[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      averageRating,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '($ratingCount ${ratingCount == 1 ? 'review' : 'reviews'})',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            // Average rating display
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.amber[400]!,
+                    Colors.amber[600]!,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.star,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    averageRating,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Rate Property Form (Jumia style) - hide if owner
+        if (!_isOwner) _buildInlineRatingForm(displayProperty),
+        
+        const SizedBox(height: 24),
+        
+        // Existing Ratings List
+        if (ratings.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.grey[200]!,
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.star_outline,
+                  size: 48,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'No ratings yet',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Be the first to rate this property',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...ratings.map((rating) => _buildRatingCard(rating as Map<String, dynamic>)),
+      ],
+    );
+  }
+
+  Widget _buildInlineRatingForm(Map<String, dynamic> property) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey[200]!,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Rate this property',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Star rating selector
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your rating:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+              ...List.generate(5, (index) {
+                final starIndex = index + 1;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _inlineRating = starIndex;
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Icon(
+                      starIndex <= _inlineRating
+                          ? Icons.star
+                          : Icons.star_border,
+                      size: 32,
+                      color: starIndex <= _inlineRating
+                          ? Colors.amber[600]
+                          : Colors.grey[300],
+                    ),
+                  ),
+                );
+              }),
+              if (_inlineRating > 0) ...[
+                const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                  _getRatingText(_inlineRating),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.amber[700],
+                          fontStyle: FontStyle.italic,
+                        ),
+                  ),
+                ),
+              ],
+                ],
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Comment box
+          TextField(
+            controller: _inlineCommentController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: 'Write your review (optional)',
+              hintStyle: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 14,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey[300]!,
+                  width: 1,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey[300]!,
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF426DC2),
+                  width: 2,
+                ),
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              contentPadding: const EdgeInsets.all(16),
+            ),
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black,
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Submit button
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: _isSubmittingRating || _inlineRating == 0
+                  ? null
+                  : () async {
+                      setState(() {
+                        _isSubmittingRating = true;
+                      });
+
+                      final propertyId = property['id'];
+
+                      if (propertyId == null) {
+                        setState(() {
+                          _isSubmittingRating = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Error: Property ID not found'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      try {
+                        final response = await _propertyService.rateProperty(
+                          propertyId: int.parse(propertyId.toString()),
+                          rating: _inlineRating,
+                          comment: _inlineCommentController.text.trim(),
+                        );
+
+                        if (!mounted) return;
+
+                        if (response.success) {
+                          // Refresh property data to get updated ratings list
+                          await _refreshPropertyData();
+                          
+                          // Reset form
+                            setState(() {
+                              _inlineRating = 0;
+                              _inlineCommentController.clear();
+                            _isSubmittingRating = false;
+                            });
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                response.message ?? 'Rating submitted successfully!',
+                              ),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        } else {
+                          setState(() {
+                            _isSubmittingRating = false;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                response.message ?? 'Failed to submit rating',
+                              ),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (!mounted) return;
+                        setState(() {
+                          _isSubmittingRating = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF426DC2),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey[300],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: _isSubmittingRating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Submit Rating',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRatingCard(Map<String, dynamic> rating) {
+    final user = rating['user'] as Map<String, dynamic>? ?? {};
+    final userName = user['name']?.toString() ?? 'Anonymous';
+    final userImage = user['profile_image']?.toString();
+    final ratingValue = rating['rating'] as int? ?? 0;
+    final comment = rating['comment']?.toString() ?? '';
+    final createdAt = rating['created_at']?.toString() ?? '';
+
+    // Format date
+    String formattedDate = '';
+    if (createdAt.isNotEmpty) {
+      try {
+        final dateTime = DateTime.parse(createdAt);
+        final now = DateTime.now();
+        final difference = now.difference(dateTime);
+
+        if (difference.inDays == 0) {
+          formattedDate = 'Today';
+        } else if (difference.inDays == 1) {
+          formattedDate = 'Yesterday';
+        } else if (difference.inDays < 7) {
+          formattedDate = '${difference.inDays} days ago';
+        } else if (difference.inDays < 30) {
+          final weeks = (difference.inDays / 7).floor();
+          formattedDate = '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+        } else {
+          formattedDate = '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+        }
+      } catch (e) {
+        formattedDate = createdAt;
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey[200]!,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User info and rating
+          Row(
+            children: [
+              // User avatar
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.grey[300]!,
+                    width: 2,
+                  ),
+                ),
+                child: ClipOval(
+                  child: userImage != null && userImage.isNotEmpty
+                      ? Image.network(
+                          userImage,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFECF0F9),
+                              child: const Icon(
+                                Icons.person,
+                                color: Color(0xFF426DC2),
+                                size: 24,
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          color: const Color(0xFFECF0F9),
+                          child: const Icon(
+                            Icons.person,
+                            color: Color(0xFF426DC2),
+                            size: 24,
+                          ),
+                        ),
+                ),
+              ),
+              
+              const SizedBox(width: 12),
+              
+              // User name and date
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    if (formattedDate.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              // Star rating
+              Row(
+                children: List.generate(5, (index) {
+                  return Icon(
+                    index < ratingValue ? Icons.star : Icons.star_border,
+                    size: 18,
+                    color: index < ratingValue ? Colors.amber[600] : Colors.grey[300],
+                  );
+                }),
+              ),
+            ],
+          ),
+          
+          // Comment
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              comment,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[800],
+                height: 1.5,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   void _showReportDialog() {
     showDialog(
       context: context,
@@ -711,8 +1587,8 @@ If you don't have the app, the link will open in your browser where you can down
 
   @override
   Widget build(BuildContext context) {
-    // Get property data or use defaults
-    final property = widget.propertyData ?? _getDefaultProperty();
+    // Get property data or use defaults (prefer updated data from rating)
+    final property = _currentPropertyData ?? widget.propertyData ?? _getDefaultProperty();
     // Derive a propertyId if missing (e.g., from images list)
     String derivedPropertyId = (property['id']?.toString()) ?? '';
     if (derivedPropertyId.isEmpty) {
@@ -939,7 +1815,9 @@ If you don't have the app, the link will open in your browser where you can down
                               Row(
                                 children: [
                                   Text(
-                                    property['rating'] as String? ?? '(5.0)',
+                                    property['average_rating']?.toString() ?? 
+                                    property['rating']?.toString() ?? 
+                                    '5.0',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -950,7 +1828,18 @@ If you don't have the app, the link will open in your browser where you can down
                                   const Icon(
                                     Icons.star,
                                     size: 18,
-                                    color: Colors.green,
+                                    color: Colors.amber,
+                                  ),
+                                  if (property['rating_count'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 4),
+                                      child: Text(
+                                        '(${property['rating_count']})',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
                                   ),
                                 ],
                               ),
@@ -1283,8 +2172,8 @@ If you don't have the app, the link will open in your browser where you can down
                           Column(
                             children: _buildFeaturesList(property, isHotel),
                           ),
-                          
-                          const SizedBox(height: 40),
+                            
+                            const SizedBox(height: 40),
                           
                           // Virtual Tour - only show for non-hotel properties and if 360 images are available
                           if (!isHotel && property360Images.isNotEmpty) ...[
@@ -1563,6 +2452,11 @@ If you don't have the app, the link will open in your browser where you can down
                             },
                           ),
                           ],
+                          
+                          const SizedBox(height: 40),
+                          
+                          // Ratings and Reviews Section - Always show
+                          _buildRatingsSection(property),
                           
                           const SizedBox(height: 20),
                           

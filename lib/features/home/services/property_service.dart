@@ -472,4 +472,30 @@ class PropertyService {
       return false;
     }
   }
+
+  /// Rate a property
+  Future<ApiResponse<Map<String, dynamic>>> rateProperty({
+    required int propertyId,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiConstants.rateProperty(propertyId),
+        body: {
+          'rating': rating,
+          'comment': comment,
+        },
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+
+      return response;
+    } catch (e) {
+      return ApiResponse.error(
+        message: 'Failed to rate property: $e',
+        statusCode: 0,
+      );
+    }
+  }
 } 

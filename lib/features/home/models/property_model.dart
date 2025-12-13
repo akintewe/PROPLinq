@@ -18,6 +18,7 @@ class PropertyModel {
   final List<String>? features;
   final bool isFavorite;
   final PropertyUser? user;
+  final Map<String, dynamic>? rawJson; // Store raw JSON to preserve ratings and other fields
 
   const PropertyModel({
     required this.id,
@@ -38,6 +39,7 @@ class PropertyModel {
     this.features,
     this.isFavorite = false,
     this.user,
+    this.rawJson,
   });
 
   /// Create a copy of this model with updated fields
@@ -60,6 +62,7 @@ class PropertyModel {
     List<String>? features,
     bool? isFavorite,
     PropertyUser? user,
+    Map<String, dynamic>? rawJson,
   }) {
     return PropertyModel(
       id: id ?? this.id,
@@ -80,6 +83,7 @@ class PropertyModel {
       features: features ?? this.features,
       isFavorite: isFavorite ?? this.isFavorite,
       user: user ?? this.user,
+      rawJson: rawJson ?? this.rawJson,
     );
   }
 
@@ -239,6 +243,7 @@ class PropertyModel {
       features: features,
       isFavorite: json['isLiked'] as bool? ?? false,
       user: user,
+      rawJson: json, // Store raw JSON to preserve ratings and other fields
     );
   }
 

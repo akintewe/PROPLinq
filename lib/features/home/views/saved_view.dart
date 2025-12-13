@@ -433,7 +433,8 @@ class _SavedViewState extends State<SavedView> {
             'badges': [property.user?.verificationStatus ?? 'Unverified'],
             'title': property.title,
             'location': property.location,
-            'rating': '(5.0)',
+            'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+            'rating_count': property.rawJson?['rating_count'] ?? 0,
             'price': property.price,
             'type': property.type,
             'category': property.category,
@@ -623,19 +624,30 @@ class _SavedViewState extends State<SavedView> {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Text(
-                            '(5.0)',
-                            style: TextStyle(
+                          Text(
+                            property.rawJson?['average_rating']?.toString() ?? '0.0',
+                            style: const TextStyle(
                               fontSize: 10,
                               color: Color(0xFF868686),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(width: 2),
                           const Icon(
                             Icons.star,
                             size: 11,
-                            color: Colors.green,
+                            color: Colors.amber,
                           ),
+                          if (property.rawJson?['rating_count'] != null) ...[
+                            const SizedBox(width: 2),
+                            Text(
+                              '(${property.rawJson!['rating_count']})',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Color(0xFF868686),
+                              ),
+                            ),
+                          ],
                           const Spacer(),
                           Flexible(
                             child: Text(
@@ -959,18 +971,29 @@ class _SavedViewState extends State<SavedView> {
                       Row(
                         children: [
                           Text(
-                            property['rating'] ?? '(5.0)',
+                            property['average_rating']?.toString() ?? '0.0',
                             style: const TextStyle(
                               fontSize: 10,
                               color: Color(0xFF868686),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(width: 2),
                           const Icon(
                             Icons.star,
                             size: 11,
-                            color: Colors.green,
+                            color: Colors.amber,
                           ),
+                          if (property['rating_count'] != null) ...[
+                            const SizedBox(width: 2),
+                            Text(
+                              '(${property['rating_count']})',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Color(0xFF868686),
+                              ),
+                            ),
+                          ],
                           const Spacer(),
                           Flexible(
                             child: Text(

@@ -18,25 +18,16 @@ class AgentKycView extends StatefulWidget {
 
 class _AgentKycViewState extends State<AgentKycView> {
   int _currentStep = 0;
-  final int _totalSteps = 4; // 4 steps: Business Info, Identity, Employment, Review & Submit
+  final int _totalSteps = 2; // 2 steps: Required Info, Documents
 
-  // Controllers for Step 1
-  final TextEditingController _businessNameController = TextEditingController();
-  final TextEditingController _tinController = TextEditingController();
-
-  // Controllers for Step 2
-  final TextEditingController _bvnController = TextEditingController();
+  // Controllers
   final TextEditingController _ninController = TextEditingController();
-
-  // Controllers for Step 3
-  final TextEditingController _occupationController = TextEditingController();
+  final TextEditingController _bvnController = TextEditingController();
+  final TextEditingController _tinController = TextEditingController();
   final TextEditingController _companyNameController = TextEditingController();
-  String _employmentStatus = '';
 
-  // File upload state for Step 4
+  // File upload state
   PlatformFile? _cacDocumentFile;
-  PlatformFile? _utilityBillFile;
-  PlatformFile? _bankStatementFile;
 
   // Loading state
   bool _isSubmitting = false;
@@ -47,21 +38,17 @@ class _AgentKycViewState extends State<AgentKycView> {
   void initState() {
     super.initState();
     // Add listeners to text controllers to update button state
-    _businessNameController.addListener(() => setState(() {}));
-    _tinController.addListener(() => setState(() {}));
-    _bvnController.addListener(() => setState(() {}));
     _ninController.addListener(() => setState(() {}));
-    _occupationController.addListener(() => setState(() {}));
+    _bvnController.addListener(() => setState(() {}));
+    _tinController.addListener(() => setState(() {}));
     _companyNameController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _businessNameController.dispose();
-    _tinController.dispose();
-    _bvnController.dispose();
     _ninController.dispose();
-    _occupationController.dispose();
+    _bvnController.dispose();
+    _tinController.dispose();
     _companyNameController.dispose();
     super.dispose();
   }
@@ -94,10 +81,6 @@ class _AgentKycViewState extends State<AgentKycView> {
         setState(() {
           if (fileType == 'cac') {
             _cacDocumentFile = result.files.first;
-          } else if (fileType == 'utility') {
-            _utilityBillFile = result.files.first;
-          } else if (fileType == 'bank') {
-            _bankStatementFile = result.files.first;
           }
         });
 
@@ -119,7 +102,11 @@ class _AgentKycViewState extends State<AgentKycView> {
   }
 
   Future<void> _submitKyc() async {
+    print('🔵🔵🔵 [AGENT KYC VIEW] ========================================');
+    print('🔵 [AGENT KYC VIEW] Starting KYC submission...');
+    
     if (!_validateForm()) {
+      print('🔴 [AGENT KYC VIEW] Form validation failed');
       return;
     }
 
@@ -130,25 +117,28 @@ class _AgentKycViewState extends State<AgentKycView> {
     try {
       // Convert PlatformFile to File
       final cacFile = File(_cacDocumentFile!.path!);
-      final utilityFile = File(_utilityBillFile!.path!);
-      final bankFile = File(_bankStatementFile!.path!);
+      
+      print('🔵 [AGENT KYC VIEW] Creating AgentKycRequest with:');
+      print('  - NIN: "${_ninController.text.trim()}"');
+      print('  - BVN: "${_bvnController.text.trim().isNotEmpty ? _bvnController.text.trim() : 'EMPTY'}"');
+      print('  - TIN: "${_tinController.text.trim().isNotEmpty ? _tinController.text.trim() : 'EMPTY'}"');
+      print('  - Company Name: "${_companyNameController.text.trim()}"');
+      print('  - CAC Doc: ${cacFile.path}');
 
       final request = AgentKycRequest(
-        bvn: _bvnController.text.trim(),
         nin: _ninController.text.trim(),
-        utilityBill: utilityFile,
-        bankStatement: bankFile,
-        businessName: _businessNameController.text.trim(),
-        tin: _tinController.text.trim(),
-        cacDoc: cacFile,
-        employmentStatus: _employmentStatus,
-        occupation: _occupationController.text.trim(),
+        bvn: _bvnController.text.trim().isNotEmpty ? _bvnController.text.trim() : null,
+        tin: _tinController.text.trim().isNotEmpty ? _tinController.text.trim() : null,
         companyName: _companyNameController.text.trim(),
+        cacDoc: cacFile,
+        // All other fields are optional
       );
 
+      print('🔵 [AGENT KYC VIEW] Calling auth service...');
       final response = await _authService.submitAgentKyc(request);
 
       if (response.success) {
+        print('✅ [AGENT KYC VIEW] KYC submission successful!');
         // Navigate to agent KYC success view
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -156,6 +146,9 @@ class _AgentKycViewState extends State<AgentKycView> {
           ),
         );
       } else {
+        print('🔴 [AGENT KYC VIEW] KYC submission failed');
+        print('🔴 [AGENT KYC VIEW] Error message: ${response.message}');
+        print('🔴 [AGENT KYC VIEW] Errors: ${response.errors}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(response.message ?? 'Failed to submit KYC'),
@@ -163,7 +156,9 @@ class _AgentKycViewState extends State<AgentKycView> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔴 [AGENT KYC VIEW] Exception caught: $e');
+      print('🔴 [AGENT KYC VIEW] Stack trace: $stackTrace');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error submitting KYC: $e'),
@@ -174,30 +169,12 @@ class _AgentKycViewState extends State<AgentKycView> {
       setState(() {
         _isSubmitting = false;
       });
+      print('🔵🔵🔵 [AGENT KYC VIEW] ========================================');
     }
   }
 
   bool _validateForm() {
-    if (_businessNameController.text.trim().isEmpty) {
-      _showErrorMessage('Please enter your business name');
-      return false;
-    }
-
-    if (_tinController.text.trim().isEmpty) {
-      _showErrorMessage('Please enter your TIN');
-      return false;
-    }
-
-    if (_bvnController.text.trim().isEmpty) {
-      _showErrorMessage('Please enter your BVN');
-      return false;
-    }
-
-    if (_bvnController.text.trim().length != 11) {
-      _showErrorMessage('BVN must be 11 digits');
-      return false;
-    }
-
+    // NIN is required
     if (_ninController.text.trim().isEmpty) {
       _showErrorMessage('Please enter your NIN');
       return false;
@@ -208,33 +185,26 @@ class _AgentKycViewState extends State<AgentKycView> {
       return false;
     }
 
-    if (_occupationController.text.trim().isEmpty) {
-      _showErrorMessage('Please enter your occupation');
+    // Either BVN or TIN is required
+    if (_bvnController.text.trim().isEmpty && _tinController.text.trim().isEmpty) {
+      _showErrorMessage('Please enter either your BVN or TIN');
       return false;
     }
 
+    if (_bvnController.text.trim().isNotEmpty && _bvnController.text.trim().length != 11) {
+      _showErrorMessage('BVN must be 11 digits');
+      return false;
+    }
+
+    // Company Name is required
     if (_companyNameController.text.trim().isEmpty) {
       _showErrorMessage('Please enter your company name');
       return false;
     }
 
-    if (_employmentStatus.isEmpty) {
-      _showErrorMessage('Please select your employment status');
-      return false;
-    }
-
+    // CAC Document is required
     if (_cacDocumentFile == null) {
       _showErrorMessage('Please upload your CAC document');
-      return false;
-    }
-
-    if (_utilityBillFile == null) {
-      _showErrorMessage('Please upload your utility bill');
-      return false;
-    }
-
-    if (_bankStatementFile == null) {
-      _showErrorMessage('Please upload your bank statement');
       return false;
     }
 
@@ -391,10 +361,6 @@ class _AgentKycViewState extends State<AgentKycView> {
         return _buildStep1();
       case 1:
         return _buildStep2();
-      case 2:
-        return _buildStep3();
-      case 3:
-        return _buildStep4();
       default:
         return _buildStep1();
     }
@@ -404,30 +370,115 @@ class _AgentKycViewState extends State<AgentKycView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Business Name
+        // NIN (Required)
         CustomTextField(
-          label: 'Business Name',
-          hintText: 'Enter your business name',
-          controller: _businessNameController,
+          label: 'NIN (National Identification Number)',
+          hintText: 'Enter your 11-digit NIN',
+          controller: _ninController,
+          keyboardType: TextInputType.number,
+          maxLength: 11,
         ),
         
         const SizedBox(height: 24),
         
-        // TIN
+        // BVN or TIN (Required - at least one)
         CustomTextField(
-          label: 'TIN',
-          hintText: 'Enter your TIN',
+          label: 'BVN (Bank Verification Number)',
+          hintText: 'Enter your 11-digit BVN (optional if you have TIN)',
+          controller: _bvnController,
+          keyboardType: TextInputType.number,
+          maxLength: 11,
+        ),
+        
+        const SizedBox(height: 16),
+        
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: const Color(0xFFE0E0E0),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              const Text(
+                'OR',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF666666),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        CustomTextField(
+          label: 'TIN (Tax Identification Number)',
+          hintText: 'Enter your TIN (optional if you have BVN)',
           controller: _tinController,
+          keyboardType: TextInputType.number,
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Company Name (Required)
+        CustomTextField(
+          label: 'Company Name',
+          hintText: 'Enter your company name',
+          controller: _companyNameController,
+        ),
+        
+        const SizedBox(height: 24),
+        
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFE0E0E0),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.info_outline,
+                size: 20,
+                color: Color(0xFF426DC2),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'You must provide either BVN or TIN. Both are not required.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         
         const SizedBox(height: 40),
         
         GradientButton(
           text: 'Next',
-          onPressed: _businessNameController.text.isNotEmpty && 
-                    _tinController.text.isNotEmpty ? _nextStep : null,
-          isEnabled: _businessNameController.text.isNotEmpty && 
-                     _tinController.text.isNotEmpty,
+          onPressed: _ninController.text.length == 11 && 
+                    (_bvnController.text.isNotEmpty || _tinController.text.isNotEmpty) &&
+                    _companyNameController.text.isNotEmpty ? _nextStep : null,
+          isEnabled: _ninController.text.length == 11 && 
+                     (_bvnController.text.isNotEmpty || _tinController.text.isNotEmpty) &&
+                     _companyNameController.text.isNotEmpty,
         ),
         
         const SizedBox(height: 40),
@@ -439,53 +490,9 @@ class _AgentKycViewState extends State<AgentKycView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // BVN
-        CustomTextField(
-          label: 'BVN',
-          hintText: 'Enter your 11-digit BVN',
-          controller: _bvnController,
-          keyboardType: TextInputType.number,
-          maxLength: 11,
-          onChanged: (_) => setState(() {}),
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // NIN
-        CustomTextField(
-          label: 'NIN',
-          hintText: 'Enter your 11-digit NIN',
-          controller: _ninController,
-          keyboardType: TextInputType.number,
-          maxLength: 11,
-          onChanged: (_) => setState(() {}),
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Occupation
-        CustomTextField(
-          label: 'Occupation',
-          hintText: 'Enter your occupation',
-          controller: _occupationController,
-          onChanged: (_) => setState(() {}),
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Company Name
-        CustomTextField(
-          label: 'Company Name',
-          hintText: 'Enter your company name',
-          controller: _companyNameController,
-          onChanged: (_) => setState(() {}),
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Employment Status
+        // CAC Document Upload (Required)
         const Text(
-          'Employment Status',
+          'CAC Document',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -495,83 +502,12 @@ class _AgentKycViewState extends State<AgentKycView> {
         
         const SizedBox(height: 8),
         
-        // Employment Status Dropdown
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: const Color(0xFFECF0F9),
-              width: 1,
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _employmentStatus.isEmpty ? null : _employmentStatus,
-              hint: const Text(
-                'Select employment status',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF868686),
-                ),
-              ),
-              isExpanded: true,
-              items: [
-                'employed',
-                'self_employed',
-                'unemployed',
-                'student',
-                'retired',
-              ].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value.replaceAll('_', ' ').toUpperCase()),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _employmentStatus = newValue ?? '';
-                });
-              },
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 40),
-        
-        GradientButton(
-          text: 'Next',
-          onPressed: _bvnController.text.length == 11 && 
-                    _ninController.text.length == 11 &&
-                    _occupationController.text.isNotEmpty && 
-                    _companyNameController.text.isNotEmpty && 
-                    _employmentStatus.isNotEmpty ? _nextStep : null,
-          isEnabled: _bvnController.text.length == 11 && 
-                     _ninController.text.length == 11 &&
-                     _occupationController.text.isNotEmpty && 
-                     _companyNameController.text.isNotEmpty && 
-                     _employmentStatus.isNotEmpty,
-        ),
-        
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildStep3() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // CAC Document Upload
         const Text(
-          'Kindly upload your CAC document',
+          'Kindly upload your CAC (Corporate Affairs Commission) document',
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFF666666),
           ),
         ),
         
@@ -585,106 +521,10 @@ class _AgentKycViewState extends State<AgentKycView> {
         
         const SizedBox(height: 32),
         
-        // Utility Bill Upload
-        const Text(
-          'Kindly upload your current utility bill',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        _buildFileUploadArea(
-          fileType: 'utility',
-          file: _utilityBillFile,
-          onTap: () => _pickFile('utility'),
-        ),
-        
-        const SizedBox(height: 32),
-        
-        // Bank Statement Upload
-        const Text(
-          'Kindly upload your bank statement',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        _buildFileUploadArea(
-          fileType: 'bank',
-          file: _bankStatementFile,
-          onTap: () => _pickFile('bank'),
-        ),
-        
-        const SizedBox(height: 40),
-        
-        GradientButton(
-          text: 'Next',
-          onPressed: _cacDocumentFile != null && 
-                    _utilityBillFile != null && 
-                    _bankStatementFile != null ? _nextStep : null,
-          isEnabled: _cacDocumentFile != null && 
-                     _utilityBillFile != null && 
-                     _bankStatementFile != null,
-        ),
-        
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildStep4() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Review section
-        const Text(
-          'Review Your Information',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: Colors.black,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        
-        const SizedBox(height: 20),
-        
-        // Review details
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildReviewItem('Business Name', _businessNameController.text),
-              _buildReviewItem('TIN', _tinController.text),
-              _buildReviewItem('BVN', _bvnController.text),
-              _buildReviewItem('NIN', _ninController.text),
-              _buildReviewItem('Occupation', _occupationController.text),
-              _buildReviewItem('Company Name', _companyNameController.text),
-              _buildReviewItem('Employment Status', _employmentStatus.replaceAll('_', ' ').toUpperCase()),
-              _buildReviewItem('Documents', 'CAC, Utility Bill, Bank Statement'),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 40),
-        
         GradientButton(
           text: _isSubmitting ? 'Submitting...' : 'Submit KYC',
-          onPressed: !_isSubmitting ? _submitKyc : null,
-          isEnabled: !_isSubmitting,
+          onPressed: !_isSubmitting && _cacDocumentFile != null ? _submitKyc : null,
+          isEnabled: !_isSubmitting && _cacDocumentFile != null,
         ),
         
         const SizedBox(height: 40),
@@ -694,37 +534,6 @@ class _AgentKycViewState extends State<AgentKycView> {
 
 
 
-  Widget _buildReviewItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF666666),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildFileUploadArea({
     required String fileType,

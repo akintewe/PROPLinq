@@ -406,19 +406,40 @@ class AuthService {
 
   // Submit agent KYC
   Future<ApiResponse<void>> submitAgentKyc(AgentKycRequest request) async {
+    print('🔵🔵🔵 [AUTH SERVICE] ========================================');
+    print('🔵 [AUTH SERVICE] SUBMITTING AGENT KYC');
+    print('🔵 [AUTH SERVICE] Endpoint: ${ApiConstants.kycAgentSubmit}');
+    print('🔵 [AUTH SERVICE] ========================================');
     
     try {
+      final fields = request.toFormFields();
+      final files = request.toFormFiles();
+      
+      print('🔵 [AUTH SERVICE] About to send request...');
+      print('🔵 [AUTH SERVICE] Fields count: ${fields.length}');
+      print('🔵 [AUTH SERVICE] Files count: ${files.length}');
+      
       final response = await _apiService.postFormData<void>(
         ApiConstants.kycAgentSubmit,
-        fields: request.toFormFields(),
-        files: request.toFormFiles(),
+        fields: fields,
+        files: files,
         requiresAuth: true,
         fromJson: (json) => null, // No response body expected
       );
       
+      print('🔵 [AUTH SERVICE] Response received:');
+      print('  - Success: ${response.success}');
+      print('  - Message: ${response.message}');
+      print('  - Status Code: ${response.statusCode}');
+      if (response.errors != null) {
+        print('  - Errors: ${response.errors}');
+      }
+      print('🔵🔵🔵 [AUTH SERVICE] ========================================');
       
       return response;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔴 [AUTH SERVICE] ERROR submitting agent KYC: $e');
+      print('🔴 [AUTH SERVICE] Stack trace: $stackTrace');
       return ApiResponse.error(
         message: 'Failed to submit KYC: $e',
         statusCode: 0,
@@ -428,19 +449,40 @@ class AuthService {
 
   // Submit user KYC
   Future<ApiResponse<void>> submitUserKyc(UserKycRequest request) async {
+    print('🟢🟢🟢 [AUTH SERVICE] ========================================');
+    print('🟢 [AUTH SERVICE] SUBMITTING USER/HOMESEEKER KYC');
+    print('🟢 [AUTH SERVICE] Endpoint: ${ApiConstants.kycUserSubmit}');
+    print('🟢 [AUTH SERVICE] ========================================');
     
     try {
+      final fields = request.toFormFields();
+      final files = request.toFormFiles();
+      
+      print('🟢 [AUTH SERVICE] About to send request...');
+      print('🟢 [AUTH SERVICE] Fields count: ${fields.length}');
+      print('🟢 [AUTH SERVICE] Files count: ${files.length}');
+      
       final response = await _apiService.postFormData<void>(
         ApiConstants.kycUserSubmit,
-        fields: request.toFormFields(),
-        files: request.toFormFiles(),
+        fields: fields,
+        files: files,
         requiresAuth: true,
         fromJson: (json) => null, // No response body expected
       );
       
+      print('🟢 [AUTH SERVICE] Response received:');
+      print('  - Success: ${response.success}');
+      print('  - Message: ${response.message}');
+      print('  - Status Code: ${response.statusCode}');
+      if (response.errors != null) {
+        print('  - Errors: ${response.errors}');
+      }
+      print('🟢🟢🟢 [AUTH SERVICE] ========================================');
       
       return response;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔴 [AUTH SERVICE] ERROR submitting user KYC: $e');
+      print('🔴 [AUTH SERVICE] Stack trace: $stackTrace');
       return ApiResponse.error(
         message: 'Failed to submit KYC: $e',
         statusCode: 0,

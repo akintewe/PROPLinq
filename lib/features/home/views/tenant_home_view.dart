@@ -1092,7 +1092,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         'badges': [property.user?.verificationStatus ?? 'Unverified'],
         'title': property.title,
         'location': property.location,
-        'rating': '(5.0)', // Default rating
+        'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+        'rating_count': property.rawJson?['rating_count'] ?? 0,
         'price': property.price,
         'type': property.type,
         'category': property.category,
@@ -1666,31 +1667,67 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // DEBUG: Check what imageUrl we're passing
         
         // Then navigate to property details with actual API data
+        // Build propertyData with ratings from rawJson
+        final propertyData = <String, dynamic>{
+          'id': property.id,
+          'badges': [property.user?.verificationStatus ?? 'Unverified'],
+          'title': property.title,
+          'location': property.location,
+          'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+          'rating_count': property.rawJson?['rating_count'] ?? 0,
+          'price': property.price,
+          'type': property.type,
+          'category': property.category,
+          'description': property.description,
+          'features': property.features,
+          'imageUrl': property.imageUrl,
+          'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null),
+          'property360_images': property.property360Images,
+          'video_url': property.videoUrl,
+          'user': property.user?.toJson(),
+          'agent': {
+            'name': property.user?.fullName ?? 'Agent',
+            'title': 'Agent',
+            'phone': property.user?.phoneNumber ?? '',
+            'email': property.user?.email ?? '',
+            'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
+          },
+        };
+        
+        // Add ratings from rawJson if available
+        if (property.rawJson != null) {
+          final rawJson = property.rawJson!;
+          print('📊 [Navigation] Property ID: ${property.id}');
+          print('📊 [Navigation] rawJson keys: ${rawJson.keys.toList()}');
+          print('📊 [Navigation] rawJson has ratings: ${rawJson.containsKey('ratings')}');
+          print('📊 [Navigation] rawJson ratings value: ${rawJson['ratings']}');
+          print('📊 [Navigation] rawJson average_rating: ${rawJson['average_rating']}');
+          print('📊 [Navigation] rawJson rating_count: ${rawJson['rating_count']}');
+          
+          if (rawJson['ratings'] != null) {
+            propertyData['ratings'] = rawJson['ratings'];
+            print('✅ [Navigation] Added ratings to propertyData');
+          } else {
+            print('⚠️ [Navigation] rawJson does not contain ratings key');
+          }
+          if (rawJson['average_rating'] != null) {
+            propertyData['average_rating'] = rawJson['average_rating'];
+            print('✅ [Navigation] Added average_rating to propertyData');
+          }
+          if (rawJson['rating_count'] != null) {
+            propertyData['rating_count'] = rawJson['rating_count'];
+            print('✅ [Navigation] Added rating_count to propertyData');
+          }
+        } else {
+          print('⚠️ [Navigation] property.rawJson is NULL for property ID: ${property.id}');
+          print('⚠️ [Navigation] This means ratings data was lost during PropertyModel creation');
+        }
+        
+        print('📊 [Navigation] Final propertyData keys: ${propertyData.keys.toList()}');
+        print('📊 [Navigation] Final propertyData has ratings: ${propertyData.containsKey('ratings')}');
+        
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-            'id': property.id,
-            'badges': [property.user?.verificationStatus ?? 'Unverified'],
-            'title': property.title,
-            'location': property.location,
-            'rating': '(5.0)',
-            'price': property.price,
-            'type': property.type,
-            'category': property.category,
-            'description': property.description,
-            'features': property.features, // Pass actual features from API
-            'imageUrl': property.imageUrl, // Pass actual image URL from API
-            'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
-            'property360_images': property.property360Images, // Pass 360 images from API
-            'video_url': property.videoUrl, // Pass video URL from API
-            'user': property.user?.toJson(), // Pass actual user data from API
-            'agent': {
-              'name': property.user?.fullName ?? 'Agent',
-              'title': 'Agent',
-              'phone': property.user?.phoneNumber ?? '',
-              'email': property.user?.email ?? '',
-              'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
-            },
-          })),
+          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: propertyData)),
         );
       },
       child: SizedBox(
@@ -1771,21 +1808,30 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                             
                                                         Text(
-                            '(5.0)',
+                                property.rawJson?['average_rating']?.toString() ?? '0.0',
                             style: const TextStyle(
                               fontSize: 13,
                               color: Colors.white,
+                                  fontWeight: FontWeight.w600,
                             ),
                           ),
                                  const SizedBox(width: 4),
                                const Icon(
                                 Icons.star,
                                 size: 16,
-                                color: Colors.green,
+                                color: Colors.amber,
                               ),
-                             
+                              if (property.rawJson?['rating_count'] != null) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${property.rawJson!['rating_count']})',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                  ),
+                              ),
+                              ],
                               const Spacer(),
                               Text(
                                 FormatUtils.formatPrice(property.price),
@@ -1968,31 +2014,67 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         
         // DEBUG: Check what imageUrl we're passing
         
+        // Build propertyData with ratings from rawJson
+        final propertyData = <String, dynamic>{
+          'id': property.id,
+          'badges': [property.user?.verificationStatus ?? 'Unverified'],
+          'title': property.title,
+          'location': property.location,
+          'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+          'rating_count': property.rawJson?['rating_count'] ?? 0,
+          'price': property.price,
+          'type': property.type,
+          'category': property.category,
+          'description': property.description,
+          'features': property.features,
+          'imageUrl': property.imageUrl,
+          'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null),
+          'property360_images': property.property360Images,
+          'video_url': property.videoUrl,
+          'user': property.user?.toJson(),
+          'agent': {
+            'name': property.user?.fullName ?? 'Agent',
+            'title': 'Agent',
+            'phone': property.user?.phoneNumber ?? '',
+            'email': property.user?.email ?? '',
+            'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
+          },
+        };
+        
+        // Add ratings from rawJson if available
+        if (property.rawJson != null) {
+          final rawJson = property.rawJson!;
+          print('📊 [Navigation] Property ID: ${property.id}');
+          print('📊 [Navigation] rawJson keys: ${rawJson.keys.toList()}');
+          print('📊 [Navigation] rawJson has ratings: ${rawJson.containsKey('ratings')}');
+          print('📊 [Navigation] rawJson ratings value: ${rawJson['ratings']}');
+          print('📊 [Navigation] rawJson average_rating: ${rawJson['average_rating']}');
+          print('📊 [Navigation] rawJson rating_count: ${rawJson['rating_count']}');
+          
+          if (rawJson['ratings'] != null) {
+            propertyData['ratings'] = rawJson['ratings'];
+            print('✅ [Navigation] Added ratings to propertyData');
+          } else {
+            print('⚠️ [Navigation] rawJson does not contain ratings key');
+          }
+          if (rawJson['average_rating'] != null) {
+            propertyData['average_rating'] = rawJson['average_rating'];
+            print('✅ [Navigation] Added average_rating to propertyData');
+          }
+          if (rawJson['rating_count'] != null) {
+            propertyData['rating_count'] = rawJson['rating_count'];
+            print('✅ [Navigation] Added rating_count to propertyData');
+          }
+        } else {
+          print('⚠️ [Navigation] property.rawJson is NULL for property ID: ${property.id}');
+          print('⚠️ [Navigation] This means ratings data was lost during PropertyModel creation');
+        }
+        
+        print('📊 [Navigation] Final propertyData keys: ${propertyData.keys.toList()}');
+        print('📊 [Navigation] Final propertyData has ratings: ${propertyData.containsKey('ratings')}');
+        
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
-            'id': property.id,
-            'badges': [property.user?.verificationStatus ?? 'Unverified'],
-            'title': property.title,
-            'location': property.location,
-            'rating': '(5.0)',
-            'price': property.price,
-            'type': property.type,
-            'category': property.category,
-            'description': property.description,
-            'features': property.features, // Pass actual features from API
-            'imageUrl': property.imageUrl, // Pass actual image URL from API
-            'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
-            'property360_images': property.property360Images, // Pass 360 images from API
-            'video_url': property.videoUrl, // Pass video URL from API
-            'user': property.user?.toJson(), // Pass actual user data from API
-            'agent': {
-              'name': property.user?.fullName ?? 'Agent',
-              'title': 'Agent',
-              'phone': property.user?.phoneNumber ?? '',
-              'email': property.user?.email ?? '',
-              'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
-            },
-          })),
+          MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: propertyData)),
         );
       },
       child: Container(
@@ -2134,18 +2216,29 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     Row(
                       children: [
                         Text(
-                          '(5.0)', // Default rating for PropertyModel
+                          property.rawJson?['average_rating']?.toString() ?? '0.0',
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFF868686),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(width: 4),
                         const Icon(
                           Icons.star,
                           size: 16,
-                          color: Colors.green,
+                          color: Colors.amber,
                         ),
+                        if (property.rawJson?['rating_count'] != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${property.rawJson!['rating_count']})',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF868686),
+                            ),
+                        ),
+                        ],
                         const Spacer(),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -2213,7 +2306,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'badges': [property['badges']?.first ?? 'Unverified'],
             'title': property['title'],
             'location': property['location'],
-            'rating': '(5.0)',
+            'average_rating': property['average_rating']?.toString() ?? '0.0',
+            'rating_count': property['rating_count'] ?? 0,
             'price': property['price'],
             'type': property['type'],
             'category': property['category'],

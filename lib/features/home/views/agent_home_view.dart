@@ -933,7 +933,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'badges': [property.user?.verificationStatus ?? 'Unverified'],
                       'title': property.title,
                       'location': property.location,
-                      'rating': '(5.0)',
+                      'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+                      'rating_count': property.rawJson?['rating_count'] ?? 0,
                       'price': property.price,
                       'type': property.type,
                       'category': property.category,
@@ -1174,18 +1175,29 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   Row(
                     children: [
                       Text(
-                        '(5.0)',
+                        property.rawJson?['average_rating']?.toString() ?? '0.0',
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF868686),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(width: 4),
                       const Icon(
                         Icons.star,
                         size: 16,
-                        color: Colors.green,
+                        color: Colors.amber,
                       ),
+                      if (property.rawJson?['rating_count'] != null) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '(${property.rawJson!['rating_count']})',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF868686),
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -1503,7 +1515,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'badges': [property.user?.verificationStatus ?? 'Unverified'],
                       'title': property.title,
                       'location': property.location,
-                      'rating': '(5.0)',
+                      'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+                      'rating_count': property.rawJson?['rating_count'] ?? 0,
                       'price': property.price,
                       'type': property.type,
                       'category': property.category,
@@ -1735,7 +1748,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             'badges': [property.user?.verificationStatus ?? 'Unverified'],
             'title': property.title,
             'location': property.location,
-            'rating': '(5.0)',
+            'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+            'rating_count': property.rawJson?['rating_count'] ?? 0,
             'price': property.price,
             'type': property.type,
             'category': property.category,
@@ -1833,21 +1847,30 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                         
                             Text(
-                              '(5.0)',
+                              property.rawJson?['average_rating']?.toString() ?? '0.0',
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: Colors.white,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                               const SizedBox(width: 4),
-                               const Icon(
+                            const SizedBox(width: 4),
+                            const Icon(
                               Icons.star,
                               size: 16,
-                              color: Colors.green,
+                              color: Colors.amber,
                             ),
-                         
+                            if (property.rawJson?['rating_count'] != null) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '(${property.rawJson!['rating_count']})',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                             const Spacer(),
                             Text(
                               FormatUtils.formatPrice(property.price),
@@ -2031,7 +2054,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               'badges': [property.user?.verificationStatus ?? 'Unverified'],
               'title': property.title,
               'location': property.location,
-              'rating': '(5.0)',
+              'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+              'rating_count': property.rawJson?['rating_count'] ?? 0,
               'price': property.price,
               'type': property.type,
               'category': property.category,
@@ -2184,21 +2208,30 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                   
                         Text(
-                          '(5.0)',
+                          property.rawJson?['average_rating']?.toString() ?? '0.0',
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFF868686),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                           const SizedBox(width: 4),
-                           const Icon(
+                        const SizedBox(width: 4),
+                        const Icon(
                           Icons.star,
                           size: 16,
-                          color: Colors.green,
+                          color: Colors.amber,
                         ),
-                    
+                        if (property.rawJson?['rating_count'] != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${property.rawJson!['rating_count']})',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF868686),
+                            ),
+                          ),
+                        ],
                         const Spacer(),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -2819,7 +2852,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                                 'badges': [property.user?.verificationStatus ?? 'Unverified'],
                                 'title': property.title,
                                 'location': property.location,
-                                'rating': '(5.0)',
+                                'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+                      'rating_count': property.rawJson?['rating_count'] ?? 0,
                                 'price': property.price,
                                 'type': property.type,
                                 'category': property.category,
@@ -3023,19 +3057,30 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Text(
-                        '(5.0)',
-                        style: TextStyle(
+                      Text(
+                        property.rawJson?['average_rating']?.toString() ?? '0.0',
+                        style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF868686),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(width: 4),
                       const Icon(
                         Icons.star,
                         size: 16,
-                        color: Colors.green,
+                        color: Colors.amber,
                       ),
+                      if (property.rawJson?['rating_count'] != null) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '(${property.rawJson!['rating_count']})',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF868686),
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       Text(
                         FormatUtils.formatPrice(property.price),

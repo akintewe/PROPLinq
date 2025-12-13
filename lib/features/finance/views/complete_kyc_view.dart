@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:dotted_border/dotted_border.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:io';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../auth/services/auth_service.dart';
@@ -18,39 +14,16 @@ class CompleteKycView extends StatefulWidget {
 
 class _CompleteKycViewState extends State<CompleteKycView> {
   int _currentStep = 0;
-  final int _totalSteps = 3;
+  final int _totalSteps = 1; // Simplified to 1 step - only NIN required
   final AuthService _authService = AuthService();
 
-  // Controllers for Step 1
-  final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-
-  // Controllers for Step 2
-  final TextEditingController _occupationController = TextEditingController();
-  final TextEditingController _companyController = TextEditingController();
-  String _employmentStatus = '';
-
-  // File upload state
-  PlatformFile? _bankStatementFile;
-  PlatformFile? _utilityBillFile;
+  // Controller for NIN (only required field)
+  final TextEditingController _ninController = TextEditingController();
 
   @override
   void dispose() {
-    _fullNameController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _occupationController.dispose();
-    _companyController.dispose();
+    _ninController.dispose();
     super.dispose();
-  }
-
-  void _nextStep() {
-    if (_currentStep < _totalSteps - 1) {
-      setState(() {
-        _currentStep++;
-      });
-    }
   }
 
   void _previousStep() {
@@ -137,7 +110,7 @@ class _CompleteKycViewState extends State<CompleteKycView> {
             const SizedBox(height: 12),
             
             const Text(
-              'Verify identity and income to unlock flexible rent payments.',
+              'Enter your NIN to verify your identity.',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
@@ -197,393 +170,93 @@ class _CompleteKycViewState extends State<CompleteKycView> {
   }
 
   Widget _buildStepContent() {
-    switch (_currentStep) {
-      case 0:
-        return _buildStep1();
-      case 1:
-        return _buildStep2();
-      case 2:
-        return _buildStep3();
-      default:
-        return _buildStep1();
-    }
+    return _buildNinStep();
   }
 
-  Widget _buildStep1() {
+  Widget _buildNinStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomTextField(
-          label: 'Full Name',
-          hintText: 'John Doe',
-          controller: _fullNameController,
+          label: 'NIN (National Identification Number)',
+          hintText: 'Enter your 11-digit NIN',
+          controller: _ninController,
+          keyboardType: TextInputType.number,
+          maxLength: 11,
         ),
         
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         
-        CustomTextField(
-          label: 'Phone Number',
-          hintText: 'Enter your phone number',
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-        ),
-        
-        const SizedBox(height: 24),
-        
-        CustomTextField(
-          label: 'Email',
-          hintText: 'Enter your email address',
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-        ),
-        
-        const SizedBox(height: 40),
-        
-        GradientButton(
-          text: 'Next',
-          onPressed: _nextStep,
-        ),
-        
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildStep2() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Employment Status Dropdown
-        const Text(
-          'Employed or Self-employed',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-        ),
-        const SizedBox(height: 8),
         Container(
-          width: double.infinity,
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: const Color(0xFFECF0F9),
+              color: const Color(0xFFE0E0E0),
               width: 1,
             ),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _employmentStatus.isEmpty ? null : _employmentStatus,
-              hint: const Text(
-                'Select',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF868686),
-                ),
-              ),
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Color(0xFF868686),
-              ),
-              isExpanded: true,
-              items: [
-                DropdownMenuItem<String>(
-                  value: 'employed',
-                  child: const Text(
-                    'Employed',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                DropdownMenuItem<String>(
-                  value: 'self-employed',
-                  child: const Text(
-                    'Self-employed',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                DropdownMenuItem<String>(
-                  value: 'unemployed',
-                  child: const Text(
-                    'Unemployed',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ],
-              onChanged: (String? newValue) {
-                setState(() {
-                  _employmentStatus = newValue ?? '';
-                });
-              },
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 24),
-        
-        CustomTextField(
-          label: 'Occupation',
-          hintText: 'Enter occupation',
-          controller: _occupationController,
-        ),
-        
-        const SizedBox(height: 24),
-        
-        CustomTextField(
-          label: 'Company or Business name',
-          hintText: 'Enter company or business name',
-          controller: _companyController,
-        ),
-        
-        const SizedBox(height: 40),
-        
-        GradientButton(
-          text: 'Next',
-          onPressed: _nextStep,
-        ),
-        
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildStep3() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Bank Statement Upload
-        const Text(
-          'Kindly upload 3-6 months bank statement',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        _buildFileUploadArea('bank_statement'),
-        
-        const SizedBox(height: 20),
-        
-        // Utility Bill Upload
-        const Text(
-          'Kindly upload your current utility bill',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        _buildFileUploadArea('utility_bill'),
-        
-        const SizedBox(height: 32),
-        
-        GradientButton(
-          text: 'Continue',
-          onPressed: _completeKyc,
-        ),
-        
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildFileUploadArea(String type) {
-    PlatformFile? selectedFile = type == 'bank_statement' ? _bankStatementFile : _utilityBillFile;
-    bool hasFile = selectedFile != null;
-
-    return GestureDetector(
-      onTap: () => _pickFile(type),
-      child: DottedBorder(
-        color: hasFile ? const Color(0xFF426DC2) : const Color(0xFFD0D0D0),
-        strokeWidth: 1.5,
-        dashPattern: const [6, 3],
-        borderType: BorderType.RRect,
-        radius: const Radius.circular(12),
-        child: Container(
-          width: double.infinity,
-          height: 160,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Row(
             children: [
-              if (hasFile) ...[
-                Icon(
-                  Icons.check_circle,
-                  size: 32,
-                  color: Colors.green,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  selectedFile.name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${(selectedFile.size / 1024 / 1024).toStringAsFixed(1)} MB',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF666666),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF426DC2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'Change File',
+              const Icon(
+                Icons.info_outline,
+                size: 20,
+                color: Color(0xFF426DC2),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Your NIN is required to verify your identity. This information is kept secure and confidential.',
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ] else ...[
-                SvgPicture.asset(
-                  'assets/icons/cloud-add.svg',
-                  width: 20,
-                  height: 20,
-                  fit: BoxFit.contain,
-                ),
-                
-                const SizedBox(height: 12),
-                
-                const Text(
-                  'Choose a file or drag & drop it here',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                  ),
-                ),
-                
-                const SizedBox(height: 4),
-                
-                const Text(
-                  'JPEG, PNG, PDF, and MP4 formats, up to 50MB',
-                  style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF666666),
-                  ),
-                ),
-                
-                const SizedBox(height: 12),
-                
-                GestureDetector(
-                  onTap: () => _pickFile(type),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Color.fromRGBO(176, 181, 187, 1),
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'Browse File',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color.fromRGBO(84, 87, 92, 1),
-                      ),
+                    color: Colors.grey[700],
+                    height: 1.4,
                     ),
                   ),
                 ),
               ],
-            ],
           ),
         ),
-      ),
+        
+        const SizedBox(height: 40),
+        
+        GradientButton(
+          text: 'Submit',
+          onPressed: _ninController.text.length == 11 ? _completeKyc : null,
+        ),
+        
+        const SizedBox(height: 40),
+      ],
     );
-  }
-
-  Future<void> _pickFile(String fileType) async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-        allowMultiple: false,
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        setState(() {
-          if (fileType == 'bank_statement') {
-            _bankStatementFile = result.files.first;
-          } else if (fileType == 'utility_bill') {
-            _utilityBillFile = result.files.first;
-          }
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${result.files.first.name} selected successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking file: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   Future<void> _completeKyc() async {
-    // Validate required fields
-    if (_fullNameController.text.isEmpty ||
-        _phoneController.text.isEmpty ||
-        _emailController.text.isEmpty ||
-        _occupationController.text.isEmpty ||
-        _companyController.text.isEmpty ||
-        _employmentStatus.isEmpty ||
-        _bankStatementFile == null ||
-        _utilityBillFile == null) {
+    // Validate NIN
+    if (_ninController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please fill in all required fields and upload all required documents'),
+          content: Text('Please enter your NIN'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
+    if (_ninController.text.trim().length != 11) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('NIN must be 11 digits'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    print('🟢🟢🟢 [USER KYC VIEW] ========================================');
+    print('🟢 [USER KYC VIEW] Starting homeseeker KYC submission...');
+    print('🟢 [USER KYC VIEW] NIN: "${_ninController.text.trim()}"');
+    
     // Show loading indicator
     showDialog(
       context: context,
@@ -596,18 +269,14 @@ class _CompleteKycViewState extends State<CompleteKycView> {
     );
 
     try {
-      // Create UserKycRequest
+      // Create UserKycRequest with only NIN (all other fields optional)
+      print('🟢 [USER KYC VIEW] Creating UserKycRequest...');
       final request = UserKycRequest(
-        bvn: '12345678901', // This should come from a BVN input field
-        nin: '12345678901', // This should come from a NIN input field
-        utilityBill: File(_utilityBillFile!.path!),
-        bankStatement: File(_bankStatementFile!.path!),
-        employmentStatus: _employmentStatus, // This now contains the correct API value
-        occupation: _occupationController.text,
-        companyName: _companyController.text,
-        tin: '1234567890', // This should come from a TIN input field
+        nin: _ninController.text.trim(),
+        // All other fields are optional for home seekers
       );
 
+      print('🟢 [USER KYC VIEW] Calling auth service...');
       // Submit KYC
       final response = await _authService.submitUserKyc(request);
 
@@ -615,6 +284,7 @@ class _CompleteKycViewState extends State<CompleteKycView> {
       Navigator.of(context).pop();
 
       if (response.success) {
+        print('✅ [USER KYC VIEW] KYC submission successful!');
         // Navigate to success screen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -622,6 +292,9 @@ class _CompleteKycViewState extends State<CompleteKycView> {
           ),
         );
       } else {
+        print('🔴 [USER KYC VIEW] KYC submission failed');
+        print('🔴 [USER KYC VIEW] Error message: ${response.message}');
+        print('🔴 [USER KYC VIEW] Errors: ${response.errors}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(response.message ?? 'Failed to submit KYC'),
@@ -629,7 +302,10 @@ class _CompleteKycViewState extends State<CompleteKycView> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔴 [USER KYC VIEW] Exception caught: $e');
+      print('🔴 [USER KYC VIEW] Stack trace: $stackTrace');
+      
       // Hide loading indicator
       Navigator.of(context).pop();
       
@@ -640,5 +316,6 @@ class _CompleteKycViewState extends State<CompleteKycView> {
         ),
       );
     }
+    print('🟢🟢🟢 [USER KYC VIEW] ========================================');
   }
 } 
