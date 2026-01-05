@@ -21,6 +21,15 @@ class _CompleteKycViewState extends State<CompleteKycView> {
   final TextEditingController _ninController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Add listener to update button state when text changes
+    _ninController.addListener(() {
+      setState(() {}); // Rebuild to enable/disable submit button
+    });
+  }
+
+  @override
   void dispose() {
     _ninController.dispose();
     super.dispose();
@@ -256,7 +265,7 @@ class _CompleteKycViewState extends State<CompleteKycView> {
     print('🟢🟢🟢 [USER KYC VIEW] ========================================');
     print('🟢 [USER KYC VIEW] Starting homeseeker KYC submission...');
     print('🟢 [USER KYC VIEW] NIN: "${_ninController.text.trim()}"');
-    
+
     // Show loading indicator
     showDialog(
       context: context,
@@ -295,10 +304,54 @@ class _CompleteKycViewState extends State<CompleteKycView> {
         print('🔴 [USER KYC VIEW] KYC submission failed');
         print('🔴 [USER KYC VIEW] Error message: ${response.message}');
         print('🔴 [USER KYC VIEW] Errors: ${response.errors}');
+        
+        // Build error message from all validation errors
+        String errorMessage = response.message ?? 'Failed to submit KYC';
+        
+        // If there are multiple validation errors, show them all
+        if (response.errors != null && response.errors!.isNotEmpty) {
+          if (response.errors is List) {
+            // Handle array of error messages
+            final errorList = response.errors as List;
+            if (errorList.length > 1) {
+              errorMessage = 'Please fix the following errors:\n' + 
+                           errorList.map((e) => '• $e').join('\n');
+            } else if (errorList.isNotEmpty) {
+              errorMessage = errorList.first.toString();
+            }
+          } else if (response.errors is Map) {
+            // Handle map of field errors
+            final errorMap = response.errors as Map;
+            final allErrors = <String>[];
+            errorMap.forEach((key, value) {
+              if (value is List && value.isNotEmpty) {
+                allErrors.addAll(value.map((e) => e.toString()));
+              } else {
+                allErrors.add(value.toString());
+              }
+            });
+            if (allErrors.length > 1) {
+              errorMessage = 'Please fix the following errors:\n' + 
+                           allErrors.map((e) => '• $e').join('\n');
+            } else if (allErrors.isNotEmpty) {
+              errorMessage = allErrors.first;
+            }
+          }
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response.message ?? 'Failed to submit KYC'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5), // Show longer for multiple errors
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
         );
       }

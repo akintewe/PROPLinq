@@ -18,7 +18,7 @@ class KycSuccessView extends StatelessWidget {
               Align(
                 alignment: Alignment.topRight,
                 child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
+                  onTap: () => Navigator.of(context).pop(true), // Pass true to trigger refresh
                   child: Container(
                     width: 32,
                     height: 32,
@@ -182,7 +182,7 @@ class KycSuccessView extends StatelessWidget {
               GradientButton(
                 text: 'Go back home',
                 onPressed: () {
-                  // Navigate back to home screen
+                  // Navigate back to home screen (pop all routes until first)
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
               ),

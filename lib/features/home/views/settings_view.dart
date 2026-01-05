@@ -6,7 +6,6 @@ import '../../auth/views/login_view.dart';
 import 'account_settings_view.dart';
 import 'privacy_policy_view.dart';
 import 'terms_and_conditions_view.dart';
-import 'bookings_list_view.dart';
 
 class SettingsView extends StatefulWidget {
   final bool isAgent;
@@ -76,22 +75,6 @@ class _SettingsViewState extends State<SettingsView> {
                         iconColor: const Color(0xFF426DC2),
                         title: 'Help & support',
                         onTap: () {},
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      _buildSettingItemWithIcon(
-                        icon: Icons.calendar_today,
-                        iconColor: const Color(0xFF426DC2),
-                        title: 'My Bookings',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const BookingsListView(),
-                            ),
-                          );
-                        },
                       ),
                       
                       const SizedBox(height: 20),
@@ -178,44 +161,6 @@ class _SettingsViewState extends State<SettingsView> {
                   color: iconColor,
                 );
               },
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingItemWithIcon({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.grey50,
-          borderRadius: BorderRadius.circular(60),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: iconColor,
             ),
             const SizedBox(width: 16),
             Expanded(

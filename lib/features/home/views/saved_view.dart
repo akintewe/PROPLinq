@@ -646,7 +646,7 @@ class _SavedViewState extends State<SavedView> {
                                 fontSize: 9,
                                 color: Color(0xFF868686),
                               ),
-                            ),
+                          ),
                           ],
                           const Spacer(),
                           Flexible(
@@ -992,7 +992,7 @@ class _SavedViewState extends State<SavedView> {
                                 fontSize: 9,
                                 color: Color(0xFF868686),
                               ),
-                            ),
+                          ),
                           ],
                           const Spacer(),
                           Flexible(

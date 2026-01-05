@@ -32,7 +32,9 @@ class ApiConstants {
   static const String favoriteProperties = '/properties/favorites';
   static const String listProperties = '/get-properties-list';
   static const String myProperties = '/agent/properties';
+  static const String promotedProperties = '/properties/promoted';
   static String rateProperty(int propertyId) => '/properties/$propertyId/rate';
+  static String promoteProperty(int propertyId) => '/properties/$propertyId/promote';
   
   // KYC Endpoints
   static const String kycSubmission = '/kyc/submit';
@@ -62,6 +64,10 @@ class ApiConstants {
   
   // Booking Endpoints
   static const String bookings = '/bookings';
+  
+  // Subscription Endpoints
+  static const String subscriptionPlans = '/agent/subscription-plans';
+  static const String paySubscription = '/agent/wallet/pay-subscription';
   
   // AppsFlyer OneLink Configuration
   // Template ID from AppsFlyer Dashboard: fOvE

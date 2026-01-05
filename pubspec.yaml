@@ -115,6 +115,9 @@ dependencies:
   # Add events to device calendar
   add_2_calendar: ^2.1.3
 
+  # Carousel slider for bookings and other carousels
+  carousel_slider: ^5.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -226,8 +226,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   List<PropertyModel> _properties = [];
+  List<PropertyModel> _promotedProperties = [];
   List<PropertyModel> _selectedProperties = [];
   bool _isLoadingProperties = true;
+  bool _isLoadingPromotedProperties = true;
   int _unreadMessageCount = 0;
   Timer? _unreadCountTimer;
 
@@ -246,6 +248,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserProfile();
       await _fetchProperties();
+      await _fetchPromotedProperties();
       await _fetchUnreadMessageCount();
       await _showKycDialogIfNeeded();
       _startFeaturedAutoScroll();
@@ -326,6 +329,46 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           ),
         );
       }
+    }
+  }
+
+  Future<void> _fetchPromotedProperties() async {
+    try {
+      print('🟢 [TenantHomeView] Starting to fetch promoted properties...');
+      setState(() {
+        _isLoadingPromotedProperties = true;
+      });
+
+      final promotedProperties = await _propertyService.fetchPromotedProperties();
+      
+      print('🟢 [TenantHomeView] Promoted properties received:');
+      print('   - Count: ${promotedProperties.length}');
+      if (promotedProperties.isNotEmpty) {
+        print('   - First property ID: ${promotedProperties[0].id}');
+        print('   - First property title: ${promotedProperties[0].title}');
+      }
+      
+      setState(() {
+        _promotedProperties = promotedProperties;
+        _isLoadingPromotedProperties = false;
+      });
+      
+      print('✅ [TenantHomeView] Promoted properties loaded successfully');
+      print('🟢🟢🟢 [TenantHomeView] ========================================');
+      
+      // Start auto-scrolling after promoted properties are loaded
+      if (promotedProperties.isNotEmpty) {
+        _startFeaturedAutoScroll();
+      } else {
+        print('⚠️ [TenantHomeView] No promoted properties to display');
+      }
+    } catch (e, stackTrace) {
+      print('❌ [TenantHomeView] Error fetching promoted properties: $e');
+      print('❌ [TenantHomeView] Stack trace: $stackTrace');
+      print('🟢🟢🟢 [TenantHomeView] ========================================');
+      setState(() {
+        _isLoadingPromotedProperties = false;
+      });
     }
   }
 
@@ -558,7 +601,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   void _startFeaturedAutoScroll() {
-    if (_properties.isEmpty) return;
+    if (_promotedProperties.isEmpty) return;
     
     // Card width (284) + separator (16) = 300 pixels per card
     const double cardWidth = 284.0;
@@ -567,7 +610,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     
     // Auto-scroll every 3-4 seconds
     Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (!mounted || _properties.isEmpty) {
+      if (!mounted || _promotedProperties.isEmpty) {
         timer.cancel();
         return;
       }
@@ -1448,22 +1491,32 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         const SizedBox(height: 16),
         
         // Featured properties carousel
-        SizedBox(
-          height: 176,
-          child: ListView.separated(
-            controller: _featuredScrollController,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(left: 24.0, right: 0),
-            itemCount: _isLoadingProperties ? 3 : _properties.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              if (_isLoadingProperties) {
-                return _buildShimmerFeaturedProperty();
-              }
-              return _buildFeaturedPropertyCard(index);
-            },
-          ),
-        ),
+        _isLoadingPromotedProperties
+            ? SizedBox(
+                height: 176,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(left: 24.0, right: 0),
+                  itemCount: 3,
+                  separatorBuilder: (context, index) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) => _buildShimmerFeaturedProperty(),
+                ),
+              )
+            : _promotedProperties.isEmpty
+                ? _buildEmptyPromotedState()
+                : SizedBox(
+                    height: 176,
+                    child: ListView.separated(
+                      controller: _featuredScrollController,
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.only(left: 24.0, right: 0),
+                      itemCount: _promotedProperties.length,
+                      separatorBuilder: (context, index) => const SizedBox(width: 16),
+                      itemBuilder: (context, index) {
+                        return _buildFeaturedPropertyCard(index);
+                      },
+                    ),
+                  ),
       ],
     );
   }
@@ -1620,44 +1673,57 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     );
   }
 
+  Widget _buildEmptyPromotedState() {
+    return Container(
+      height: 176,
+      margin: const EdgeInsets.symmetric(horizontal: 24.0),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE9ECEF),
+          width: 1,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.star_outline,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No Promoted Properties',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Promoted properties will appear here',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeaturedPropertyCard(int index) {
-    // Show loading if properties are still loading
-    if (_isLoadingProperties) {
-      return SizedBox(
-        width: 284,
-        height: 176,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: const Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
-      );
+    // Use promoted properties
+    if (index >= _promotedProperties.length) {
+      return const SizedBox.shrink();
     }
 
-    // Use real properties data if available, otherwise show placeholder
-    if (_properties.isEmpty) {
-      return SizedBox(
-        width: 284,
-        height: 176,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: const Center(
-            child: Text('No properties available'),
-          ),
-        ),
-      );
-    }
-
-    // Get property at index from all properties (Featured Houses should always show all)
-    final propertyIndex = index < _properties.length ? index : 0;
-    final property = _properties[propertyIndex];
+    final property = _promotedProperties[index];
     
     return GestureDetector(
       onTap: () async {

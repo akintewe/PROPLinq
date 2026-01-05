@@ -355,6 +355,130 @@ class PropertyService {
   }
 
   /// Fetch agent's own properties
+  /// Fetch promoted properties
+  Future<List<PropertyModel>> fetchPromotedProperties() async {
+    try {
+      print('🔵 [PropertyService] Fetching promoted properties...');
+      print('🔵 [PropertyService] Endpoint: ${ApiConstants.promotedProperties}');
+      
+      final response = await _apiService.get<dynamic>(
+        ApiConstants.promotedProperties,
+        requiresAuth: false,
+        fromJson: (json) => json,
+      );
+
+      print('🔵 [PropertyService] Response received:');
+      print('   - Success: ${response.success}');
+      print('   - Status Code: ${response.statusCode}');
+      print('   - Message: ${response.message}');
+      print('   - Data type: ${response.data?.runtimeType}');
+      print('   - Data is null: ${response.data == null}');
+      
+      // Handle 404 - no promoted properties found (this is expected if none exist)
+      if (response.statusCode == 404) {
+        print('ℹ️ [PropertyService] No promoted properties found (404) - this is normal if none exist');
+        print('🔵🔵🔵 [PropertyService] ========================================');
+        return [];
+      }
+
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        print('🔵 [PropertyService] Processing response data...');
+        print('   - Data type: ${data.runtimeType}');
+        
+        if (data is Map<String, dynamic>) {
+          print('   - Data is Map with keys: ${data.keys.toList()}');
+        } else if (data is List) {
+          print('   - Data is List with ${data.length} items');
+        }
+        
+        // Handle different response structures
+        List<dynamic> propertiesData = [];
+        if (data is Map<String, dynamic>) {
+          if (data.containsKey('data')) {
+            print('   - Found "data" key in Map');
+            if (data['data'] is List) {
+              propertiesData = data['data'] as List<dynamic>;
+              print('   - Extracted ${propertiesData.length} properties from data.data (List)');
+            } else if (data['data'] is Map && (data['data'] as Map).containsKey('data')) {
+              final nestedData = (data['data'] as Map<String, dynamic>)['data'];
+              if (nestedData is List) {
+                propertiesData = nestedData;
+                print('   - Extracted ${propertiesData.length} properties from nested data.data');
+              }
+            }
+          } else {
+            print('   - Map does not contain "data" key');
+          }
+        } else if (data is List) {
+          propertiesData = data;
+          print('   - Using data directly as List (${propertiesData.length} items)');
+        }
+
+        if (propertiesData.isNotEmpty) {
+          print('   - First property structure: ${propertiesData[0]}');
+        }
+
+        final properties = propertiesData
+            .map((item) => PropertyModel.fromJson(item as Map<String, dynamic>))
+            .toList();
+        
+        print('✅ [PropertyService] Successfully parsed ${properties.length} promoted properties');
+        print('🔵🔵🔵 [PropertyService] ========================================');
+        
+        return properties;
+      } else {
+        if (response.statusCode == 404) {
+          print('ℹ️ [PropertyService] No promoted properties found (404) - returning empty list');
+        } else {
+          print('❌ [PropertyService] Failed to fetch promoted properties');
+          print('   - Success: ${response.success}');
+          print('   - Status Code: ${response.statusCode}');
+          print('   - Message: ${response.message}');
+        }
+        print('🔵🔵🔵 [PropertyService] ========================================');
+      }
+      
+      return [];
+    } catch (e, stackTrace) {
+      print('❌ [PropertyService] Error fetching promoted properties: $e');
+      print('❌ [PropertyService] Stack trace: $stackTrace');
+      print('🔵🔵🔵 [PropertyService] ========================================');
+      return [];
+    }
+  }
+
+  /// Promote a property
+  Future<ApiResponse<Map<String, dynamic>>> promoteProperty(int propertyId) async {
+    try {
+      print('🔵 [PropertyService] Promoting property ID: $propertyId');
+      print('🔵 [PropertyService] Endpoint: ${ApiConstants.promoteProperty(propertyId)}');
+      
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiConstants.promoteProperty(propertyId),
+        body: {
+          'is_promoted': true,
+        },
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+
+      print('🔵 [PropertyService] Promote property response:');
+      print('   - Success: ${response.success}');
+      print('   - Status Code: ${response.statusCode}');
+      print('   - Message: ${response.message}');
+      print('   - Data: ${response.data}');
+
+      return response;
+    } catch (e) {
+      print('❌ [PropertyService] Error promoting property: $e');
+      return ApiResponse.error(
+        message: 'Error promoting property: $e',
+        statusCode: 0,
+      );
+    }
+  }
+
   Future<List<PropertyModel>> fetchMyProperties() async {
     try {
       

@@ -17,6 +17,8 @@ import '../../auth/models/user_model.dart';
 import '../../auth/models/kyc_status_response.dart';
 import '../services/property_service.dart';
 import '../models/property_model.dart';
+import '../widgets/booking_carousel_widget.dart';
+import 'bookings_list_view.dart';
 
 class ProfileView extends StatefulWidget {
   final bool isAgent;
@@ -50,6 +52,28 @@ class _ProfileViewState extends State<ProfileView> {
     if (widget.isAgent) {
       _fetchMyProperties();
     }
+  }
+  
+  /// Refresh all profile data (called after KYC submission)
+  Future<void> _refreshProfile() async {
+    print('🔄 [ProfileView] Refreshing all profile data...');
+    setState(() {
+      _isLoadingProfile = true;
+      _isLoadingKycStatus = true;
+    });
+    
+    // Refresh user profile
+    await _fetchUserProfile();
+    
+    // Refresh KYC status
+    await _fetchKycStatus();
+    
+    // Refresh properties for agents
+    if (widget.isAgent) {
+      await _fetchMyProperties();
+    }
+    
+    print('✅ [ProfileView] Profile refresh complete!');
   }
 
   @override
@@ -463,6 +487,11 @@ class _ProfileViewState extends State<ProfileView> {
                 
                         // Contact Details Section
         widget.isAgent ? _buildAgentContactDetailsSection() : _buildContactDetailsSection(),
+        
+        const SizedBox(height: 40),
+        
+        // Bookings Section (for both agents and home seekers)
+        _buildBookingsSection(),
         
         const SizedBox(height: 40),
         
@@ -896,7 +925,7 @@ class _ProfileViewState extends State<ProfileView> {
               borderRadius: BorderRadius.circular(24),
             ),
             child: ElevatedButton(
-              onPressed: _isLoadingKycStatus ? null : () {
+              onPressed: _isLoadingKycStatus ? null : () async {
                 // Navigate based on KYC status
                 if (_kycStatus?.status == 'pending') {
                   // Show KYC status review screen
@@ -908,12 +937,18 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                   );
                 } else {
-                  // Navigate to KYC form
-                  Navigator.of(context).push(
+                  // Navigate to KYC form and refresh on return
+                  final result = await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const AgentKycView(),
                     ),
                   );
+                  
+                  // Refresh profile if KYC was submitted
+                  if (result == true && mounted) {
+                    print('🔄 [ProfileView] Refreshing after agent KYC submission...');
+                    _refreshProfile();
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -1079,7 +1114,7 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
                 child: ElevatedButton(
                   
-                  onPressed: _isLoadingKycStatus ? null : () {
+                  onPressed: _isLoadingKycStatus ? null : () async {
                     // Navigate based on KYC status
                     if (_kycStatus?.status == 'pending') {
                       // Show KYC status review screen
@@ -1091,12 +1126,18 @@ class _ProfileViewState extends State<ProfileView> {
                         ),
                       );
                     } else {
-                      // Navigate to KYC form
-                      Navigator.of(context).push(
+                      // Navigate to KYC form and refresh on return
+                      final result = await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const CompleteKycView(),
                         ),
                       );
+                      
+                      // Refresh profile if KYC was submitted
+                      if (result == true && mounted) {
+                        print('🔄 [ProfileView] Refreshing after homeseeker KYC submission...');
+                        _refreshProfile();
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -1229,6 +1270,63 @@ class _ProfileViewState extends State<ProfileView> {
               ? 'Loading...' 
               : _currentUser?.location ?? 'Not provided',
         ),
+      ],
+    );
+  }
+
+  Widget _buildBookingsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header with View All button
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'My Bookings',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const BookingsListView(),
+                  ),
+                );
+              },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              child: const Row(
+                children: [
+                  Text(
+                    'View All',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF426DC2),
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward,
+                    size: 16,
+                    color: Color(0xFF426DC2),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 20),
+        
+        // Bookings carousel
+        const BookingCarouselWidget(),
       ],
     );
   }
@@ -1498,12 +1596,43 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                   ),
                 ),
-                // Favorite and More buttons
+                // Promote, Favorite and More buttons
                 Positioned(
                   top: 12,
                   right: 12,
                   child: Row(
                     children: [
+                      // Promote button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            _promoteProperty(property);
+                          },
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.star,
+                              size: 16,
+                              color: Color(0xFFFFA726),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Container(
                         width: 28,
                         height: 28,
@@ -1517,23 +1646,29 @@ class _ProfileViewState extends State<ProfileView> {
                           color: Colors.red,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () => _showPropertyOptionsMenu(context, property),
-                        child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.more_vert,
+                          const SizedBox(width: 8),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                _showPropertyOptionsMenu(context, property);
+                              },
+                              customBorder: const CircleBorder(),
+                              child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.more_vert,
               size: 16,
-                          color: Colors.black,
+                              color: Colors.black,
+                              ),
+                            ),
+                            ),
                           ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -1668,7 +1803,7 @@ class _ProfileViewState extends State<ProfileView> {
                             fontSize: 10,
                             color: Color(0xFF666666),
                           ),
-                        ),
+                      ),
                       ],
                       const Spacer(),
                       Flexible(
@@ -1694,7 +1829,9 @@ class _ProfileViewState extends State<ProfileView> {
                           child: SizedBox(
                             height: 32,
                             child: OutlinedButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                _promoteProperty(property);
+                              },
                               style: OutlinedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: const Color(0xFF426DC2),
@@ -1763,11 +1900,13 @@ class _ProfileViewState extends State<ProfileView> {
                     )
                   else
                     // For non-hotels, show only Promote property button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 32,
-                    child: OutlinedButton(
-                      onPressed: () {},
+                    SizedBox(
+                      width: double.infinity,
+                      height: 32,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          _promoteProperty(property);
+                        },
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: const Color(0xFF426DC2),
@@ -1961,6 +2100,74 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
+  Future<void> _promoteProperty(PropertyModel property) async {
+    try {
+      print('⭐ [ProfileView] Promoting property ID: ${property.id}');
+      
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF426DC2),
+          ),
+        ),
+      );
+
+      final response = await _propertyService.promoteProperty(property.id);
+      
+      // Close loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      print('⭐ [ProfileView] Promote property response:');
+      print('   - Success: ${response.success}');
+      print('   - Status Code: ${response.statusCode}');
+      print('   - Message: ${response.message}');
+      print('   - Data: ${response.data}');
+
+      if (mounted) {
+        if (response.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message ?? 'Property promoted successfully!'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          
+          // Refresh properties to show updated status
+          _fetchMyProperties();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message ?? 'Failed to promote property. Please try again.'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e, stackTrace) {
+      print('❌ [ProfileView] Error promoting property: $e');
+      print('❌ [ProfileView] Stack trace: $stackTrace');
+      
+      // Close loading dialog if still open
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error promoting property: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
   void _showPropertyOptionsMenu(BuildContext context, PropertyModel property) {
     showModalBottomSheet(
       context: context,
@@ -2024,6 +2231,41 @@ class _ProfileViewState extends State<ProfileView> {
                 if (result == true) {
                   _fetchMyProperties();
                 }
+              },
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Promote Property Option
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFA726).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.star,
+                  color: Color(0xFFFFA726),
+                ),
+              ),
+              title: const Text(
+                'Promote Property',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text(
+                'Feature this property in promoted listings',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF868686),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _promoteProperty(property);
               },
             ),
             

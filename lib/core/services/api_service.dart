@@ -106,10 +106,17 @@ class ApiService {
           // Check if data is a Map (expected format for fromJson)
           if (jsonData['data'] is Map<String, dynamic>) {
             data = fromJson(jsonData['data']);
+          } else if (jsonData['data'] is List) {
+            // If data is a List, pass the whole jsonData to fromJson so it can access the list
+            // The fromJson function should handle extracting the list
+            data = fromJson(jsonData);
           } else {
-            // If data is not a Map (e.g., array), pass empty Map to fromJson
+            // If data is not a Map or List, pass empty Map to fromJson
             data = fromJson({});
           }
+        } else {
+          // No 'data' key, pass the whole jsonData
+          data = fromJson(jsonData);
         }
         
         return ApiResponse.success(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_constants.dart';
-import 'hotel_reservation_view.dart';
+import 'booking_details_view.dart';
 
 class BookingsListView extends StatefulWidget {
   const BookingsListView({super.key});
@@ -163,6 +163,19 @@ class _BookingsListViewState extends State<BookingsListView> {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  String _calculateNights(String? checkIn, String? checkOut) {
+    if (checkIn == null || checkOut == null) return '0 nights';
+    
+    try {
+      final checkInDate = DateTime.parse(checkIn);
+      final checkOutDate = DateTime.parse(checkOut);
+      final nights = checkOutDate.difference(checkInDate).inDays;
+      return '$nights ${nights == 1 ? 'night' : 'nights'}';
+    } catch (e) {
+      return '0 nights';
     }
   }
 
@@ -464,6 +477,37 @@ class _BookingsListViewState extends State<BookingsListView> {
                                           
                                           const SizedBox(height: 16),
                                           
+                                          // Client name (if available)
+                                          if (booking['user'] != null)
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFF8F9FA),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.person_outline,
+                                                    size: 16,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Client: ${(booking['user'] as Map)['full_name'] ?? (booking['user'] as Map)['name'] ?? 'Guest'}',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          
+                                          if (booking['user'] != null)
+                                            const SizedBox(height: 12),
+                                          
                                           // Dates row
                                           Row(
                                             children: [
@@ -491,19 +535,62 @@ class _BookingsListViewState extends State<BookingsListView> {
                                             ],
                                           ),
                                           
-                                          const SizedBox(height: 16),
+                                          const SizedBox(height: 12),
                                           
-                                          // Booking code and total amount
+                                          // Number of nights
                                           Container(
                                             padding: const EdgeInsets.all(12),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFF8F9FA),
+                                              color: const Color(0xFFE3F2FD),
                                               borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.nightlight_round,
+                                                  size: 16,
+                                                  color: Color(0xFF426DC2),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  _calculateNights(
+                                                    booking['check_in'] as String?,
+                                                    booking['check_out'] as String?,
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFF426DC2),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          
+                                          const SizedBox(height: 16),
+                                          
+                                          // Booking code and total revenue
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  const Color(0xFF426DC2).withOpacity(0.1),
+                                                  const Color(0xFF426DC2).withOpacity(0.05),
+                                                ],
+                                              ),
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: const Color(0xFF426DC2).withOpacity(0.2),
+                                                width: 1,
+                                              ),
                                             ),
                                             child: Row(
                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
-                                                Column(
+                                                if (booking['booking_code'] != null)
+                                                  Expanded(
+                                                    child: Column(
                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
@@ -515,34 +602,44 @@ class _BookingsListViewState extends State<BookingsListView> {
                                                       ),
                                                     ),
                                                     const SizedBox(height: 4),
-                                                    if (booking['booking_code'] != null)
                                                       Text(
                                                         booking['booking_code'],
                                                         style: const TextStyle(
-                                                          fontSize: 16,
+                                                            fontSize: 14,
                                                           fontWeight: FontWeight.w700,
                                                           color: Colors.black,
-                                                          letterSpacing: 1.2,
+                                                            letterSpacing: 1.0,
                                                         ),
                                                       ),
                                                   ],
+                                                    ),
                                                 ),
                                                 Column(
                                                   crossAxisAlignment: CrossAxisAlignment.end,
                                                   children: [
+                                                    Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.account_balance_wallet,
+                                                          size: 14,
+                                                          color: Colors.grey[600],
+                                                        ),
+                                                        const SizedBox(width: 4),
                                                     Text(
-                                                      'Total Amount',
+                                                          'Total Revenue',
                                                       style: TextStyle(
                                                         fontSize: 11,
                                                         color: Colors.grey[600],
                                                         fontWeight: FontWeight.w500,
                                                       ),
+                                                        ),
+                                                      ],
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Text(
                                                       _formatPrice(booking['amount']?.toString()),
                                                       style: const TextStyle(
-                                                        fontSize: 20,
+                                                        fontSize: 22,
                                                         fontWeight: FontWeight.w700,
                                                         color: Color(0xFF426DC2),
                                                       ),
