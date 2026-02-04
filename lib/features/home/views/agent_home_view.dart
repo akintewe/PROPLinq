@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
 import 'dart:async';
+import 'dart:ui';
 import 'package:proplinq/core/constants/app_colors.dart';
 import '../../../core/utils/format_utils.dart';
+import '../../../core/services/bookings_cache_service.dart';
 import 'saved_view.dart';
 import 'messages_view.dart';
 import 'profile_view.dart';
@@ -230,9 +232,13 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       await _showKycDialogIfNeeded();
       _startFeaturedAutoScroll();
       
+      // Pre-load bookings cache for phone number blur feature
+      BookingsCacheService().fetchAndCacheBookings();
+      
       // Periodically refresh unread message count
+      // Only update if user is NOT viewing messages tab
       _unreadCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        if (mounted) {
+        if (mounted && _currentIndex != 2) {
           _fetchUnreadMessageCount();
         }
       });
@@ -277,6 +283,22 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
       final properties = await _propertyService.fetchAllProperties();
       
+      print('🟡 [AgentHomeView] Fetched properties count: ${properties.length}');
+      print('🟡 [AgentHomeView] Featured properties count: ${properties.where((p) => p.isFeatured).length}');
+      print('🟡 [AgentHomeView] Non-featured properties count: ${properties.where((p) => !p.isFeatured).length}');
+      
+      // Always update featured properties from main list on refresh
+      final featuredFromMain = properties.where((p) => p.isFeatured).toList();
+      if (featuredFromMain.isNotEmpty) {
+        setState(() {
+          _promotedProperties = featuredFromMain;
+        });
+      } else if (_promotedProperties.isNotEmpty) {
+        // If no featured properties found but we had some before, clear them
+        setState(() {
+          _promotedProperties = [];
+        });
+      }
       
       setState(() {
         _properties = properties;
@@ -319,8 +341,20 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         print('   - First property title: ${promotedProperties[0].title}');
       }
       
+      // Filter to only show properties with is_featured: true
+      final featuredProperties = promotedProperties.where((p) => p.isFeatured).toList();
+      
       setState(() {
-        _promotedProperties = promotedProperties;
+        // Only update if we got results from promoted endpoint, otherwise keep/maintain from main list
+        if (featuredProperties.isNotEmpty) {
+          _promotedProperties = featuredProperties;
+        } else {
+          // If promoted endpoint returned empty, try to get from main properties list
+          final featuredFromMain = _properties.where((p) => p.isFeatured).toList();
+          if (featuredFromMain.isNotEmpty) {
+            _promotedProperties = featuredFromMain;
+          }
+        }
         _isLoadingPromotedProperties = false;
       });
       
@@ -328,7 +362,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       print('🟡🟡🟡 [AgentHomeView] ========================================');
       
       // Start auto-scrolling after promoted properties are loaded
-      if (promotedProperties.isNotEmpty) {
+      if (_promotedProperties.isNotEmpty) {
         _startFeaturedAutoScroll();
       } else {
         print('⚠️ [AgentHomeView] No promoted properties to display');
@@ -752,14 +786,34 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     return filtered;
   }
 
+  String _getUserTypeDisplayForAgent() {
+    if (_currentUser == null) return 'Agent';
+    
+    // Prefer agentType if available
+    if (_currentUser!.agentType != null && _currentUser!.agentType!.trim().isNotEmpty) {
+      return _currentUser!.agentType!.replaceAll('_', ' ');
+    }
+    
+    // Fallback to userType
+    final userType = _currentUser!.userType.trim();
+    if (userType.isEmpty || userType == 'agent') {
+      return 'Agent';
+    }
+    
+    return userType.replaceAll('_', ' ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: RefreshIndicator(
         onRefresh: () async {
-          // Refresh properties data
-          await _fetchProperties();
+          // Refresh both properties and featured properties
+          await Future.wait([
+            _fetchProperties(),
+            _fetchPromotedProperties(),
+          ]);
         },
         child: IndexedStack(
           index: _currentIndex,
@@ -1366,8 +1420,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                             ? 'Loading...'
                             : _isShowingSearchResults && _selectedLocation.isNotEmpty
                                 ? _selectedLocation
-                            : _currentUser?.agentType?.replaceAll('_', ' ') ?? 
-                              (_currentUser?.userType == 'agent' ? 'Agent' : 'User'),
+                            : _getUserTypeDisplayForAgent(),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
@@ -1486,6 +1539,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   }
 
   Widget _buildFeaturedSection() {
+    // Hide the entire section if not loading and no featured properties
+    if (!_isLoadingPromotedProperties && _promotedProperties.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       children: [
         Padding(
@@ -1501,7 +1559,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   color: Colors.black,
                 ),
               ),
-       
+
               Transform.translate(
                 offset: Offset(20, 0),
                 child: Row(
@@ -1523,13 +1581,13 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   ],
                 ),
               ),
-             
+
             ],
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Featured properties carousel
         _isLoadingPromotedProperties
             ? SizedBox(
@@ -1542,9 +1600,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   itemBuilder: (context, index) => _buildShimmerFeaturedProperty(),
                 ),
               )
-            : _promotedProperties.isEmpty
-                ? _buildEmptyPromotedState()
-                : SizedBox(
+            : SizedBox(
                     height: 176,
                     child: ListView.separated(
                       controller: _featuredScrollController,
@@ -1659,12 +1715,48 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     );
   }
 
+  /// Check if address should be blurred for shortlets
+  bool _shouldBlurAddress(PropertyModel property) {
+    final isShortlet = property.type.toLowerCase() == 'shortlet';
+    if (!isShortlet) return false;
+    
+    final bookingsCacheService = BookingsCacheService();
+    return !bookingsCacheService.hasBookedProperty(property.id.toString());
+  }
+
+  /// Build blurred text widget
+  Widget _buildBlurredText(String text) {
+    return Stack(
+      children: [
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFF868686),
+          ),
+        ),
+        Positioned.fill(
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+              child: Container(
+                color: Colors.white.withOpacity(0.1),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildVerificationBadge(PropertyModel property) {
     final user = property.user;
     
     // Check if we should show "For Rent" or "For Sale"
+    // Exclude shortlet and hotel from showing "For Rent" tag
     final showForRentSale = (property.category == 'for_rent' || property.category == 'for_sale') &&
-        property.type.toLowerCase() != 'hotel';
+        property.type.toLowerCase() != 'hotel' &&
+        property.type.toLowerCase() != 'shortlet';
     final forRentSaleText = property.category == 'for_rent' ? 'For Rent' : 'For Sale';
     
     IconData icon;
@@ -1747,50 +1839,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           ),
         ],
       ],
-    );
-  }
-
-  Widget _buildEmptyPromotedState() {
-    return Container(
-      height: 176,
-      margin: const EdgeInsets.symmetric(horizontal: 24.0),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE9ECEF),
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.star_outline,
-              size: 48,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'No Promoted Properties',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Promoted properties will appear here',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -2472,14 +2520,17 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   Widget _buildNavItem(int index, String title, String selectedIcon, String unselectedIcon) {
     final isSelected = _currentIndex == index;
-    final showBadge = index == 2 && _unreadMessageCount > 0; // Messages tab (index 2)
+    final showBadge = index == 2 && _unreadMessageCount > 0 && _currentIndex != 2; // Messages tab (index 2), hide badge when viewing messages
     
     return GestureDetector(
       onTap: () {
         // If clicking on home tab (index 0) when already on home, scroll to top and refresh
         if (index == 0 && _currentIndex == 0) {
-          // Refresh properties data
-          _fetchProperties();
+          // Refresh both properties and featured properties
+          Future.wait([
+            _fetchProperties(),
+            _fetchPromotedProperties(),
+          ]);
           // Scroll to top
           if (_homeScrollController.hasClients) {
             _homeScrollController.animateTo(
@@ -2489,11 +2540,25 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             );
           }
         } else {
+          // Clear unread count when navigating to messages tab
+          if (index == 2) {
+            setState(() {
+              _unreadMessageCount = 0; // Clear badge when viewing messages
+            });
+          }
+          // Clear unread count when leaving messages tab
+          if (_currentIndex == 2 && index != 2) {
+            setState(() {
+              _unreadMessageCount = 0; // Clear badge when leaving messages
+            });
+          }
+          
           setState(() {
             _currentIndex = index;
           });
-          // Refresh unread count when navigating to messages
-          if (index == 2) {
+          
+          // Fetch to get accurate count from endpoint (only if not on messages tab)
+          if (index != 2) {
             _fetchUnreadMessageCount();
           }
         }
@@ -3108,13 +3173,15 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       ),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          property.location,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF868686),
-                          ),
-                        ),
+                        child: _shouldBlurAddress(property)
+                            ? _buildBlurredText(property.location)
+                            : Text(
+                                property.location,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF868686),
+                                ),
+                              ),
                       ),
                     ],
                   ),

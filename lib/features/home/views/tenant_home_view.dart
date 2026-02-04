@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
 import 'dart:async';
+import 'dart:ui';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
+import '../../../core/services/bookings_cache_service.dart';
 import 'saved_view.dart';
 import 'messages_view.dart';
 import 'profile_view.dart';
@@ -253,9 +255,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       await _showKycDialogIfNeeded();
       _startFeaturedAutoScroll();
       
+      // Pre-load bookings cache for phone number blur feature
+      BookingsCacheService().fetchAndCacheBookings();
+      
       // Periodically refresh unread message count
+      // Only update if user is NOT viewing messages tab
       _unreadCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        if (mounted) {
+        if (mounted && _currentIndex != 2) {
           _fetchUnreadMessageCount();
         }
       });
@@ -305,6 +311,22 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
       final properties = await _propertyService.fetchAllProperties();
       
+      print('🟢 [TenantHomeView] Fetched properties count: ${properties.length}');
+      print('🟢 [TenantHomeView] Featured properties count: ${properties.where((p) => p.isFeatured).length}');
+      print('🟢 [TenantHomeView] Non-featured properties count: ${properties.where((p) => !p.isFeatured).length}');
+      
+      // Always update featured properties from main list on refresh
+      final featuredFromMain = properties.where((p) => p.isFeatured).toList();
+      if (featuredFromMain.isNotEmpty) {
+        setState(() {
+          _promotedProperties = featuredFromMain;
+        });
+      } else if (_promotedProperties.isNotEmpty) {
+        // If no featured properties found but we had some before, clear them
+        setState(() {
+          _promotedProperties = [];
+        });
+      }
       
       setState(() {
         _properties = properties;
@@ -348,8 +370,20 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         print('   - First property title: ${promotedProperties[0].title}');
       }
       
+      // Filter to only show properties with is_featured: true
+      final featuredProperties = promotedProperties.where((p) => p.isFeatured).toList();
+      
       setState(() {
-        _promotedProperties = promotedProperties;
+        // Only update if we got results from promoted endpoint, otherwise keep/maintain from main list
+        if (featuredProperties.isNotEmpty) {
+          _promotedProperties = featuredProperties;
+        } else {
+          // If promoted endpoint returned empty, try to get from main properties list
+          final featuredFromMain = _properties.where((p) => p.isFeatured).toList();
+          if (featuredFromMain.isNotEmpty) {
+            _promotedProperties = featuredFromMain;
+          }
+        }
         _isLoadingPromotedProperties = false;
       });
       
@@ -357,7 +391,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       print('🟢🟢🟢 [TenantHomeView] ========================================');
       
       // Start auto-scrolling after promoted properties are loaded
-      if (promotedProperties.isNotEmpty) {
+      if (_promotedProperties.isNotEmpty) {
         _startFeaturedAutoScroll();
       } else {
         print('⚠️ [TenantHomeView] No promoted properties to display');
@@ -737,9 +771,13 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   String _getUserRoleDisplay() {
-    if (_currentUser?.userType == null) return 'User';
+    if (_currentUser?.userType == null || _currentUser!.userType.trim().isEmpty) {
+      return 'Home seeker'; // Default for tenant home view
+    }
     
-    switch (_currentUser!.userType) {
+    final userType = _currentUser!.userType.trim();
+    
+    switch (userType) {
       case 'home_seeker':
         return 'Home seeker';
       case 'agent':
@@ -751,9 +789,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       case 'apartment':
         return 'Apartment';
       default:
-        return _currentUser!.userType.replaceAll('_', ' ').split(' ').map((word) => 
-          word[0].toUpperCase() + word.substring(1).toLowerCase()
-        ).join(' ');
+        return userType.replaceAll('_', ' ').split(' ').map((word) => 
+          word.isNotEmpty ? (word[0].toUpperCase() + word.substring(1).toLowerCase()) : ''
+        ).where((word) => word.isNotEmpty).join(' ');
     }
   }
 
@@ -763,8 +801,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       backgroundColor: Colors.white,
       body: RefreshIndicator(
         onRefresh: () async {
-          // Refresh properties data
-          await _fetchProperties();
+          // Refresh both properties and featured properties
+          await Future.wait([
+            _fetchProperties(),
+            _fetchPromotedProperties(),
+          ]);
         },
         child: IndexedStack(
           index: _currentIndex,
@@ -1448,6 +1489,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   Widget _buildFeaturedSection() {
+    // Hide the entire section if not loading and no featured properties
+    if (!_isLoadingPromotedProperties && _promotedProperties.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       children: [
         Padding(
@@ -1487,9 +1533,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             ],
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Featured properties carousel
         _isLoadingPromotedProperties
             ? SizedBox(
@@ -1502,21 +1548,19 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                   itemBuilder: (context, index) => _buildShimmerFeaturedProperty(),
                 ),
               )
-            : _promotedProperties.isEmpty
-                ? _buildEmptyPromotedState()
-                : SizedBox(
-                    height: 176,
-                    child: ListView.separated(
-                      controller: _featuredScrollController,
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.only(left: 24.0, right: 0),
-                      itemCount: _promotedProperties.length,
-                      separatorBuilder: (context, index) => const SizedBox(width: 16),
-                      itemBuilder: (context, index) {
-                        return _buildFeaturedPropertyCard(index);
-                      },
-                    ),
-                  ),
+            : SizedBox(
+                height: 176,
+                child: ListView.separated(
+                  controller: _featuredScrollController,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(left: 24.0, right: 0),
+                  itemCount: _promotedProperties.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    return _buildFeaturedPropertyCard(index);
+                  },
+                ),
+              ),
       ],
     );
   }
@@ -1582,12 +1626,48 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     );
   }
 
+  /// Check if address should be blurred for shortlets
+  bool _shouldBlurAddress(PropertyModel property) {
+    final isShortlet = property.type.toLowerCase() == 'shortlet';
+    if (!isShortlet) return false;
+    
+    final bookingsCacheService = BookingsCacheService();
+    return !bookingsCacheService.hasBookedProperty(property.id.toString());
+  }
+
+  /// Build blurred text widget
+  Widget _buildBlurredText(String text) {
+    return Stack(
+      children: [
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFF868686),
+          ),
+        ),
+        Positioned.fill(
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+              child: Container(
+                color: Colors.white.withOpacity(0.1),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildVerificationBadge(PropertyModel property) {
     final user = property.user;
     
     // Check if we should show "For Rent" or "For Sale"
+    // Exclude shortlet and hotel from showing "For Rent" tag
     final showForRentSale = (property.category == 'for_rent' || property.category == 'for_sale') &&
-        property.type.toLowerCase() != 'hotel';
+        property.type.toLowerCase() != 'hotel' &&
+        property.type.toLowerCase() != 'shortlet';
     final forRentSaleText = property.category == 'for_rent' ? 'For Rent' : 'For Sale';
     
     IconData icon;
@@ -1670,50 +1750,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           ),
         ],
       ],
-    );
-  }
-
-  Widget _buildEmptyPromotedState() {
-    return Container(
-      height: 176,
-      margin: const EdgeInsets.symmetric(horizontal: 24.0),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE9ECEF),
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.star_outline,
-              size: 48,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'No Promoted Properties',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Promoted properties will appear here',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1861,13 +1897,15 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                      ),
                               const SizedBox(width: 4),
                               Expanded(
-                                child: Text(
-                                  property.location,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                child: _shouldBlurAddress(property)
+                                    ? _buildBlurredText(property.location)
+                                    : Text(
+                                        property.location,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                               ),
                             ],
                           ),
@@ -2268,13 +2306,15 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         ),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: Text(
-                            property.location,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF868686),
-                            ),
-                          ),
+                          child: _shouldBlurAddress(property)
+                              ? _buildBlurredText(property.location)
+                              : Text(
+                                  property.location,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF868686),
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -2834,14 +2874,17 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Widget _buildNavItem(int index, String title, String selectedIcon, String unselectedIcon) {
     final isSelected = _currentIndex == index;
-    final showBadge = index == 2 && _unreadMessageCount > 0; // Messages tab (index 2)
+    final showBadge = index == 2 && _unreadMessageCount > 0 && _currentIndex != 2; // Messages tab (index 2), hide badge when viewing messages
     
     return GestureDetector(
       onTap: () {
         // If clicking on home tab (index 0) when already on home, scroll to top and refresh
         if (index == 0 && _currentIndex == 0) {
-          // Refresh properties data
-          _fetchProperties();
+          // Refresh both properties and featured properties
+          Future.wait([
+            _fetchProperties(),
+            _fetchPromotedProperties(),
+          ]);
           // Scroll to top
           if (_homeScrollController.hasClients) {
             _homeScrollController.animateTo(
@@ -2851,11 +2894,25 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             );
           }
         } else {
+          // Clear unread count when navigating to messages tab
+          if (index == 2) {
+            setState(() {
+              _unreadMessageCount = 0; // Clear badge when viewing messages
+            });
+          }
+          // Clear unread count when leaving messages tab
+          if (_currentIndex == 2 && index != 2) {
+            setState(() {
+              _unreadMessageCount = 0; // Clear badge when leaving messages
+            });
+          }
+          
           setState(() {
             _currentIndex = index;
           });
-          // Refresh unread count when navigating to messages
-          if (index == 2) {
+          
+          // Fetch to get accurate count from endpoint (only if not on messages tab)
+          if (index != 2) {
             _fetchUnreadMessageCount();
           }
         }

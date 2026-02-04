@@ -47,6 +47,8 @@
 	<string>Proplinq needs access to your camera to take photos for property listings and chat messages.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Proplinq needs access to your microphone to record videos with audio for property listings and chat messages.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Proplinq needs access to your calendar to help you schedule property viewings and manage booking appointments.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

@@ -57,7 +57,8 @@ abstract class BaseViewModel extends ChangeNotifier {
       return result;
     } catch (e) {
       hideLoading();
-      setError(e.toString());
+      // Provide user-friendly error message without exposing technical details
+      setError('An error occurred while processing your request. Please try again.');
       return null;
     }
   }

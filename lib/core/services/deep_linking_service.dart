@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:appsflyer_sdk/appsflyer_sdk.dart';
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 
 /// Service to handle deep linking and deferred deep linking via AppsFlyer
 class DeepLinkingService {
@@ -13,6 +13,7 @@ class DeepLinkingService {
   StreamSubscription? _subscription;
   StreamSubscription? _uriLinkSubscription;
   bool _isInitialized = false;
+  final AppLinks _appLinks = AppLinks();
   
   // Store pending deep link data for deferred deep linking
   Map<String, dynamic>? _pendingDeepLinkData;
@@ -30,6 +31,10 @@ class DeepLinkingService {
     }
 
     try {
+      print('🔵 [DeepLinkingService] Initializing AppsFlyer SDK...');
+      print('   - Platform: ${Platform.isAndroid ? "Android" : "iOS"}');
+      print('   - Dev Key: TBCWz6fvHsJ2xegPPzHGJH');
+      print('   - Debug Mode: $isDebug');
       
       // Set up deep link callback
       _onDeepLinkReceived = onDeepLinkReceived;
@@ -37,12 +42,13 @@ class DeepLinkingService {
       // AppsFlyer SDK configuration
       final appsFlyerOptions = AppsFlyerOptions(
         afDevKey: 'TBCWz6fvHsJ2xegPPzHGJH',
-        appId: Platform.isIOS ? '6755110033' : '', // iOS App ID for App Store
+        appId: Platform.isIOS ? '6755110033' : '', // iOS App ID for App Store (Android doesn't need appId)
         showDebug: isDebug,
         timeToWaitForATTUserAuthorization: Platform.isIOS ? 60 : null, // iOS only
       );
 
       _appsflyerSdk = AppsflyerSdk(appsFlyerOptions);
+      print('✅ [DeepLinkingService] AppsFlyer SDK instance created');
       
       // Set up deep link listener
       _appsflyerSdk?.onInstallConversionData((data) {
@@ -67,28 +73,33 @@ class DeepLinkingService {
       });
 
       // Initialize AppsFlyer
+      print('🔵 [DeepLinkingService] Calling initSdk...');
       await _appsflyerSdk?.initSdk(
         registerConversionDataCallback: true,
         registerOnAppOpenAttributionCallback: true,
         registerOnDeepLinkingCallback: true,
       );
+      print('✅ [DeepLinkingService] AppsFlyer SDK initialized successfully');
 
       
       // Set up uni_links listener for custom URL schemes
       await _initUniLinks();
       
       _isInitialized = true;
-    } catch (e) {
+      print('✅ [DeepLinkingService] Deep linking service fully initialized');
+    } catch (e, stackTrace) {
+      print('❌ [DeepLinkingService] Error initializing AppsFlyer SDK: $e');
+      print('   - Stack trace: $stackTrace');
     }
   }
 
-  /// Initialize uni_links for custom URL scheme handling
+  /// Initialize app_links for custom URL scheme handling
   Future<void> _initUniLinks() async {
     try {
       
       // Handle initial link (when app is opened via deep link)
       try {
-        final initialLink = await getInitialUri();
+        final initialLink = await _appLinks.getInitialLink();
         if (initialLink != null) {
           _handleDeepLink(initialLink.toString());
         } else {
@@ -97,12 +108,9 @@ class DeepLinkingService {
       }
 
       // Listen for incoming links when app is already running
-      _uriLinkSubscription = uriLinkStream.listen(
-        (Uri? uri) {
-          if (uri != null) {
+      _uriLinkSubscription = _appLinks.uriLinkStream.listen(
+        (Uri uri) {
             _handleDeepLink(uri.toString());
-          } else {
-          }
         },
         onError: (err) {
         },

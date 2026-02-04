@@ -8,6 +8,7 @@ class GoogleMapWidget extends StatefulWidget {
   final double? latitude;
   final double? longitude;
   final String? propertyTitle;
+  final String? locationString; // Location address string for geocoding
   final double height;
   final bool showMarker;
 
@@ -16,6 +17,7 @@ class GoogleMapWidget extends StatefulWidget {
     this.latitude,
     this.longitude,
     this.propertyTitle,
+    this.locationString,
     this.height = 200,
     this.showMarker = true,
   });
@@ -268,7 +270,16 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   }
 
   void _openInGoogleMaps(double lat, double lng, String title) async {
-    final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    // Use location string if available, otherwise use coordinates
+    String url;
+    if (widget.locationString != null && widget.locationString!.isNotEmpty) {
+      // Use location string in query parameter for better accuracy
+      final encodedLocation = Uri.encodeComponent(widget.locationString!);
+      url = 'https://www.google.com/maps/search/?api=1&query=$encodedLocation';
+    } else {
+      // Fallback to coordinates
+      url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    }
     
     try {
       if (await canLaunchUrl(Uri.parse(url))) {

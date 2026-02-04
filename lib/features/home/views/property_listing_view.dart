@@ -1686,12 +1686,19 @@ class _PropertyListingViewState extends State<PropertyListingView> {
 
       // Create property using the service
       final propertyService = PropertyService();
+      
+      // For Hotels and Shortlets, use the property type as category
+      // For Apartments, use the listing type (For rent/For sale)
+      final String propertyCategory = (_isHotelType || _isShortletType) 
+          ? _selectedPropertyType 
+          : _listingType;
+      
       final response = await propertyService.createProperty(
         type: _selectedPropertyType,
         title: _propertyTitleController.text,
         description: _descriptionController.text,
         price: cleanPrice,
-        category: _listingType,
+        category: propertyCategory,
         location: _locationController.text,
         bedrooms: (_isHotelType || _isShortletType) ? '1' : _roomsController.text,
         bathrooms: (_isHotelType || _isShortletType) ? '1' : _bathroomsController.text,

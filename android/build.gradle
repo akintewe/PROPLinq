@@ -11,6 +11,12 @@ allprojects {
                 namespace 'finaldev.motion_sensors'
             }
         }
+        // Fix uni_links plugin namespace issue
+        if (project.name == 'uni_links') {
+            project.android {
+                namespace 'io.flutter.plugins.uni_links'
+            }
+        }
     }
 }
 

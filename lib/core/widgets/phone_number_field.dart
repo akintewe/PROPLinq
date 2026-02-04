@@ -32,7 +32,11 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
     
     // Initialize display controller with existing value
     if (widget.controller.text.isNotEmpty) {
-      if (widget.controller.text.startsWith('+234')) {
+      if (widget.controller.text.startsWith('234')) {
+        // Remove 234 prefix to show only the phone number part
+        _displayController.text = widget.controller.text.substring(3);
+      } else if (widget.controller.text.startsWith('+234')) {
+        // Remove +234 prefix to show only the phone number part
         _displayController.text = widget.controller.text.substring(4);
       } else {
         _displayController.text = widget.controller.text;
@@ -58,18 +62,16 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
     
     // Handle Nigerian phone number format
     if (phoneNumber.isNotEmpty) {
-      // If starts with 0, replace with +234
+      // If starts with 0, replace with 234
       if (phoneNumber.startsWith('0')) {
-        phoneNumber = '+234${phoneNumber.substring(1)}';
+        phoneNumber = '234${phoneNumber.substring(1)}';
       } 
-      // If doesn't start with country code, add +234
+      // If doesn't start with country code, add 234
       else if (!phoneNumber.startsWith('234')) {
-        phoneNumber = '+234$phoneNumber';
+        phoneNumber = '234$phoneNumber';
       }
-      // If starts with 234 but no +, add +
-      else if (phoneNumber.startsWith('234')) {
-        phoneNumber = '+$phoneNumber';
-      }
+      // If already starts with 234, use as is
+      // (no need to add +)
       
       widget.controller.text = phoneNumber;
     } else {

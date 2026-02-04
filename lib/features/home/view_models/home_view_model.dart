@@ -42,10 +42,14 @@ class HomeViewModel extends BaseViewModel {
       // Fetch all properties from API
       final properties = await _propertyService.fetchAllProperties();
       
+      print('🏠 [HomeViewModel] Fetched properties count: ${properties.length}');
+      print('🏠 [HomeViewModel] Featured properties count: ${properties.where((p) => p.isFeatured).length}');
+      print('🏠 [HomeViewModel] Non-featured properties count: ${properties.where((p) => !p.isFeatured).length}');
+      
       if (properties.isNotEmpty) {
         _properties = properties;
-        // Set featured properties (first 3)
-        _featuredProperties = _properties.take(3).toList();
+        // Set featured properties - only those with is_featured: true
+        _featuredProperties = _properties.where((p) => p.isFeatured).toList();
         
       } else {
         _properties = [];
@@ -87,7 +91,9 @@ class HomeViewModel extends BaseViewModel {
   /// Get property by ID
   PropertyModel? getPropertyById(String id) {
     try {
-      return _properties.firstWhere((p) => p.id == id);
+      final propertyId = int.tryParse(id);
+      if (propertyId == null) return null;
+      return _properties.firstWhere((p) => p.id == propertyId);
     } catch (e) {
       return null;
     }

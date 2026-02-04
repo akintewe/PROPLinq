@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:proplinq/core/constants/app_colors.dart';
-import 'package:proplinq/core/constants/app_typography.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/phone_number_field.dart';
@@ -9,7 +7,7 @@ import '../../../core/widgets/location_autocomplete_field.dart';
 import '../models/register_request.dart';
 import '../services/auth_service.dart';
 import 'login_view.dart';
-import 'email_verification_view.dart';
+import 'verify_phone_view.dart';
 import 'option_selection_view.dart';
 import '../../home/views/tenant_home_view.dart';
 import '../../home/views/agent_home_view.dart';
@@ -119,15 +117,15 @@ class _SignUpViewState extends State<SignUpView> {
       }
 
       if (response.success && response.data != null) {
-        // Registration successful - check if it's a home seeker
-        if (_isHomeSeeker) {
-          // Navigate to option selection screen for home seekers
-          _navigateToOptionSelection();
-        } else {
-          // For agents, navigate to login screen
-          _showSuccessMessage('Registration successful! Please log in with your credentials.');
-          _navigateToLogin();
-        }
+        // Registration successful - navigate to phone verification screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => VerifyPhoneView(
+              phoneNumber: _phoneNumberController.text.trim(),
+              isHomeSeeker: _isHomeSeeker,
+            ),
+          ),
+        );
       } else {
         // Registration failed
         _showErrorMessage(
@@ -533,7 +531,7 @@ class _SignUpViewState extends State<SignUpView> {
                       
                       // Dropdown for agent type
                       const Text(
-                        'Individual agent, Realtor, Hotel or Apartment',
+                        'Individual agent, Realtor, Hotel or Shortlet',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -560,7 +558,7 @@ class _SignUpViewState extends State<SignUpView> {
                               'Individual Agent',
                               'Realtor',
                               'Hotel',
-                              'Apartment',
+                              'Shortlet',
                             ].map((String value) {
                               return DropdownMenuItem<String>(
                                 value: value,

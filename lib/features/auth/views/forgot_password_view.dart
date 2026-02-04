@@ -3,6 +3,7 @@ import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/constants/app_typography.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../services/auth_service.dart';
 import 'enter_code_view.dart';
 
 class ForgotPasswordView extends StatefulWidget {
@@ -15,6 +16,10 @@ class ForgotPasswordView extends StatefulWidget {
 class _ForgotPasswordViewState extends State<ForgotPasswordView> {
   final TextEditingController _emailController = TextEditingController();
   final FocusNode _focusNodeEmail = FocusNode();
+  final AuthService _authService = AuthService();
+
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -23,11 +28,91 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
     super.dispose();
   }
 
-  void _sendEmail() {
-    // Handle send email logic
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const EnterCodeView()),
+  bool _validateForm() {
+    if (_emailController.text.trim().isEmpty) {
+      _showErrorMessage('Please enter your email address');
+      return false;
+    }
+
+    if (!_isValidEmail(_emailController.text.trim())) {
+      _showErrorMessage('Please enter a valid email address');
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
     );
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _requestPasswordReset() async {
+    if (!_validateForm()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await _authService.forgotPassword(
+        email: _emailController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (response.success) {
+        _showSuccessMessage('OTP sent to your phone/WhatsApp');
+
+        // Navigate to OTP verification view
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => EnterCodeView(
+              email: _emailController.text.trim(),
+            ),
+          ),
+        );
+      } else {
+        setState(() {
+          _errorMessage = response.message ?? 'Failed to send OTP. Please try again.';
+        });
+        _showErrorMessage(_errorMessage!);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'An unexpected error occurred. Please try again.';
+      });
+      _showErrorMessage(_errorMessage!);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _goBack() {
@@ -93,7 +178,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
               const SizedBox(height: 8),
               const Center(
                 child: Text(
-                  'Enter your email below, and a link will be sent to you to reset it.',
+                  'Enter your email below, and an OTP will be sent to your phone/WhatsApp to reset it.',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
@@ -102,9 +187,9 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                   textAlign: TextAlign.center,
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Email field
               CustomTextField(
                 label: 'Email',
@@ -112,14 +197,16 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                 controller: _emailController,
                 focusNode: _focusNodeEmail,
                 keyboardType: TextInputType.emailAddress,
+                hasError: _errorMessage != null,
+                errorMessage: _errorMessage,
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Send Email button
               GradientButton(
-                text: 'Send Email',
-                onPressed: _sendEmail,
+                text: _isLoading ? 'Sending...' : 'Send OTP',
+                onPressed: _isLoading ? null : _requestPasswordReset,
               ),
               
               const SizedBox(height: 24),

@@ -508,16 +508,18 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                           color: Color(0xFF426DC2),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        description,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF666666),
-                          fontStyle: FontStyle.italic,
+                      if (description.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          description,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF666666),
+                            fontStyle: FontStyle.italic,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -543,10 +545,11 @@ class _SubscriptionViewState extends State<SubscriptionView> {
               ],
             ),
             
-            const SizedBox(height: 16),
-            
-            // Features
-            ...features.map((feature) => Padding(
+            if (features.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              
+              // Features
+              ...features.map((feature) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,6 +578,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                 ],
               ),
             )).toList(),
+            ],
           ],
         ),
       ),

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+6
+version: 1.0.0+11
 
 environment:
   sdk: ^3.6.1
@@ -103,8 +103,8 @@ dependencies:
   # AppsFlyer for deep linking and deferred deep linking
   appsflyer_sdk: ^6.15.2
   
-  # UniLinks for handling deep links
-  uni_links: ^0.5.1
+  # app_links for handling deep links (replacement for discontinued uni_links)
+  app_links: ^6.3.4
 
   # Share functionality for deep links
   share_plus: ^10.1.2

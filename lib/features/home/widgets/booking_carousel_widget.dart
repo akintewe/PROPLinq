@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/bookings_cache_service.dart';
 import '../../../core/constants/api_constants.dart';
 import '../views/bookings_list_view.dart';
 
@@ -13,6 +14,7 @@ class BookingCarouselWidget extends StatefulWidget {
 
 class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
   final ApiService _apiService = ApiService();
+  final BookingsCacheService _bookingsCacheService = BookingsCacheService();
   List<Map<String, dynamic>> _bookings = [];
   bool _isLoading = true;
   int _currentIndex = 0;
@@ -65,6 +67,9 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
               .toList();
           _isLoading = false;
         });
+        
+        // Update bookings cache with fresh data
+        _bookingsCacheService.fetchAndCacheBookings(forceRefresh: true);
       } else {
         setState(() {
           _isLoading = false;
@@ -131,6 +136,89 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
       return checkOutDate.difference(checkInDate).inDays;
     } catch (e) {
       return 0;
+    }
+  }
+
+  Future<void> _cancelBooking(int bookingId, String bookingCode) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Booking'),
+        content: Text(
+          'Are you sure you want to cancel booking $bookingCode? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show loading indicator
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF426DC2),
+        ),
+      ),
+    );
+
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiConstants.cancelBooking(bookingId),
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (response.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Booking cancelled successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        // Refresh bookings list
+        _loadBookings();
+        // Refresh cache
+        _bookingsCacheService.fetchAndCacheBookings(forceRefresh: true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message ?? 'Failed to cancel booking'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error cancelling booking: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -288,103 +376,147 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Property title
-                              Text(
-                                property['title'] ?? 'Property',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black,
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Property title
+                                Text(
+                                  property['title'] ?? 'Property',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              
-                              const SizedBox(height: 6),
-                              
-                              // Dates
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_today,
-                                    size: 12,
-                                    color: Color(0xFF666666),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      '${_formatDate(booking['check_in'] as String?)} - ${_formatDate(booking['check_out'] as String?)}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF666666),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              
-                              const SizedBox(height: 4),
-                              
-                              // Number of nights
-                              if (nights > 0)
+                                
+                                const SizedBox(height: 6),
+                                
+                                // Dates
                                 Row(
                                   children: [
                                     const Icon(
-                                      Icons.nightlight_round,
+                                      Icons.calendar_today,
                                       size: 12,
                                       color: Color(0xFF666666),
                                     ),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      '$nights ${nights == 1 ? 'night' : 'nights'}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF666666),
+                                    Expanded(
+                                      child: Text(
+                                        '${_formatDate(booking['check_in'] as String?)} - ${_formatDate(booking['check_out'] as String?)}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF666666),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
                                 ),
-                              
-                              const Spacer(),
-                              
-                              // Divider
-                              Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: Colors.grey[200],
-                              ),
-                              
-                              const SizedBox(height: 8),
-                              
-                              // Price
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Text(
-                                    'Total',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Color(0xFF666666),
-                                      fontWeight: FontWeight.w500,
+                                
+                                const SizedBox(height: 4),
+                                
+                                // Number of nights
+                                if (nights > 0)
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.nightlight_round,
+                                        size: 12,
+                                        color: Color(0xFF666666),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '$nights ${nights == 1 ? 'night' : 'nights'}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF666666),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                
+                                const SizedBox(height: 12),
+                                
+                                // Divider
+                                Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: Colors.grey[200],
+                                ),
+                                
+                                const SizedBox(height: 8),
+                                
+                                // Price
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text(
+                                      'Total',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFF666666),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatPrice(booking['amount']?.toString()),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF426DC2),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                
+                                const SizedBox(height: 8),
+                                
+                                // Cancel Booking Button
+                                if (booking['status'] != null && 
+                                    (booking['status'] as String).toLowerCase() != 'cancelled')
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () {
+                                        final bookingId = booking['id'];
+                                        final bookingCode = booking['booking_code'] ?? 'N/A';
+                                        if (bookingId != null) {
+                                          _cancelBooking(
+                                            bookingId is int ? bookingId : int.tryParse(bookingId.toString()) ?? 0,
+                                            bookingCode.toString(),
+                                          );
+                                        }
+                                      },
+                                      icon: const Icon(
+                                        Icons.cancel_outlined,
+                                        size: 14,
+                                        color: Colors.red,
+                                      ),
+                                      label: const Text(
+                                        'Cancel',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        side: const BorderSide(color: Colors.red, width: 1),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  Text(
-                                    _formatPrice(booking['amount']?.toString()),
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF426DC2),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -395,7 +527,7 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
             );
           },
           options: CarouselOptions(
-            height: 300,
+            height: 340,
             viewportFraction: _bookings.length == 1 ? 1.0 : 0.65,
             enlargeCenterPage: _bookings.length > 1,
             enlargeFactor: _bookings.length > 1 ? 0.15 : 0.0,

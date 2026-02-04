@@ -107,9 +107,15 @@ class ApiService {
           if (jsonData['data'] is Map<String, dynamic>) {
             data = fromJson(jsonData['data']);
           } else if (jsonData['data'] is List) {
-            // If data is a List, pass the whole jsonData to fromJson so it can access the list
-            // The fromJson function should handle extracting the list
-            data = fromJson(jsonData);
+            // If data is a List, we need to handle it specially
+            // For generic T, we'll pass the whole jsonData so fromJson can extract the list
+            // This is typically used when T is dynamic or when the fromJson handles the extraction
+            try {
+              data = fromJson(jsonData);
+            } catch (e) {
+              // If that fails, try passing just the data list wrapped in a map
+              data = fromJson({'data': jsonData['data']});
+            }
           } else {
             // If data is not a Map or List, pass empty Map to fromJson
             data = fromJson({});
@@ -161,7 +167,7 @@ class ApiService {
         );
       }
       return ApiResponse.error(
-        message: 'Failed to parse response: $e',
+        message: 'An error occurred while processing the server response. Please try again.',
         statusCode: response.statusCode,
       );
     }
@@ -196,14 +202,19 @@ class ApiService {
       } else {
         return _handleResponse<T>(response, (json) => json as T);
       }
-    } on SocketException {
+    } on SocketException catch (_) {
       return ApiResponse.error(
-        message: 'No internet connection',
+        message: 'No internet connection. Please check your network and try again.',
         statusCode: 0,
       );
-    } catch (e) {
+    } on http.ClientException catch (_) {
       return ApiResponse.error(
-        message: 'Request failed: $e',
+        message: 'Unable to connect to the server. Please check your internet connection and try again.',
+        statusCode: 0,
+      );
+    } catch (_) {
+      return ApiResponse.error(
+        message: 'An error occurred while processing your request. Please try again.',
         statusCode: 0,
       );
     }
@@ -231,14 +242,19 @@ class ApiService {
       } else {
         return _handleResponse<T>(response, (json) => json as T);
       }
-    } on SocketException {
+    } on SocketException catch (_) {
       return ApiResponse.error(
-        message: 'No internet connection',
+        message: 'No internet connection. Please check your network and try again.',
         statusCode: 0,
       );
-    } catch (e) {
+    } on http.ClientException catch (_) {
       return ApiResponse.error(
-        message: 'Request failed: $e',
+        message: 'Unable to connect to the server. Please check your internet connection and try again.',
+        statusCode: 0,
+      );
+    } catch (_) {
+      return ApiResponse.error(
+        message: 'An error occurred while processing your request. Please try again.',
         statusCode: 0,
       );
     }
@@ -266,14 +282,19 @@ class ApiService {
       } else {
         return _handleResponse<T>(response, (json) => json as T);
       }
-    } on SocketException {
+    } on SocketException catch (_) {
       return ApiResponse.error(
-        message: 'No internet connection',
+        message: 'No internet connection. Please check your network and try again.',
         statusCode: 0,
       );
-    } catch (e) {
+    } on http.ClientException catch (_) {
       return ApiResponse.error(
-        message: 'Request failed: $e',
+        message: 'Unable to connect to the server. Please check your internet connection and try again.',
+        statusCode: 0,
+      );
+    } catch (_) {
+      return ApiResponse.error(
+        message: 'An error occurred while processing your request. Please try again.',
         statusCode: 0,
       );
     }
@@ -296,14 +317,19 @@ class ApiService {
       } else {
         return _handleResponse<T>(response, (json) => json as T);
       }
-    } on SocketException {
+    } on SocketException catch (_) {
       return ApiResponse.error(
-        message: 'No internet connection',
+        message: 'No internet connection. Please check your network and try again.',
         statusCode: 0,
       );
-    } catch (e) {
+    } on http.ClientException catch (_) {
       return ApiResponse.error(
-        message: 'Request failed: $e',
+        message: 'Unable to connect to the server. Please check your internet connection and try again.',
+        statusCode: 0,
+      );
+    } catch (_) {
+      return ApiResponse.error(
+        message: 'An error occurred while processing your request. Please try again.',
         statusCode: 0,
       );
     }
@@ -361,14 +387,19 @@ class ApiService {
       } else {
         return _handleResponse<T>(response, (json) => json as T);
       }
-    } on SocketException {
+    } on SocketException catch (_) {
       return ApiResponse.error(
-        message: 'No internet connection',
+        message: 'No internet connection. Please check your network and try again.',
         statusCode: 0,
       );
-    } catch (e) {
+    } on http.ClientException catch (_) {
       return ApiResponse.error(
-        message: 'Request failed: $e',
+        message: 'Unable to connect to the server. Please check your internet connection and try again.',
+        statusCode: 0,
+      );
+    } catch (_) {
+      return ApiResponse.error(
+        message: 'An error occurred while processing your request. Please try again.',
         statusCode: 0,
       );
     }

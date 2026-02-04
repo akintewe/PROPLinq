@@ -21,8 +21,6 @@ class _AgentKycViewState extends State<AgentKycView> {
   final int _totalSteps = 2; // 2 steps: Required Info, Documents
 
   // Controllers
-  final TextEditingController _ninController = TextEditingController();
-  final TextEditingController _bvnController = TextEditingController();
   final TextEditingController _tinController = TextEditingController();
   final TextEditingController _companyNameController = TextEditingController();
 
@@ -38,16 +36,12 @@ class _AgentKycViewState extends State<AgentKycView> {
   void initState() {
     super.initState();
     // Add listeners to text controllers to update button state
-    _ninController.addListener(() => setState(() {}));
-    _bvnController.addListener(() => setState(() {}));
     _tinController.addListener(() => setState(() {}));
     _companyNameController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _ninController.dispose();
-    _bvnController.dispose();
     _tinController.dispose();
     _companyNameController.dispose();
     super.dispose();
@@ -119,15 +113,13 @@ class _AgentKycViewState extends State<AgentKycView> {
       final cacFile = File(_cacDocumentFile!.path!);
       
       print('🔵 [AGENT KYC VIEW] Creating AgentKycRequest with:');
-      print('  - NIN: "${_ninController.text.trim()}"');
-      print('  - BVN: "${_bvnController.text.trim().isNotEmpty ? _bvnController.text.trim() : 'EMPTY'}"');
       print('  - TIN: "${_tinController.text.trim().isNotEmpty ? _tinController.text.trim() : 'EMPTY'}"');
       print('  - Company Name: "${_companyNameController.text.trim()}"');
       print('  - CAC Doc: ${cacFile.path}');
 
       final request = AgentKycRequest(
-        nin: _ninController.text.trim(),
-        bvn: _bvnController.text.trim().isNotEmpty ? _bvnController.text.trim() : null,
+        nin: null, // NIN removed from UI
+        bvn: null, // BVN removed from UI
         tin: _tinController.text.trim().isNotEmpty ? _tinController.text.trim() : null,
         companyName: _companyNameController.text.trim(),
         cacDoc: cacFile,
@@ -205,7 +197,7 @@ class _AgentKycViewState extends State<AgentKycView> {
       print('🔴 [AGENT KYC VIEW] Stack trace: $stackTrace');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error submitting KYC: $e'),
+          content: Text('An error occurred while submitting your KYC. Please try again.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -218,28 +210,6 @@ class _AgentKycViewState extends State<AgentKycView> {
   }
 
   bool _validateForm() {
-    // NIN is required
-    if (_ninController.text.trim().isEmpty) {
-      _showErrorMessage('Please enter your NIN');
-      return false;
-    }
-
-    if (_ninController.text.trim().length != 11) {
-      _showErrorMessage('NIN must be 11 digits');
-      return false;
-    }
-
-    // Either BVN or TIN is required
-    if (_bvnController.text.trim().isEmpty && _tinController.text.trim().isEmpty) {
-      _showErrorMessage('Please enter either your BVN or TIN');
-      return false;
-    }
-
-    if (_bvnController.text.trim().isNotEmpty && _bvnController.text.trim().length != 11) {
-      _showErrorMessage('BVN must be 11 digits');
-      return false;
-    }
-
     // Company Name is required
     if (_companyNameController.text.trim().isEmpty) {
       _showErrorMessage('Please enter your company name');
@@ -414,57 +384,10 @@ class _AgentKycViewState extends State<AgentKycView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // NIN (Required)
-        CustomTextField(
-          label: 'NIN (National Identification Number)',
-          hintText: 'Enter your 11-digit NIN',
-          controller: _ninController,
-          keyboardType: TextInputType.number,
-          maxLength: 11,
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // BVN or TIN (Required - at least one)
-        CustomTextField(
-          label: 'BVN (Bank Verification Number)',
-          hintText: 'Enter your 11-digit BVN (optional if you have TIN)',
-          controller: _bvnController,
-          keyboardType: TextInputType.number,
-          maxLength: 11,
-        ),
-        
-        const SizedBox(height: 16),
-        
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: const Color(0xFFE0E0E0),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              const Text(
-                'OR',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF666666),
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
+        // TIN (Optional)
         CustomTextField(
           label: 'TIN (Tax Identification Number)',
-          hintText: 'Enter your TIN (optional if you have BVN)',
+          hintText: 'Enter your TIN (optional)',
           controller: _tinController,
           keyboardType: TextInputType.number,
         ),
@@ -478,51 +401,12 @@ class _AgentKycViewState extends State<AgentKycView> {
           controller: _companyNameController,
         ),
         
-        const SizedBox(height: 24),
-        
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFE0E0E0),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.info_outline,
-                size: 20,
-                color: Color(0xFF426DC2),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'You must provide either BVN or TIN. Both are not required.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[700],
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        
         const SizedBox(height: 40),
         
         GradientButton(
           text: 'Next',
-          onPressed: _ninController.text.length == 11 && 
-                    (_bvnController.text.isNotEmpty || _tinController.text.isNotEmpty) &&
-                    _companyNameController.text.isNotEmpty ? _nextStep : null,
-          isEnabled: _ninController.text.length == 11 && 
-                     (_bvnController.text.isNotEmpty || _tinController.text.isNotEmpty) &&
-                     _companyNameController.text.isNotEmpty,
+          onPressed: _companyNameController.text.isNotEmpty ? _nextStep : null,
+          isEnabled: _companyNameController.text.isNotEmpty,
         ),
         
         const SizedBox(height: 40),

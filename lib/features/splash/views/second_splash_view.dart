@@ -35,7 +35,7 @@ class _SecondSplashViewState extends State<SecondSplashView> {
   Future<void> _checkAuthenticationStatus() async {
     try {
       // First, check if there's a pending deep link
-      // Give uni_links a moment to process the initial link
+      // Give app_links a moment to process the initial link
       await Future.delayed(const Duration(milliseconds: 500));
       
       final deepLinkingService = DeepLinkingService();

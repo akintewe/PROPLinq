@@ -9,7 +9,7 @@
     
     <application
         android:label="proplinq"
-        android:name="${applicationName}"
+        android:name=".MainApplication"
         android:icon="@mipmap/ic_launcher">
         
         <!-- Google Maps API Key -->

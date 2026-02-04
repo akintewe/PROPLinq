@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/bookings_cache_service.dart';
 import '../../../core/constants/api_constants.dart';
 import 'booking_details_view.dart';
 
@@ -12,6 +13,7 @@ class BookingsListView extends StatefulWidget {
 
 class _BookingsListViewState extends State<BookingsListView> {
   final ApiService _apiService = ApiService();
+  final BookingsCacheService _bookingsCacheService = BookingsCacheService();
   List<Map<String, dynamic>> _bookings = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -105,6 +107,10 @@ class _BookingsListViewState extends State<BookingsListView> {
         });
         
         print('✅ [BookingsListView] Successfully loaded ${_bookings.length} bookings');
+        
+        // Update bookings cache with fresh data
+        _bookingsCacheService.fetchAndCacheBookings(forceRefresh: true);
+        print('🔄 [BookingsListView] Bookings cache refreshed');
       } else {
         print('❌ [BookingsListView] Failed to load bookings: ${response.message}');
         setState(() {
@@ -176,6 +182,89 @@ class _BookingsListViewState extends State<BookingsListView> {
       return '$nights ${nights == 1 ? 'night' : 'nights'}';
     } catch (e) {
       return '0 nights';
+    }
+  }
+
+  Future<void> _cancelBooking(int bookingId, String bookingCode) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Booking'),
+        content: Text(
+          'Are you sure you want to cancel booking $bookingCode? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show loading indicator
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF426DC2),
+        ),
+      ),
+    );
+
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiConstants.cancelBooking(bookingId),
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (response.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Booking cancelled successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        // Refresh bookings list
+        _loadBookings();
+        // Refresh cache
+        _bookingsCacheService.fetchAndCacheBookings(forceRefresh: true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message ?? 'Failed to cancel booking'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error cancelling booking: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -649,6 +738,47 @@ class _BookingsListViewState extends State<BookingsListView> {
                                               ],
                                             ),
                                           ),
+                                          
+                                          const SizedBox(height: 16),
+                                          
+                                          // Cancel Booking Button
+                                          if (booking['status'] != null && 
+                                              (booking['status'] as String).toLowerCase() != 'cancelled')
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: OutlinedButton.icon(
+                                                onPressed: () {
+                                                  final bookingId = booking['id'];
+                                                  final bookingCode = booking['booking_code'] ?? 'N/A';
+                                                  if (bookingId != null) {
+                                                    _cancelBooking(
+                                                      bookingId is int ? bookingId : int.tryParse(bookingId.toString()) ?? 0,
+                                                      bookingCode.toString(),
+                                                    );
+                                                  }
+                                                },
+                                                icon: const Icon(
+                                                  Icons.cancel_outlined,
+                                                  size: 18,
+                                                  color: Colors.red,
+                                                ),
+                                                label: const Text(
+                                                  'Cancel Booking',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                                style: OutlinedButton.styleFrom(
+                                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                                  side: const BorderSide(color: Colors.red, width: 1.5),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),

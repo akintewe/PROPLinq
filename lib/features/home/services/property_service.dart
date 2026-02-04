@@ -231,18 +231,39 @@ class PropertyService {
       if (category != null) queryParams['category'] = category;
 
 
-      final response = await _apiService.get<Map<String, dynamic>>(
+      final response = await _apiService.get<dynamic>(
         ApiConstants.listProperties,
         queryParams: queryParams,
         requiresAuth: true,
-        fromJson: (json) => json,
+        fromJson: (json) {
+          // Handle both Map and the data structure
+          if (json is Map<String, dynamic> && json.containsKey('data')) {
+            return json['data']; // Return the data array/list directly
+          }
+          return json;
+        },
       );
 
 
       if (response.success && response.data != null) {
         final data = response.data!;
-        final List<dynamic> propertiesData = data['data'] as List<dynamic>;
         
+        // Handle new structure: data can be a direct array or nested
+        List<dynamic> propertiesData;
+        if (data is List) {
+          // Data is directly an array
+          propertiesData = data;
+        } else if (data is Map<String, dynamic>) {
+          // Check if data contains a 'data' key with array
+          if (data['data'] is List) {
+            propertiesData = data['data'] as List<dynamic>;
+          } else {
+            // Fallback: treat the whole data as a single property (unlikely but safe)
+            propertiesData = [];
+          }
+        } else {
+          propertiesData = [];
+        }
         
         final List<PropertyModel> properties = propertiesData
             .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
@@ -281,41 +302,96 @@ class PropertyService {
         if (priceMax != null) queryParams['price_max'] = priceMax;
         if (category != null) queryParams['category'] = category;
 
-        final response = await _apiService.get<Map<String, dynamic>>(
+        final response = await _apiService.get<dynamic>(
           ApiConstants.listProperties,
           queryParams: queryParams,
           requiresAuth: true,
-          fromJson: (json) => json,
+          fromJson: (json) {
+            // The API service passes jsonData['data'] to fromJson when it's a Map
+            // or the whole jsonData when it's a List
+            // So we just return it as-is to handle both cases
+            return json;
+          },
         );
+
+        print('📡 [PropertyService] Fetch all properties - Page $currentPage');
+        print('   - Response success: ${response.success}');
+        print('   - Response status code: ${response.statusCode}');
+        print('   - Response message: ${response.message}');
+        print('   - Response data type: ${response.data?.runtimeType}');
 
         if (response.success && response.data != null) {
           final data = response.data!;
-          final List<dynamic> propertiesData = data['data'] as List<dynamic>;
-          final int currentPageFromResponse = data['current_page'] as int;
-          final int lastPage = data['last_page'] as int;
           
+          print('   - Data type: ${data.runtimeType}');
+          if (data is Map) {
+            print('   - Data keys: ${(data as Map).keys.toList()}');
+          }
           
-          // Debug: Check if API data includes images
-          if (propertiesData.isNotEmpty) {
-            final firstProperty = propertiesData.first as Map<String, dynamic>;
+          // Handle new structure: data can be a direct array or nested with pagination
+          List<dynamic> propertiesData;
+          int? currentPageFromResponse;
+          int? lastPage;
+          
+          if (data is List) {
+            // Data is directly an array (no pagination)
+            print('   - Data is List with ${data.length} items');
+            propertiesData = data;
+            hasMorePages = false; // No pagination if direct array
+          } else if (data is Map<String, dynamic>) {
+            // Check if data contains a 'data' key with array (paginated)
+            if (data.containsKey('data') && data['data'] is List) {
+              propertiesData = data['data'] as List<dynamic>;
+              currentPageFromResponse = data['current_page'] as int?;
+              lastPage = data['last_page'] as int?;
+              
+              print('   - Found nested data array with ${propertiesData.length} items');
+              print('   - Current page: $currentPageFromResponse, Last page: $lastPage');
+              
+              // Check if there are more pages
+              if (currentPageFromResponse != null && lastPage != null) {
+                hasMorePages = currentPageFromResponse < lastPage;
+              } else {
+                hasMorePages = false; // No pagination info, assume last page
+              }
+            } else {
+              // Fallback: empty array
+              print('   - No data array found in response');
+              propertiesData = [];
+              hasMorePages = false;
+            }
+          } else {
+            print('   - Unknown data type: ${data.runtimeType}');
+            propertiesData = [];
+            hasMorePages = false;
           }
           
           final List<PropertyModel> pageProperties = propertiesData
               .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
               .toList();
 
+          print('📦 [PropertyService] Page $currentPage: Parsed ${pageProperties.length} properties');
+          print('📦 [PropertyService] Featured count: ${pageProperties.where((p) => p.isFeatured).length}');
+          print('📦 [PropertyService] Non-featured count: ${pageProperties.where((p) => !p.isFeatured).length}');
+
           allProperties.addAll(pageProperties);
           
-          // Check if there are more pages
-          hasMorePages = currentPageFromResponse < lastPage;
-          currentPage = currentPageFromResponse + 1;
+          // Update page for next iteration
+          if (hasMorePages && currentPageFromResponse != null) {
+            currentPage = currentPageFromResponse + 1;
+          }
         } else {
           hasMorePages = false;
         }
       }
 
+      print('✅ [PropertyService] Total properties fetched: ${allProperties.length}');
+      print('✅ [PropertyService] Total featured: ${allProperties.where((p) => p.isFeatured).length}');
+      print('✅ [PropertyService] Total non-featured: ${allProperties.where((p) => !p.isFeatured).length}');
+      
       return allProperties;
     } catch (e) {
+      print('❌ [PropertyService] Error in fetchAllProperties: $e');
       return [];
     }
   }
@@ -363,7 +439,7 @@ class PropertyService {
       
       final response = await _apiService.get<dynamic>(
         ApiConstants.promotedProperties,
-        requiresAuth: false,
+        requiresAuth: true,
         fromJson: (json) => json,
       );
 
@@ -481,50 +557,78 @@ class PropertyService {
 
   Future<List<PropertyModel>> fetchMyProperties() async {
     try {
+      print('🔵 [PropertyService] Fetching agent properties...');
+      print('🔵 [PropertyService] Endpoint: ${ApiConstants.myProperties}');
       
-      final response = await _apiService.get<Map<String, dynamic>>(
+      final response = await _apiService.get<dynamic>(
         ApiConstants.myProperties,
         requiresAuth: true,
-        fromJson: (json) => json,
+        fromJson: (json) {
+          // Return json as-is to handle both nested and direct structures
+          return json;
+        },
       );
 
+      print('🔵 [PropertyService] Agent properties response:');
+      print('   - Success: ${response.success}');
+      print('   - Status Code: ${response.statusCode}');
+      print('   - Message: ${response.message}');
+      print('   - Data type: ${response.data?.runtimeType}');
       
       if (response.errors != null && response.errors!.isNotEmpty) {
+        print('   - Errors: ${response.errors}');
       }
 
       if (response.success && response.data != null) {
         final data = response.data!;
         
-        // Check if data has the expected structure
-        if (data.containsKey('data')) {
-          final List<dynamic> propertiesData = data['data'] as List<dynamic>;
-          
-          if (propertiesData.isNotEmpty) {
-          }
-          
-          final List<PropertyModel> properties = propertiesData
-              .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
-              .toList();
-
-          
-          if (properties.isNotEmpty) {
-            for (int i = 0; i < properties.length && i < 3; i++) {
-              final prop = properties[i];
+        print('   - Data type: ${data.runtimeType}');
+        if (data is Map) {
+          print('   - Data keys: ${(data as Map).keys.toList()}');
+        }
+        
+        // Handle new structure: data can be a direct array or nested with pagination
+        List<dynamic> propertiesData;
+        
+        if (data is List) {
+          // Data is directly an array
+          print('   - Data is List with ${data.length} items');
+          propertiesData = data;
+        } else if (data is Map<String, dynamic>) {
+          // Check if data contains a 'data' key with array (paginated)
+          if (data.containsKey('data') && data['data'] is List) {
+            propertiesData = data['data'] as List<dynamic>;
+            print('   - Found nested data array with ${propertiesData.length} items');
+            if (data.containsKey('current_page')) {
+              print('   - Current page: ${data['current_page']}, Last page: ${data['last_page']}');
             }
-            if (properties.length > 3) {
-            }
+          } else {
+            print('   - No data array found in response');
+            propertiesData = [];
           }
-          
-          return properties;
         } else {
-          return [];
+          print('   - Unknown data type: ${data.runtimeType}');
+          propertiesData = [];
         }
+        
+        final List<PropertyModel> properties = propertiesData
+            .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        print('✅ [PropertyService] Successfully parsed ${properties.length} agent properties');
+        print('🔵🔵🔵 [PropertyService] ========================================');
+        
+        return properties;
       } else {
-        if (response.statusCode != null) {
-        }
+        print('❌ [PropertyService] Failed to fetch agent properties');
+        print('   - Success: ${response.success}');
+        print('   - Status Code: ${response.statusCode}');
+        print('   - Message: ${response.message}');
         return [];
       }
     } catch (e, stackTrace) {
+      print('❌ [PropertyService] Error fetching agent properties: $e');
+      print('   - Stack trace: $stackTrace');
       return [];
     }
   }

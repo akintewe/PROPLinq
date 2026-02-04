@@ -3,6 +3,8 @@ import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../core/utils/format_utils.dart';
+import '../../../core/services/api_service.dart';
+import '../../../core/constants/api_constants.dart';
 import 'property_listing_view.dart';
 import 'property_details_view.dart';
 import 'subscription_view.dart';
@@ -32,6 +34,7 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> {
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
+  final ApiService _apiService = ApiService();
   final ImagePicker _imagePicker = ImagePicker();
   
   UserModel? _currentUser;
@@ -41,6 +44,10 @@ class _ProfileViewState extends State<ProfileView> {
   bool _isLoadingKycStatus = true;
   List<PropertyModel> _myProperties = [];
   bool _isLoadingMyProperties = true;
+  
+  // Ratings and Reviews
+  List<Map<String, dynamic>> _agentRatings = [];
+  bool _isLoadingRatings = true;
 
   @override
   void initState() {
@@ -51,6 +58,7 @@ class _ProfileViewState extends State<ProfileView> {
     // Fetch agent's properties if they are an agent
     if (widget.isAgent) {
       _fetchMyProperties();
+      _fetchAgentRatings();
     }
   }
   
@@ -71,6 +79,7 @@ class _ProfileViewState extends State<ProfileView> {
     // Refresh properties for agents
     if (widget.isAgent) {
       await _fetchMyProperties();
+      await _fetchAgentRatings();
     }
     
     print('✅ [ProfileView] Profile refresh complete!');
@@ -91,12 +100,21 @@ class _ProfileViewState extends State<ProfileView> {
       
       final response = await _authService.getProfile();
       
+      print('🔵 [ProfileView] Profile response:');
+      print('  - Success: ${response.success}');
+      print('  - User: ${response.data?.toJson()}');
+      print('  - UserType: ${response.data?.userType}');
       
       if (response.success && response.data != null) {
         setState(() {
           _currentUser = response.data;
           _isLoadingProfile = false;
         });
+        
+        print('🔵 [ProfileView] Current user set:');
+        print('  - userType: ${_currentUser?.userType}');
+        print('  - agentType: ${_currentUser?.agentType}');
+        print('  - Display: ${_getUserTypeDisplay()}');
         
         if (_currentUser!.agencyName != null) {
         }
@@ -120,8 +138,6 @@ class _ProfileViewState extends State<ProfileView> {
 
   Future<void> _fetchKycStatus() async {
     try {
-      final userType = widget.isAgent ? 'agent' : 'tenant/home seeker';
-      
       final response = await _authService.getKycStatus();
       
       
@@ -223,20 +239,37 @@ class _ProfileViewState extends State<ProfileView> {
   String _getUserTypeDisplay() {
     if (_currentUser == null) return 'User';
     
-    if (_currentUser!.userType == 'agent') {
+    final userType = _currentUser!.userType.trim();
+    
+    print('🔵 [ProfileView] _getUserTypeDisplay called:');
+    print('  - userType: "$userType"');
+    print('  - agentType: "${_currentUser!.agentType}"');
+    
+    if (userType.isEmpty) {
+      // If userType is empty, try to infer from isAgent widget property
+      return widget.isAgent ? 'Agent' : 'Home Seeker';
+    }
+    
+    if (userType == 'agent') {
       // For agents, show their specific agent type if available
-      if (_currentUser!.agentType != null) {
-        return _currentUser!.agentType!
+      if (_currentUser!.agentType != null && _currentUser!.agentType!.trim().isNotEmpty) {
+        final display = _currentUser!.agentType!
             .replaceAll('_', ' ')
             .split(' ')
+            .where((word) => word.isNotEmpty) // Filter out empty strings
             .map((word) => word[0].toUpperCase() + word.substring(1))
             .join(' ');
+        print('  - Returning agentType display: "$display"');
+        return display;
       }
       return 'Agent';
-    } else if (_currentUser!.userType == 'home_seeker') {
+    } else if (userType == 'home_seeker') {
       return 'Home Seeker';
     } else {
-      return _currentUser!.userType.replaceAll('_', ' ');
+      // Format other user types
+      final display = userType.replaceAll('_', ' ');
+      print('  - Returning formatted display: "$display"');
+      return display;
     }
   }
 
@@ -252,8 +285,152 @@ class _ProfileViewState extends State<ProfileView> {
     // Refresh agent properties if user is an agent
     if (widget.isAgent) {
       await _fetchMyProperties();
+      await _fetchAgentRatings();
     }
     
+  }
+  
+  /// Fetch agent ratings and reviews
+  Future<void> _fetchAgentRatings() async {
+    if (!widget.isAgent) return;
+    
+    try {
+      setState(() {
+        _isLoadingRatings = true;
+      });
+      
+      print('⭐ [ProfileView] Fetching agent ratings...');
+      print('⭐ [ProfileView] Endpoint: ${ApiConstants.agentPropertiesRatings}');
+      
+      final response = await _apiService.get<dynamic>(
+        ApiConstants.agentPropertiesRatings,
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+      
+      if (!mounted) return;
+      
+      print('⭐ [ProfileView] Response success: ${response.success}');
+      print('⭐ [ProfileView] Response statusCode: ${response.statusCode}');
+      print('⭐ [ProfileView] Response message: ${response.message}');
+      print('⭐ [ProfileView] Response data type: ${response.data?.runtimeType}');
+      
+      if (response.data != null) {
+        print('⭐ [ProfileView] Response data: ${response.data}');
+        print('⭐ [ProfileView] Response data (pretty):');
+        _printPrettyJson(response.data);
+      }
+      
+      if (response.success && response.data != null) {
+        final data = response.data;
+        List<dynamic> ratingsList = [];
+        
+        print('⭐ [ProfileView] Processing response data...');
+        
+        // Handle different response structures
+        if (data is List) {
+          print('⭐ [ProfileView] Data is a List with ${data.length} items');
+          ratingsList = data;
+        } else if (data is Map<String, dynamic>) {
+          print('⭐ [ProfileView] Data is a Map with keys: ${data.keys.toList()}');
+          
+          if (data.containsKey('data')) {
+            print('⭐ [ProfileView] Found "data" key, type: ${data['data'].runtimeType}');
+            if (data['data'] is List) {
+              ratingsList = data['data'] as List<dynamic>;
+              print('⭐ [ProfileView] Extracted ${ratingsList.length} ratings from data.data (List)');
+            } else if (data['data'] is Map && (data['data'] as Map).containsKey('ratings')) {
+              ratingsList = (data['data'] as Map)['ratings'] as List<dynamic>;
+              print('⭐ [ProfileView] Extracted ${ratingsList.length} ratings from data.data.ratings');
+            }
+          } else if (data.containsKey('ratings')) {
+            ratingsList = data['ratings'] as List<dynamic>;
+            print('⭐ [ProfileView] Extracted ${ratingsList.length} ratings from data.ratings');
+          } else {
+            // Check all keys to see what we have
+            print('⭐ [ProfileView] Data keys: ${data.keys.toList()}');
+            // Try to find any list in the map
+            for (var key in data.keys) {
+              if (data[key] is List) {
+                ratingsList = data[key] as List<dynamic>;
+                print('⭐ [ProfileView] Found list in key "$key" with ${ratingsList.length} items');
+                break;
+              }
+            }
+          }
+        }
+        
+        if (ratingsList.isNotEmpty) {
+          print('⭐ [ProfileView] First rating structure: ${ratingsList.first}');
+        }
+        
+        setState(() {
+          _agentRatings = ratingsList
+              .map((item) {
+                if (item is Map) {
+                  return Map<String, dynamic>.from(item);
+                }
+                return <String, dynamic>{};
+              })
+              .where((item) => item.isNotEmpty)
+              .toList();
+          _isLoadingRatings = false;
+        });
+        
+        print('✅ [ProfileView] Successfully loaded ${_agentRatings.length} ratings');
+        print('✅ [ProfileView] Processed ratings:');
+        for (int i = 0; i < _agentRatings.length; i++) {
+          print('  Rating $i: ${_agentRatings[i]}');
+        }
+      } else {
+        setState(() {
+          _isLoadingRatings = false;
+        });
+        print('⚠️ [ProfileView] Failed to fetch ratings: ${response.message}');
+        if (response.errors != null) {
+          print('⚠️ [ProfileView] Response errors: ${response.errors}');
+        }
+      }
+    } catch (e, stackTrace) {
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoadingRatings = false;
+      });
+      
+      print('❌ [ProfileView] Error fetching ratings: $e');
+      print('❌ [ProfileView] Stack trace: $stackTrace');
+    }
+  }
+  
+  /// Helper method to print JSON in a readable format
+  void _printPrettyJson(dynamic data, {int indent = 0}) {
+    final indentStr = '  ' * indent;
+    
+    if (data is Map) {
+      print('$indentStr{');
+      data.forEach((key, value) {
+        if (value is Map || value is List) {
+          print('$indentStr  "$key":');
+          _printPrettyJson(value, indent: indent + 2);
+        } else {
+          print('$indentStr  "$key": $value');
+        }
+      });
+      print('$indentStr}');
+    } else if (data is List) {
+      print('$indentStr[');
+      for (var item in data) {
+        if (item is Map || item is List) {
+          _printPrettyJson(item, indent: indent + 2);
+        } else {
+          print('$indentStr  $item');
+        }
+      }
+      print('$indentStr]');
+    } else {
+      print('$indentStr$data');
+    }
   }
 
   /// Show image picker options (camera or gallery)
@@ -1291,12 +1468,20 @@ class _ProfileViewState extends State<ProfileView> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).push(
+              onPressed: () async {
+                // Navigate to bookings list and wait for return
+                await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const BookingsListView(),
                   ),
                 );
+                
+                // Refresh the profile view to update carousel
+                if (mounted) {
+                  setState(() {
+                    // Trigger rebuild to refresh BookingCarouselWidget
+                  });
+                }
               },
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1325,8 +1510,10 @@ class _ProfileViewState extends State<ProfileView> {
         
         const SizedBox(height: 20),
         
-        // Bookings carousel
-        const BookingCarouselWidget(),
+        // Bookings carousel (key ensures rebuild on navigation back)
+        BookingCarouselWidget(
+          key: ValueKey('bookings_carousel_${DateTime.now().millisecondsSinceEpoch}'),
+        ),
       ],
     );
   }
@@ -1502,6 +1689,10 @@ class _ProfileViewState extends State<ProfileView> {
     }
 
     final property = _myProperties[index];
+    
+    // Check if property has is_promoted value
+    final isPromoted = property.rawJson?['is_promoted'] as bool? ?? false;
+    print('🏠 [ProfileView] Property ${property.id} - is_promoted: $isPromoted');
 
     return GestureDetector(
       onTap: () {
@@ -1521,6 +1712,7 @@ class _ProfileViewState extends State<ProfileView> {
                 'category': property.category,
                 'description': property.description,
                 'features': property.features,
+                'is_promoted': property.rawJson?['is_promoted'] as bool? ?? false, // Pass is_promoted from rawJson
                 'imageUrl': property.imageUrl, // Pass actual image URL from API
                 'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images
                 'property360_images': property.property360Images, // Pass 360 images
@@ -1606,7 +1798,7 @@ class _ProfileViewState extends State<ProfileView> {
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () {
+                          onTap: isPromoted ? null : () {
                             _promoteProperty(property);
                           },
                           customBorder: const CircleBorder(),
@@ -1614,7 +1806,7 @@ class _ProfileViewState extends State<ProfileView> {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: isPromoted ? const Color(0xFF426DC2) : Colors.white,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
@@ -1624,10 +1816,10 @@ class _ProfileViewState extends State<ProfileView> {
                                 ),
                               ],
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.star,
                               size: 16,
-                              color: Color(0xFFFFA726),
+                              color: isPromoted ? Colors.white : const Color(0xFFFFA726),
                             ),
                           ),
                         ),
@@ -1829,24 +2021,27 @@ class _ProfileViewState extends State<ProfileView> {
                           child: SizedBox(
                             height: 32,
                             child: OutlinedButton(
-                              onPressed: () {
+                              onPressed: isPromoted ? null : () {
                                 _promoteProperty(property);
                               },
                               style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF426DC2),
-                                side: const BorderSide(color: Color(0xFF426DC2), width: 1),
+                                backgroundColor: isPromoted ? const Color(0xFF426DC2) : Colors.white,
+                                foregroundColor: isPromoted ? Colors.white : const Color(0xFF426DC2),
+                                side: BorderSide(
+                                  color: isPromoted ? const Color(0xFF426DC2) : const Color(0xFF426DC2),
+                                  width: 1,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                               ),
-                              child: const Text(
-                                'Promote property',
+                              child: Text(
+                                isPromoted ? 'Already Promoted' : 'Promote property',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
-                                  color: Color(0xFF426DC2),
+                                  color: isPromoted ? Colors.white : const Color(0xFF426DC2),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -1904,24 +2099,27 @@ class _ProfileViewState extends State<ProfileView> {
                       width: double.infinity,
                       height: 32,
                       child: OutlinedButton(
-                        onPressed: () {
+                        onPressed: isPromoted ? null : () {
                           _promoteProperty(property);
                         },
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF426DC2),
-                        side: const BorderSide(color: Color(0xFF426DC2), width: 1),
+                        backgroundColor: isPromoted ? const Color(0xFF426DC2) : Colors.white,
+                        foregroundColor: isPromoted ? Colors.white : const Color(0xFF426DC2),
+                        side: BorderSide(
+                          color: isPromoted ? const Color(0xFF426DC2) : const Color(0xFF426DC2),
+                          width: 1,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       ),
-                      child: const Text(
-                        'Promote property',
+                      child: Text(
+                        isPromoted ? 'Already Promoted' : 'Promote property',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF426DC2),
+                          color: isPromoted ? Colors.white : const Color(0xFF426DC2),
                         ),
                       ),
                     ),
@@ -2009,61 +2207,146 @@ class _ProfileViewState extends State<ProfileView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
         const Text(
-          'Review',
+              'Ratings & Reviews',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
+            ),
+            if (_agentRatings.isNotEmpty)
+              Text(
+                '${_agentRatings.length} ${_agentRatings.length == 1 ? 'review' : 'reviews'}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF666666),
+                ),
+              ),
+          ],
         ),
         
         const SizedBox(height: 16),
         
+        if (_isLoadingRatings)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_agentRatings.isEmpty)
         Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.grey[200]!,
+                width: 1,
+              ),
+            ),
+            child: const Center(
+              child: Text(
+                'No ratings yet. Your reviews will appear here once customers rate your properties.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF666666),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else
+          ..._agentRatings.map((rating) => _buildRatingCard(rating)).toList(),
+      ],
+    );
+  }
+  
+  Widget _buildRatingCard(Map<String, dynamic> rating) {
+    // Extract rating data based on actual API structure
+    final ratingValue = (rating['rating'] ?? 0) is int
+        ? (rating['rating'] ?? 0) as int
+        : ((rating['rating'] ?? 0) as num).toInt();
+    
+    final comment = rating['comment'] ?? '';
+    final user = rating['user'] as Map<String, dynamic>?;
+    final userName = user?['name'] ?? 'Anonymous';
+    final userProfileImage = user?['profile_image'] as String?;
+    final createdAt = rating['created_at'] ?? '';
+    final property = rating['property'] as Map<String, dynamic>?;
+    final propertyTitle = property?['title'] ?? '';
+    
+    // Get first letter of name for avatar fallback
+    final firstLetter = userName.isNotEmpty ? userName[0].toUpperCase() : 'A';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-           
+        border: Border.all(
+          color: const Color(0xFFECF0F9),
+          width: 1,
+        ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
+              // User avatar with profile image
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF426DC2),
+                decoration: BoxDecoration(
+                  color: userProfileImage == null 
+                      ? const Color(0xFF426DC2) 
+                      : null,
                       shape: BoxShape.circle,
+                  image: userProfileImage != null
+                      ? DecorationImage(
+                          image: NetworkImage(userProfileImage),
+                          fit: BoxFit.cover,
+                          onError: (exception, stackTrace) {
+                            // Handle image load error
+                          },
+                        )
+                      : null,
                     ),
-                    child: const Center(
+                child: userProfileImage == null
+                    ? Center(
                       child: Text(
-                        'J',
-                        style: TextStyle(
+                          firstLetter,
+                          style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
                       ),
-                    ),
+                      )
+                    : null,
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+              Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'James',
-                          style: TextStyle(
+                      userName,
+                      style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: Colors.black,
                           ),
                         ),
-                        Text(
+                    const Text(
                           'Home Seeker',
                           style: TextStyle(
                             fontSize: 12,
@@ -2073,31 +2356,83 @@ class _ProfileViewState extends State<ProfileView> {
                       ],
                     ),
                   ),
+              // Star rating
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < 4 ? Icons.star : Icons.star_border,
+                    index < ratingValue ? Icons.star : Icons.star_border,
                         size: 16,
-                        color: index < 4 ? Colors.green : Colors.grey,
+                    color: index < ratingValue 
+                        ? Colors.amber 
+                        : Colors.grey[300]!,
                       );
                     }),
                   ),
                 ],
               ),
+          if (propertyTitle.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Property: $propertyTitle',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF426DC2),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+          if (comment.isNotEmpty) ...[
               const SizedBox(height: 12),
-              const Text(
-                'Very professional and reliable. [Agent\'s Name] made the entire process smooth and stress-free. I found the perfect apartment within a week!',
-                style: TextStyle(
+            Text(
+              comment,
+              style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black,
                   height: 1.4,
                 ),
               ),
             ],
+          if (createdAt.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              _formatDate(createdAt),
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF999999),
           ),
         ),
       ],
+        ],
+      ),
     );
+  }
+  
+  String _formatDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return '';
+    
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+      
+      if (difference.inDays == 0) {
+        return 'Today';
+      } else if (difference.inDays == 1) {
+        return 'Yesterday';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} days ago';
+      } else if (difference.inDays < 30) {
+        final weeks = (difference.inDays / 7).floor();
+        return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+      } else if (difference.inDays < 365) {
+        final months = (difference.inDays / 30).floor();
+        return '$months ${months == 1 ? 'month' : 'months'} ago';
+      } else {
+        return '${date.day}/${date.month}/${date.year}';
+      }
+    } catch (e) {
+      return dateString;
+    }
   }
 
   Future<void> _promoteProperty(PropertyModel property) async {
@@ -2241,29 +2576,40 @@ class _ProfileViewState extends State<ProfileView> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFA726).withOpacity(0.1),
+                  color: (property.rawJson?['is_promoted'] as bool? ?? false)
+                      ? const Color(0xFF426DC2).withOpacity(0.1)
+                      : const Color(0xFFFFA726).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.star,
-                  color: Color(0xFFFFA726),
+                  color: (property.rawJson?['is_promoted'] as bool? ?? false)
+                      ? const Color(0xFF426DC2)
+                      : const Color(0xFFFFA726),
                 ),
               ),
-              title: const Text(
-                'Promote Property',
+              title: Text(
+                (property.rawJson?['is_promoted'] as bool? ?? false)
+                    ? 'Already Promoted'
+                    : 'Promote Property',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
+                  color: (property.rawJson?['is_promoted'] as bool? ?? false)
+                      ? const Color(0xFF426DC2)
+                      : Colors.black,
                 ),
               ),
-              subtitle: const Text(
-                'Feature this property in promoted listings',
-                style: TextStyle(
+              subtitle: Text(
+                (property.rawJson?['is_promoted'] as bool? ?? false)
+                    ? 'This property is already featured in promoted listings'
+                    : 'Feature this property in promoted listings',
+                style: const TextStyle(
                   fontSize: 14,
                   color: Color(0xFF868686),
                 ),
               ),
-              onTap: () {
+              onTap: (property.rawJson?['is_promoted'] as bool? ?? false) ? null : () {
                 Navigator.pop(context);
                 _promoteProperty(property);
               },

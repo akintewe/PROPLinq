@@ -65,7 +65,7 @@ class _BiometricLoginViewState extends State<BiometricLoginView> {
         _showErrorDialog('Authentication failed. Please try again.');
       }
     } catch (e) {
-      _showErrorDialog('Authentication error: ${e.toString()}');
+      _showErrorDialog('Authentication failed. Please try again.');
     } finally {
       setState(() {
         _isLoading = false;

@@ -38,11 +38,26 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    // Debug: Print the raw JSON to see the actual structure
+    print('🔵 [UserModel] Raw JSON response: $json');
+    print('🔵 [UserModel] Checking for user type fields:');
+    print('  - json["role"]: ${json["role"]}');
+    print('  - json["user_type"]: ${json["user_type"]}');
+    print('  - json["userType"]: ${json["userType"]}');
+    
+    // Try multiple field names for user type
+    final userType = json['role'] ?? 
+                     json['user_type'] ?? 
+                     json['userType'] ?? 
+                     '';
+    
+    print('🔵 [UserModel] Final userType: "$userType"');
+    
     return UserModel(
       id: json['id']?.toString() ?? '',
       fullName: json['full_name'] ?? '',
       email: json['email'] ?? '',
-      userType: json['role'] ?? '', // API uses 'role' instead of 'user_type'
+      userType: userType,
       phoneNumber: json['phone_number'] ?? '',
       location: json['location'] ?? '',
       agencyName: json['agency_name'],

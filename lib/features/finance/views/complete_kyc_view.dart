@@ -364,7 +364,7 @@ class _CompleteKycViewState extends State<CompleteKycView> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error submitting KYC: $e'),
+          content: Text('An error occurred while submitting your KYC. Please try again.'),
           backgroundColor: Colors.red,
         ),
       );

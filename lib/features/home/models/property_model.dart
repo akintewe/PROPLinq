@@ -17,6 +17,7 @@ class PropertyModel {
   final double? area;
   final List<String>? features;
   final bool isFavorite;
+  final bool isFeatured;
   final PropertyUser? user;
   final Map<String, dynamic>? rawJson; // Store raw JSON to preserve ratings and other fields
 
@@ -38,6 +39,7 @@ class PropertyModel {
     this.area,
     this.features,
     this.isFavorite = false,
+    this.isFeatured = false,
     this.user,
     this.rawJson,
   });
@@ -61,6 +63,7 @@ class PropertyModel {
     double? area,
     List<String>? features,
     bool? isFavorite,
+    bool? isFeatured,
     PropertyUser? user,
     Map<String, dynamic>? rawJson,
   }) {
@@ -82,6 +85,7 @@ class PropertyModel {
       area: area ?? this.area,
       features: features ?? this.features,
       isFavorite: isFavorite ?? this.isFavorite,
+      isFeatured: isFeatured ?? this.isFeatured,
       user: user ?? this.user,
       rawJson: rawJson ?? this.rawJson,
     );
@@ -123,6 +127,8 @@ class PropertyModel {
     // Parse images array
     String? imageUrl;
     List<Map<String, dynamic>>? images;
+    bool hasFeaturedImage = false;
+    
     if (json['images'] != null && json['images'] is List && (json['images'] as List).isNotEmpty) {
       final imagesList = json['images'] as List<dynamic>;
       
@@ -135,6 +141,10 @@ class PropertyModel {
           if (rawUrl.startsWith('property-images/') || rawUrl.startsWith('uploads/')) {
             imageMap['full_url'] = 'https://proapi.proplinq.com/storage/$rawUrl';
           }
+        }
+        // Check if this image is featured
+        if (imageMap['is_featured'] == true) {
+          hasFeaturedImage = true;
         }
         return imageMap;
       }).toList();
@@ -150,7 +160,27 @@ class PropertyModel {
           imageUrl = rawImageUrl;
         }
       }
-    } else {
+    } else if (json['images_full_urls'] != null && json['images_full_urls'] is List && (json['images_full_urls'] as List).isNotEmpty) {
+      // Handle alternative structure with images_full_urls array
+      final imagesList = json['images_full_urls'] as List<dynamic>;
+      images = imagesList.map((url) {
+        return {
+          'full_url': url.toString(),
+          'is_featured': false,
+        };
+      }).toList();
+      
+      // Set the first image as the primary imageUrl
+      if (images.isNotEmpty) {
+        imageUrl = images.first['full_url'] as String;
+      }
+    }
+    
+    // Determine if property is featured
+    // Check property-level is_featured first, then check if any image has is_featured: true
+    bool isFeatured = json['is_featured'] as bool? ?? false;
+    if (!isFeatured && hasFeaturedImage) {
+      isFeatured = true;
     }
     
     // Parse property360_images array
@@ -241,7 +271,8 @@ class PropertyModel {
       bathrooms: json['bathrooms'] as int?,
       area: json['area'] != null ? (json['area'] as num).toDouble() : null,
       features: features,
-      isFavorite: json['isLiked'] as bool? ?? false,
+      isFavorite: json['is_liked'] as bool? ?? json['isLiked'] as bool? ?? false,
+      isFeatured: isFeatured,
       user: user,
       rawJson: json, // Store raw JSON to preserve ratings and other fields
     );
@@ -310,17 +341,54 @@ class PropertyUser {
 
   /// Create from JSON
   factory PropertyUser.fromJson(Map<String, dynamic> json) {
+    // Handle new structure with full_name or construct from first_name/last_name
+    String fullName;
+    if (json['full_name'] != null && json['full_name'].toString().isNotEmpty) {
+      fullName = json['full_name'] as String;
+    } else if (json['first_name'] != null || json['last_name'] != null) {
+      final firstName = json['first_name']?.toString() ?? '';
+      final lastName = json['last_name']?.toString() ?? '';
+      fullName = '$firstName $lastName'.trim();
+      if (fullName.isEmpty) {
+        fullName = json['name']?.toString() ?? 'Unknown';
+      }
+    } else {
+      fullName = json['name']?.toString() ?? 'Unknown';
+    }
+    
+    // Handle profile_image vs profile_image_full_url
+    String? profileImageFullUrl = json['profile_image_full_url'] as String?;
+    if (profileImageFullUrl == null && json['profile_image'] != null) {
+      profileImageFullUrl = json['profile_image'] as String;
+      // Construct full URL if it's a relative path
+      if (profileImageFullUrl.startsWith('profile_images/') || profileImageFullUrl.startsWith('uploads/')) {
+        profileImageFullUrl = 'https://proapi.proplinq.com/storage/$profileImageFullUrl';
+      }
+    }
+    
+    // Handle kyc_status - create PropertyKyc if kyc_status exists
+    PropertyKyc? kyc;
+    if (json['kyc'] != null) {
+      kyc = PropertyKyc.fromJson(json['kyc'] as Map<String, dynamic>);
+    } else if (json['kyc_status'] != null) {
+      // Create a minimal KYC object from kyc_status
+      kyc = PropertyKyc(
+        userId: json['id'] as int,
+        status: json['kyc_status'] as String,
+      );
+    }
+    
     return PropertyUser(
       id: json['id'] as int,
-      fullName: json['full_name'] as String,
+      fullName: fullName,
       email: json['email'] as String,
       phoneNumber: json['phone_number'] as String?,
       location: json['location'] as String?,
       agencyName: json['agency_name'] as String?,
       agentType: json['agent_type'] as String?,
       whatsappNumber: json['whatsapp_number'] as String?,
-      profileImageFullUrl: json['profile_image_full_url'] as String?,
-      kyc: json['kyc'] != null ? PropertyKyc.fromJson(json['kyc'] as Map<String, dynamic>) : null,
+      profileImageFullUrl: profileImageFullUrl,
+      kyc: kyc,
     );
   }
 

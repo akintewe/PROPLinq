@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/bookings_cache_service.dart';
 import '../models/auth_response.dart';
 import '../models/register_request.dart';
 import '../models/user_model.dart';
@@ -94,6 +95,9 @@ class AuthService {
 
     // Clear local storage regardless of API response
     await _storageService.clearAll();
+    
+    // Clear bookings cache
+    BookingsCacheService().clearCache();
 
     return response;
   }
@@ -126,6 +130,63 @@ class AuthService {
         'password': password,
         'password_confirmation': passwordConfirmation,
       },
+      fromJson: (json) => json,
+    );
+  }
+
+  // Verify reset OTP (for password reset flow)
+  Future<ApiResponse<Map<String, dynamic>>> verifyResetOtp({
+    required String email,
+    required String otp,
+  }) async {
+    return await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.verifyResetOtp,
+      body: {
+        'email': email,
+        'otp': otp,
+      },
+      fromJson: (json) => json,
+    );
+  }
+
+  // Reset password with OTP (alternative to resetPassword)
+  Future<ApiResponse<Map<String, dynamic>>> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    return await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.resetPassword,
+      body: {
+        'email': email,
+        'otp': otp,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      },
+      fromJson: (json) => json,
+    );
+  }
+
+  // Verify OTP (for email verification after registration)
+  Future<ApiResponse<Map<String, dynamic>>> verifyOtp({
+    required String otp,
+  }) async {
+    return await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.verifyOtp,
+      body: {
+        'otp': otp,
+      },
+      requiresAuth: true,
+      fromJson: (json) => json,
+    );
+  }
+  
+  // Resend OTP (for email verification)
+  Future<ApiResponse<Map<String, dynamic>>> resendOtp() async {
+    return await _apiService.post<Map<String, dynamic>>(
+      ApiConstants.resendOtp,
+      requiresAuth: true,
       fromJson: (json) => json,
     );
   }

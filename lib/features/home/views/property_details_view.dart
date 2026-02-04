@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/constants/api_constants.dart';
 import 'package:proplinq/core/widgets/google_map_widget.dart';
+import 'package:proplinq/core/services/bookings_cache_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'virtual_tour_360_view.dart';
 import 'hotel_reservation_view.dart';
@@ -35,11 +37,13 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   final AuthService _authService = AuthService();
   final RecentlyViewedService _recentlyViewedService = RecentlyViewedService();
   final PropertyService _propertyService = PropertyService();
+  final BookingsCacheService _bookingsCacheService = BookingsCacheService();
   bool _isOwner = false;
   Map<String, dynamic>? _currentPropertyData;
   int _inlineRating = 0;
   final TextEditingController _inlineCommentController = TextEditingController();
   bool _isSubmittingRating = false;
+  late bool _hasBookedProperty;
   
   // Default fallback images for when property has no images
   final List<String> _fallbackImages = [
@@ -60,11 +64,18 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   @override
   void initState() {
     super.initState();
+    
+    // Initialize blur state IMMEDIATELY (before any async operations)
+    _hasBookedProperty = _checkIfPropertyBookedSync();
+    
     _initializeTextAnimation();
     _startTextRotation();
     _checkPropertyOwnership();
     _addToRecentlyViewed();
     _refreshPropertyData();
+    
+    // Refresh bookings cache in background if needed
+    _refreshBookingsCacheIfNeeded();
   }
   
   /// Refresh property data to get latest ratings
@@ -121,6 +132,67 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
       } else {
       }
     } catch (e) {
+    }
+  }
+  
+  /// Check if user has booked this property (SYNCHRONOUS - uses cache)
+  bool _checkIfPropertyBookedSync() {
+    try {
+      final property = widget.propertyData ?? _getDefaultProperty();
+      final propertyId = property['id']?.toString();
+      final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
+      
+      // Only check for shortlets
+      if (!propertyType.contains('shortlet')) {
+        return false;
+      }
+      
+      if (propertyId == null) {
+        return false;
+      }
+      
+      // Check cached bookings IMMEDIATELY (no async, no delay)
+      final hasBooked = _bookingsCacheService.hasBookedProperty(propertyId);
+      
+      print(hasBooked 
+          ? '✅ [PropertyDetailsView] User has booked shortlet $propertyId (cached)'
+          : '🔒 [PropertyDetailsView] User has not booked shortlet $propertyId (cached)');
+      
+      return hasBooked;
+    } catch (e) {
+      print('❌ [PropertyDetailsView] Error checking cached bookings: $e');
+      return false; // Default to blurred on error
+    }
+  }
+  
+  /// Refresh bookings cache in background if needed
+  Future<void> _refreshBookingsCacheIfNeeded() async {
+    try {
+      final property = widget.propertyData ?? _getDefaultProperty();
+      final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
+      
+      // Only refresh for shortlets
+      if (!propertyType.contains('shortlet')) {
+        return;
+      }
+      
+      // Fetch and cache bookings in background
+      await _bookingsCacheService.fetchAndCacheBookings();
+      
+      if (!mounted) return;
+      
+      // Re-check booking status after cache refresh
+      final hasBooked = _checkIfPropertyBookedSync();
+      
+      // Update UI if status changed
+      if (_hasBookedProperty != hasBooked) {
+        setState(() {
+          _hasBookedProperty = hasBooked;
+        });
+        print('🔄 [PropertyDetailsView] Booking status updated after cache refresh');
+      }
+    } catch (e) {
+      print('❌ [PropertyDetailsView] Error refreshing bookings cache: $e');
     }
   }
 
@@ -306,6 +378,18 @@ If you don't have the app, the link will open in your browser where you can down
         });
       }
     });
+  }
+
+  /// Show full-screen image gallery dialog
+  void _showImageGallery(BuildContext context, List<String> images, int initialIndex) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => ImageGalleryDialog(
+        images: images,
+        initialIndex: initialIndex,
+      ),
+    );
   }
 
   @override
@@ -1633,27 +1717,26 @@ If you don't have the app, the link will open in your browser where you can down
                   height: 400,
                   child: Stack(
                     children: [
-                      // Image PageView
-                      PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentImageIndex = index;
-                          });
+                      // Image PageView - Make it clickable to open full-screen gallery
+                      GestureDetector(
+                        onTap: () {
+                          _showImageGallery(context, propertyImages, _currentImageIndex);
                         },
-                        itemCount: propertyImages.length,
-                        itemBuilder: (context, index) {
-                          return Container(
-                            width: double.infinity,
-                            height: 400,
-                            decoration: BoxDecoration(
-                              image: DecorationImage(
-                                image: NetworkImage(propertyImages[index]),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          );
-                        },
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentImageIndex = index;
+                            });
+                          },
+                          itemCount: propertyImages.length,
+                          itemBuilder: (context, index) {
+                            return _buildImageWithLoader(
+                              imageUrl: propertyImages[index],
+                              height: 400,
+                            );
+                          },
+                        ),
                       ),
                       
                       // Top overlay buttons
@@ -1859,14 +1942,16 @@ If you don't have the app, the link will open in your browser where you can down
                               ),
                               const SizedBox(width: 6),
                               Expanded(
-                                child: Text(
-                                property['location'] as String? ?? 'Location not specified',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF868686),
-                                  ),
-                                  softWrap: true,
-                                ),
+                                child: (isShortlet && !_hasBookedProperty)
+                                    ? _buildBlurredText(property['location'] as String? ?? 'Location not specified')
+                                    : Text(
+                                        property['location'] as String? ?? 'Location not specified',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF868686),
+                                        ),
+                                        softWrap: true,
+                                      ),
                               ),
                             ],
                           ),
@@ -1967,14 +2052,58 @@ If you don't have the app, the link will open in your browser where you can down
                             
                             const SizedBox(height: 20),
                             
+                            // Info banner for blurred contacts (shortlets only)
+                            if (isShortlet && !_hasBookedProperty) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF4E6),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFB547),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: const Color(0xFFFF9800),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Book this shortlet to view agent contact details',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: const Color(0xFF663C00),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            
                             // Contact info
                             Column(
                               children: [
-                                _buildContactRow('assets/icons/fluent_call-24-filled.svg', _getAgentPhone(property)),
+                                _buildContactRow(
+                                  'assets/icons/fluent_call-24-filled.svg', 
+                                  _getAgentPhone(property),
+                                  shouldBlur: isShortlet && !_hasBookedProperty,
+                                ),
                                 const SizedBox(height: 16),
                                 _buildContactRow('assets/icons/majesticons_mail.svg', _getAgentEmail(property)),
                                 const SizedBox(height: 16),
-                                _buildContactRow('assets/icons/logos_whatsapp-icon.svg', _getAgentWhatsApp(property)),
+                                _buildContactRow(
+                                  'assets/icons/logos_whatsapp-icon.svg', 
+                                  _getAgentWhatsApp(property),
+                                  shouldBlur: isShortlet && !_hasBookedProperty,
+                                ),
                               ],
                             ),
                           ],
@@ -2201,23 +2330,22 @@ If you don't have the app, the link will open in your browser where you can down
                                 ),
                               );
                             },
-                            child: Container(
-                              height: 200,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                image: property360Images.isNotEmpty 
-                                    ? DecorationImage(
-                                        image: NetworkImage(property360Images.first),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : const DecorationImage(
-                                        image: AssetImage('assets/images/3af693f3bf0406d67cddf98a62526eba4c273542.jpg'), // Fallback 360° apartment image
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
                               child: Stack(
                                 children: [
+                                  // 360 Image with loader
+                                  property360Images.isNotEmpty
+                                      ? _buildImageWithLoader(
+                                          imageUrl: property360Images.first,
+                                          height: 200,
+                                        )
+                                      : Image.asset(
+                                          'assets/images/3af693f3bf0406d67cddf98a62526eba4c273542.jpg',
+                              height: 200,
+                              width: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
                                   // Overlay gradient for better visibility
                                   Container(
                                     decoration: BoxDecoration(
@@ -2410,11 +2538,13 @@ If you don't have the app, the link will open in your browser where you can down
                             builder: (context) {
                               try {
                                 final coordinates = _getPropertyCoordinates(property);
+                                final locationString = property['location'] as String?;
                                 
                                 return GoogleMapWidget(
                                   latitude: coordinates['latitude'],
                                   longitude: coordinates['longitude'],
                                   propertyTitle: property['title'] as String?,
+                                  locationString: locationString,
                                   height: 200,
                                   showMarker: true,
                                 );
@@ -2672,7 +2802,7 @@ If you don't have the app, the link will open in your browser where you can down
     );
   }
 
-  Widget _buildContactRow(String icon, String text) {
+  Widget _buildContactRow(String icon, String text, {bool shouldBlur = false}) {
     return Row(
       children: [
         Container(
@@ -2697,7 +2827,7 @@ If you don't have the app, the link will open in your browser where you can down
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
+          child: shouldBlur ? _buildBlurredText(text) : Text(
             text,
             style: const TextStyle(
               fontSize: 16,
@@ -2705,10 +2835,162 @@ If you don't have the app, the link will open in your browser where you can down
             ),
           ),
         ),
+        if (shouldBlur)
+          Tooltip(
+            message: 'Book this shortlet to view contact details',
+            child: Icon(
+              Icons.lock_outline,
+              size: 16,
+              color: Colors.grey[600],
+            ),
+          )
+        else
         SvgPicture.asset(
           'assets/icons/si_copy-line.svg',
           width: 16,
           height: 16,
+          ),
+      ],
+    );
+  }
+  
+  /// Build blurred text widget
+  Widget _buildBlurredText(String text) {
+    return Stack(
+      children: [
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black,
+          ),
+        ),
+        Positioned.fill(
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+              child: Container(
+                color: Colors.white.withOpacity(0.1),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  /// Build image with percentage loading indicator
+  Widget _buildImageWithLoader({
+    required String imageUrl,
+    required double height,
+    BoxFit fit = BoxFit.cover,
+  }) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Background color while loading
+        Container(
+          color: Colors.grey[200],
+        ),
+        // Image
+        Image.network(
+          imageUrl,
+          width: double.infinity,
+          height: height,
+          fit: fit,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) {
+              // Image fully loaded
+              return child;
+            }
+            
+            // Calculate loading percentage
+            final progress = loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                : 0.0;
+            
+            final percentage = (progress * 100).toInt();
+            
+            // Show loading indicator with percentage
+            return Container(
+              color: Colors.grey[200],
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Circular progress indicator
+                    SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Background circle
+                          SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: CircularProgressIndicator(
+                              value: progress,
+                              strokeWidth: 4,
+                              backgroundColor: Colors.grey[300],
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                const Color(0xFF426DC2),
+                              ),
+                            ),
+                          ),
+                          // Percentage text
+                          Text(
+                            '$percentage%',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF426DC2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Loading text
+                    const Text(
+                      'Loading image...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF666666),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            // Show error state
+            return Container(
+              color: Colors.grey[200],
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.broken_image_outlined,
+                      size: 48,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Failed to load image',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -2879,20 +3161,26 @@ If you don't have the app, the link will open in your browser where you can down
     // Try to get coordinates from property data
     final coordinates = property['coordinates'] as Map<String, dynamic>?;
     if (coordinates != null) {
-      return {
-        'latitude': (coordinates['latitude'] as num?)?.toDouble() ?? 6.5244,
-        'longitude': (coordinates['longitude'] as num?)?.toDouble() ?? 3.3792,
-      };
+      final lat = (coordinates['latitude'] as num?)?.toDouble();
+      final lng = (coordinates['longitude'] as num?)?.toDouble();
+      if (lat != null && lng != null) {
+        return {
+          'latitude': lat,
+          'longitude': lng,
+        };
+      }
     }
 
-    // Try to get coordinates from location string (fallback)
+    // Try to get coordinates from location string using geocoding
+    // For now, use the location string directly in Google Maps URL
+    // The Google Maps widget will handle geocoding via the location string
     final location = property['location'] as String?;
-    if (location != null) {
-      // Parse location string to extract coordinates if available
-      // For now, return default Lagos coordinates
+    if (location != null && location.isNotEmpty) {
+      // Return default coordinates but we'll pass location string to Google Maps
+      // The GoogleMapWidget will need to be updated to accept location string
       return {
-        'latitude': 6.5244,
-        'longitude': 3.3792,
+        'latitude': 6.5244, // Default Lagos
+        'longitude': 3.3792, // Default Lagos
       };
     }
 
@@ -2951,4 +3239,165 @@ If you don't have the app, the link will open in your browser where you can down
     );
   }
 
+}
+
+/// Full-screen image gallery dialog
+class ImageGalleryDialog extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const ImageGalleryDialog({
+    super.key,
+    required this.images,
+    this.initialIndex = 0,
+  });
+
+  @override
+  State<ImageGalleryDialog> createState() => _ImageGalleryDialogState();
+}
+
+class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Full-screen image viewer
+            PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemCount: widget.images.length,
+              itemBuilder: (context, index) {
+                return InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Center(
+                    child: Image.network(
+                      widget.images[index],
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(
+                            Icons.error_outline,
+                            color: Colors.white70,
+                            size: 48,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            // Close button
+            Positioned(
+              top: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+
+            // Image counter indicator (only show if multiple images)
+            if (widget.images.length > 1)
+              Positioned(
+                bottom: 32,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_currentIndex + 1} / ${widget.images.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Image dots indicator (optional, at the bottom)
+            if (widget.images.length > 1)
+              Positioned(
+                bottom: 80,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    widget.images.length,
+                    (index) => Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _currentIndex == index
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.4),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 } 

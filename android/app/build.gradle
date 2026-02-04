@@ -17,6 +17,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.proplinq.app"
     compileSdk = 36
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -75,11 +76,13 @@ dependencies {
 // Fix motion_sensors plugin issues
 configurations.all {
     resolutionStrategy {
-        force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
-        force 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib:2.1.0'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0'
+        force 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0'
     }
 }
 
 // Add namespace for motion_sensors plugin
 project.ext.set("motion_sensors.namespace", "finaldev.motion_sensors")
+// Add namespace for uni_links plugin
+project.ext.set("uni_links.namespace", "io.flutter.plugins.uni_links")

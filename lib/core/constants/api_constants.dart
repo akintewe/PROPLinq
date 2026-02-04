@@ -13,6 +13,7 @@ class ApiConstants {
   static const String login = '/login';
   static const String logout = '/logout';
   static const String forgotPassword = '/forgot-password';
+  static const String verifyResetOtp = '/verify-reset-otp';
   static const String resetPassword = '/reset-password';
   static const String verifyEmail = '/verify-email';
   static const String resendVerification = '/resend-verification';
@@ -22,6 +23,7 @@ class ApiConstants {
   static const String updateProfile = '/profile/update';
   static const String changePassword = '/change-password';
   static const String uploadProfileImage = '/user/profile-image';
+  static const String updatePlayerId = '/update-player-id';
   
   // Property Endpoints
   static const String properties = '/properties';
@@ -30,7 +32,7 @@ class ApiConstants {
   static const String deleteProperty = '/properties';
   static const String searchProperties = '/properties/search';
   static const String favoriteProperties = '/properties/favorites';
-  static const String listProperties = '/get-properties-list';
+  static const String listProperties = '/properties';
   static const String myProperties = '/agent/properties';
   static const String promotedProperties = '/properties/promoted';
   static String rateProperty(int propertyId) => '/properties/$propertyId/rate';
@@ -48,6 +50,8 @@ class ApiConstants {
   static const String phoneVerify = '/phone/verify';
   static const String emailVerifyRequest = '/email/verify/request';
   static const String emailVerify = '/email/verify';
+  static const String verifyOtp = '/verify-otp';
+  static const String resendOtp = '/resend-otp';
   
   // Favorites
   static const String getFavourites = '/favourite/get-favourites';
@@ -64,6 +68,10 @@ class ApiConstants {
   
   // Booking Endpoints
   static const String bookings = '/bookings';
+  static String cancelBooking(int bookingId) => '/bookings/$bookingId/cancel';
+  
+  // Agent Ratings Endpoints
+  static const String agentPropertiesRatings = '/agent/properties/ratings';
   
   // Subscription Endpoints
   static const String subscriptionPlans = '/agent/subscription-plans';

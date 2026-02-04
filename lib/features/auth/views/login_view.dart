@@ -5,6 +5,7 @@ import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/services/onesignal_service.dart';
+import '../../../core/services/deep_linking_service.dart';
 import '../services/auth_service.dart';
 import 'forgot_password_view.dart';
 import 'sign_up_view.dart';
@@ -110,6 +111,9 @@ class _LoginViewState extends State<LoginView> {
         if (response.data!.user.location.isNotEmpty) {
           await _oneSignalService.setUserLocation(response.data!.user.location);
         }
+        
+        // Set AppsFlyer customer user ID for attribution tracking
+        DeepLinkingService().setUserId(response.data!.user.id.toString());
         
         _navigateToHome(response.data!.user.userType);
       } else {
@@ -264,7 +268,7 @@ class _LoginViewState extends State<LoginView> {
         _showErrorMessage('Biometric authentication failed. Please try again.');
       }
     } catch (e) {
-      _showErrorMessage('Biometric authentication error: ${e.toString()}');
+      _showErrorMessage('Biometric authentication failed. Please try again.');
     } finally {
       setState(() {
         _isLoading = false;

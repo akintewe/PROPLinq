@@ -1,8 +1,8 @@
 import 'dart:io';
 
 class AgentKycRequest {
-  final String nin; // Required
-  final String? bvn; // Optional - either BVN or TIN required
+  final String? nin; // Optional - removed from UI
+  final String? bvn; // Optional - removed from UI
   final String? tin; // Optional - either BVN or TIN required
   final String companyName; // Required
   final File cacDoc; // Required
@@ -13,7 +13,7 @@ class AgentKycRequest {
   final File? bankStatement; // Optional
 
   AgentKycRequest({
-    required this.nin,
+    this.nin,
     this.bvn,
     this.tin,
     required this.companyName,
@@ -29,7 +29,7 @@ class AgentKycRequest {
   Map<String, String> toFormFields() {
     print('🔵 [AGENT KYC] Creating form fields...');
     print('🔵 [AGENT KYC] Raw values:');
-    print('  - nin: "$nin"');
+    print('  - nin: "${nin ?? 'NULL'}"');
     print('  - bvn: "${bvn ?? 'NULL'}"');
     print('  - tin: "${tin ?? 'NULL'}"');
     print('  - companyName: "$companyName"');
@@ -38,9 +38,16 @@ class AgentKycRequest {
     print('  - occupation: "${occupation ?? 'NULL'}"');
     
     final fields = <String, String>{
-      'nin': nin,
       'company_name': companyName,
     };
+
+    // Add NIN if provided
+    if (nin != null && nin!.isNotEmpty) {
+      fields['nin'] = nin!;
+      print('  ✅ Added NIN: "${nin!}"');
+    } else {
+      print('  ⚠️ NIN not provided');
+    }
 
     // Add BVN if provided
     if (bvn != null && bvn!.isNotEmpty) {
