@@ -1,6 +1,7 @@
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../models/property_model.dart';
+import '../models/paginated_properties_response.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
@@ -212,7 +213,87 @@ class PropertyService {
     }
   }
 
-  /// Fetch all properties with pagination support
+  /// Fetch properties with pagination support (returns single page)
+  Future<PaginatedPropertiesResponse> fetchPropertiesPaginated({
+    int page = 1,
+    String? type,
+    String? location,
+    String? priceMin,
+    String? priceMax,
+    String? category,
+  }) async {
+    try {
+      print('📡 [PropertyService] Fetching properties (paginated) - Page $page');
+
+      // Build query parameters
+      final Map<String, String> queryParams = {'page': page.toString()};
+      if (type != null) queryParams['type'] = type;
+      if (location != null) queryParams['location'] = location;
+      if (priceMin != null) queryParams['price_min'] = priceMin;
+      if (priceMax != null) queryParams['price_max'] = priceMax;
+      if (category != null) queryParams['category'] = category;
+
+      final response = await _apiService.get<dynamic>(
+        ApiConstants.listProperties,
+        queryParams: queryParams,
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+
+      print('   - Response success: ${response.success}');
+      print('   - Response data type: ${response.data?.runtimeType}');
+
+      if (response.success && response.data != null) {
+        final data = response.data!;
+
+        // Handle pagination structure
+        if (data is Map<String, dynamic>) {
+          // Check if it has pagination structure
+          if (data.containsKey('data') && data['data'] is List) {
+            print('   - Paginated response: ${data['current_page']}/${data['last_page']}');
+            final paginatedResponse = PaginatedPropertiesResponse.fromJson(data);
+            print('✅ [PropertyService] Fetched ${paginatedResponse.properties.length} properties on page $page');
+            return paginatedResponse;
+          }
+        }
+
+        // Fallback: treat as non-paginated data
+        print('   - Non-paginated response, treating as single page');
+        final propertiesData = data is List ? data : (data is Map && data.containsKey('data') ? data['data'] as List : []);
+        return PaginatedPropertiesResponse(
+          properties: propertiesData,
+          currentPage: 1,
+          lastPage: 1,
+          total: propertiesData.length,
+          perPage: propertiesData.length,
+          hasMorePages: false,
+        );
+      } else {
+        print('❌ [PropertyService] Failed to fetch properties: ${response.message}');
+        return PaginatedPropertiesResponse(
+          properties: [],
+          currentPage: page,
+          lastPage: page,
+          total: 0,
+          perPage: 0,
+          hasMorePages: false,
+        );
+      }
+    } catch (e) {
+      print('❌ [PropertyService] Error fetching paginated properties: $e');
+      return PaginatedPropertiesResponse(
+        properties: [],
+        currentPage: page,
+        lastPage: page,
+        total: 0,
+        perPage: 0,
+        hasMorePages: false,
+      );
+    }
+  }
+
+  /// Fetch all properties with pagination support (DEPRECATED - use fetchPropertiesPaginated)
+  @Deprecated('Use fetchPropertiesPaginated for better performance')
   Future<List<PropertyModel>> fetchProperties({
     String? type,
     String? location,
@@ -221,7 +302,7 @@ class PropertyService {
     String? category,
   }) async {
     try {
-      
+
       // Build query parameters
       final Map<String, String> queryParams = {};
       if (type != null) queryParams['type'] = type;
@@ -247,7 +328,7 @@ class PropertyService {
 
       if (response.success && response.data != null) {
         final data = response.data!;
-        
+
         // Handle new structure: data can be a direct array or nested
         List<dynamic> propertiesData;
         if (data is List) {
@@ -264,7 +345,7 @@ class PropertyService {
         } else {
           propertiesData = [];
         }
-        
+
         final List<PropertyModel> properties = propertiesData
             .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
             .toList();

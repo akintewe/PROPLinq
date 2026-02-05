@@ -21,7 +21,7 @@ class _AgentKycViewState extends State<AgentKycView> {
   final int _totalSteps = 2; // 2 steps: Required Info, Documents
 
   // Controllers
-  final TextEditingController _tinController = TextEditingController();
+  final TextEditingController _ninController = TextEditingController();
   final TextEditingController _companyNameController = TextEditingController();
 
   // File upload state
@@ -36,13 +36,13 @@ class _AgentKycViewState extends State<AgentKycView> {
   void initState() {
     super.initState();
     // Add listeners to text controllers to update button state
-    _tinController.addListener(() => setState(() {}));
+    _ninController.addListener(() => setState(() {}));
     _companyNameController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _tinController.dispose();
+    _ninController.dispose();
     _companyNameController.dispose();
     super.dispose();
   }
@@ -113,14 +113,14 @@ class _AgentKycViewState extends State<AgentKycView> {
       final cacFile = File(_cacDocumentFile!.path!);
       
       print('🔵 [AGENT KYC VIEW] Creating AgentKycRequest with:');
-      print('  - TIN: "${_tinController.text.trim().isNotEmpty ? _tinController.text.trim() : 'EMPTY'}"');
+      print('  - NIN: "${_ninController.text.trim().isNotEmpty ? _ninController.text.trim() : 'EMPTY'}"');
       print('  - Company Name: "${_companyNameController.text.trim()}"');
       print('  - CAC Doc: ${cacFile.path}');
 
       final request = AgentKycRequest(
-        nin: null, // NIN removed from UI
+        nin: _ninController.text.trim().isNotEmpty ? _ninController.text.trim() : null,
         bvn: null, // BVN removed from UI
-        tin: _tinController.text.trim().isNotEmpty ? _tinController.text.trim() : null,
+        tin: null, // TIN removed from UI
         companyName: _companyNameController.text.trim(),
         cacDoc: cacFile,
         // All other fields are optional
@@ -384,11 +384,11 @@ class _AgentKycViewState extends State<AgentKycView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // TIN (Optional)
+        // NIN (Required)
         CustomTextField(
-          label: 'TIN (Tax Identification Number)',
-          hintText: 'Enter your TIN (optional)',
-          controller: _tinController,
+          label: 'NIN (National Identification Number)',
+          hintText: 'Enter your NIN',
+          controller: _ninController,
           keyboardType: TextInputType.number,
         ),
         

@@ -23,6 +23,7 @@ import '../services/property_service.dart';
 import '../services/favorite_service.dart';
 import '../services/chat_service.dart';
 import '../models/property_model.dart';
+import '../models/paginated_properties_response.dart';
 
 // Image carousel widget for agent property cards
 class _AgentPropertyImageCarousel extends StatefulWidget {
@@ -204,6 +205,12 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   int _unreadMessageCount = 0;
   Timer? _unreadCountTimer;
 
+  // Pagination state
+  int _currentPage = 1;
+  int _lastPage = 1;
+  bool _hasMorePages = false;
+  bool _isLoadingMoreProperties = false;
+
   // Promotional messages for rotating banner
   final List<String> _promotionalMessages = [
     "PROMOTE YOUR PROPERTY TODAY",
@@ -216,10 +223,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       duration: const Duration(seconds: 15),
       vsync: this,
     )..repeat();
-    
+
     _featuredScrollController = ScrollController();
     _homeScrollController = ScrollController();
-    
+
     // Start promotional message rotation
     _startPromoMessageRotation();
     
@@ -275,43 +282,65 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     }
   }
 
-  Future<void> _fetchProperties() async {
+  Future<void> _fetchProperties({bool isRefresh = false}) async {
     try {
       setState(() {
         _isLoadingProperties = true;
+        if (isRefresh) {
+          _currentPage = 1;
+          _properties = [];
+        }
       });
 
-      final properties = await _propertyService.fetchAllProperties();
-      
-      print('🟡 [AgentHomeView] Fetched properties count: ${properties.length}');
-      print('🟡 [AgentHomeView] Featured properties count: ${properties.where((p) => p.isFeatured).length}');
-      print('🟡 [AgentHomeView] Non-featured properties count: ${properties.where((p) => !p.isFeatured).length}');
-      
-      // Always update featured properties from main list on refresh
-      final featuredFromMain = properties.where((p) => p.isFeatured).toList();
+      // Fetch ALL pages at once
+      List<PropertyModel> allProperties = [];
+      int currentPage = 1;
+      int lastPage = 1;
+
+      do {
+        final response = await _propertyService.fetchPropertiesPaginated(page: currentPage);
+        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+
+        allProperties.addAll(properties);
+        currentPage = response.currentPage;
+        lastPage = response.lastPage;
+
+        print('🟡 [AgentHomeView] Fetched page $currentPage/$lastPage with ${properties.length} properties');
+
+        currentPage++;
+      } while (currentPage <= lastPage);
+
+      print('🟡 [AgentHomeView] Total properties fetched: ${allProperties.length}');
+      print('🟡 [AgentHomeView] Featured properties count: ${allProperties.where((p) => p.isFeatured).length}');
+
+      // Always update featured properties from main list
+      final featuredFromMain = allProperties.where((p) => p.isFeatured).toList();
       if (featuredFromMain.isNotEmpty) {
         setState(() {
           _promotedProperties = featuredFromMain;
         });
-      } else if (_promotedProperties.isNotEmpty) {
-        // If no featured properties found but we had some before, clear them
+      } else if (_promotedProperties.isNotEmpty && isRefresh) {
+        // If no featured properties found but we had some before, clear them on refresh
         setState(() {
           _promotedProperties = [];
         });
       }
-      
+
       setState(() {
-        _properties = properties;
+        _properties = allProperties;
+        _currentPage = lastPage;
+        _lastPage = lastPage;
+        _hasMorePages = false;
         _isLoadingProperties = false;
       });
-      
+
       // Start auto-scrolling after properties are loaded
       _startFeaturedAutoScroll();
     } catch (e) {
       setState(() {
         _isLoadingProperties = false;
       });
-      
+
       // Show error message to user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -324,6 +353,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       }
     }
   }
+
 
   Future<void> _fetchPromotedProperties() async {
     try {

@@ -2885,19 +2885,22 @@ If you don't have the app, the link will open in your browser where you can down
     required double height,
     BoxFit fit = BoxFit.cover,
   }) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Background color while loading
-        Container(
-          color: Colors.grey[200],
-        ),
-        // Image
-        Image.network(
-          imageUrl,
-          width: double.infinity,
-          height: height,
-          fit: fit,
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background color while loading
+          Container(
+            color: Colors.grey[200],
+          ),
+          // Image
+          Image.network(
+            imageUrl,
+            width: double.infinity,
+            height: height,
+            fit: fit,
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) {
               // Image fully loaded
@@ -2993,6 +2996,7 @@ If you don't have the app, the link will open in your browser where you can down
           },
         ),
       ],
+      ),
     );
   }
 
@@ -3096,11 +3100,13 @@ If you don't have the app, the link will open in your browser where you can down
 
         ),
         const SizedBox(width: 12),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.black,
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black,
+            ),
           ),
         ),
       ],

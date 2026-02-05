@@ -20,6 +20,7 @@ import '../services/property_service.dart';
 import '../services/favorite_service.dart';
 import '../services/chat_service.dart';
 import '../models/property_model.dart';
+import '../models/paginated_properties_response.dart';
 import 'property_details_view.dart';
 
 // Image carousel widget for property cards
@@ -235,6 +236,12 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   int _unreadMessageCount = 0;
   Timer? _unreadCountTimer;
 
+  // Pagination state
+  int _currentPage = 1;
+  int _lastPage = 1;
+  bool _hasMorePages = false;
+  bool _isLoadingMoreProperties = false;
+
   @override
   void initState() {
     super.initState();
@@ -242,10 +249,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       duration: const Duration(seconds: 15),
       vsync: this,
     )..repeat();
-    
+
     _featuredScrollController = ScrollController();
     _homeScrollController = ScrollController();
-    
+
     // Fetch user profile, properties, and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserProfile();
@@ -254,7 +261,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       await _fetchUnreadMessageCount();
       await _showKycDialogIfNeeded();
       _startFeaturedAutoScroll();
-      
+
       // Pre-load bookings cache for phone number blur feature
       BookingsCacheService().fetchAndCacheBookings();
       
@@ -303,36 +310,58 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
   }
 
-  Future<void> _fetchProperties() async {
+  Future<void> _fetchProperties({bool isRefresh = false}) async {
     try {
       setState(() {
         _isLoadingProperties = true;
+        if (isRefresh) {
+          _currentPage = 1;
+          _properties = [];
+        }
       });
 
-      final properties = await _propertyService.fetchAllProperties();
-      
-      print('🟢 [TenantHomeView] Fetched properties count: ${properties.length}');
-      print('🟢 [TenantHomeView] Featured properties count: ${properties.where((p) => p.isFeatured).length}');
-      print('🟢 [TenantHomeView] Non-featured properties count: ${properties.where((p) => !p.isFeatured).length}');
-      
-      // Always update featured properties from main list on refresh
-      final featuredFromMain = properties.where((p) => p.isFeatured).toList();
+      // Fetch ALL pages at once
+      List<PropertyModel> allProperties = [];
+      int currentPage = 1;
+      int lastPage = 1;
+
+      do {
+        final response = await _propertyService.fetchPropertiesPaginated(page: currentPage);
+        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+
+        allProperties.addAll(properties);
+        currentPage = response.currentPage;
+        lastPage = response.lastPage;
+
+        print('🟢 [TenantHomeView] Fetched page $currentPage/$lastPage with ${properties.length} properties');
+
+        currentPage++;
+      } while (currentPage <= lastPage);
+
+      print('🟢 [TenantHomeView] Total properties fetched: ${allProperties.length}');
+      print('🟢 [TenantHomeView] Featured properties count: ${allProperties.where((p) => p.isFeatured).length}');
+
+      // Always update featured properties from main list
+      final featuredFromMain = allProperties.where((p) => p.isFeatured).toList();
       if (featuredFromMain.isNotEmpty) {
         setState(() {
           _promotedProperties = featuredFromMain;
         });
-      } else if (_promotedProperties.isNotEmpty) {
-        // If no featured properties found but we had some before, clear them
+      } else if (_promotedProperties.isNotEmpty && isRefresh) {
+        // If no featured properties found but we had some before, clear them on refresh
         setState(() {
           _promotedProperties = [];
         });
       }
-      
+
       setState(() {
-        _properties = properties;
+        _properties = allProperties;
+        _currentPage = lastPage;
+        _lastPage = lastPage;
+        _hasMorePages = false;
         _isLoadingProperties = false;
       });
-      
+
       // Start auto-scrolling after properties are loaded
       _startFeaturedAutoScroll();
       _maybeShowInitialBottomSheet();
@@ -340,7 +369,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       setState(() {
         _isLoadingProperties = false;
       });
-      
+
       // Show error message to user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -353,6 +382,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       }
     }
   }
+
 
   Future<void> _fetchPromotedProperties() async {
     try {
