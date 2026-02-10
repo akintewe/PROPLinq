@@ -321,22 +321,51 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       });
 
       // Fetch ALL pages at once
+      // Note: API has a bug where lastPage is always 1 and total is always 0
+      // So we fetch pages until we get less than 12 items (empty or partial page)
       List<PropertyModel> allProperties = [];
       int currentPage = 1;
-      int lastPage = 1;
+      bool hasMorePages = true;
 
-      do {
+      while (hasMorePages) {
+        print('🟢🟢🟢 [TenantHomeView] ========================================');
+        print('🟢 [TenantHomeView] Requesting page: $currentPage');
+
         final response = await _propertyService.fetchPropertiesPaginated(page: currentPage);
+
+        print('🟢 [TenantHomeView] Response received:');
+        print('   - currentPage: ${response.currentPage}');
+        print('   - lastPage: ${response.lastPage}');
+        print('   - total: ${response.total}');
+        print('   - perPage: ${response.perPage}');
+        print('   - hasMorePages: ${response.hasMorePages}');
+        print('   - properties in response: ${response.properties.length}');
+        print('   - nextPageUrl: ${response.nextPageUrl}');
+        print('🟢 [TenantHomeView] Full response: $response');
+
         final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
+        // If no properties returned, stop fetching
+        if (properties.isEmpty) {
+          print('🟢 [TenantHomeView] No more properties, stopping at page $currentPage');
+          break;
+        }
+
         allProperties.addAll(properties);
-        currentPage = response.currentPage;
-        lastPage = response.lastPage;
 
-        print('🟢 [TenantHomeView] Fetched page $currentPage/$lastPage with ${properties.length} properties');
+        print('🟢 [TenantHomeView] Fetched page $currentPage with ${properties.length} properties');
+        print('🟢 [TenantHomeView] Total accumulated so far: ${allProperties.length}');
 
-        currentPage++;
-      } while (currentPage <= lastPage);
+        // Check if we should continue fetching
+        // If we got a full page (12 items), there might be more
+        if (properties.length < 12) {
+          print('🟢 [TenantHomeView] Received partial page (${properties.length} < 12), no more pages');
+          hasMorePages = false;
+        } else {
+          print('🟢 [TenantHomeView] Received full page (${properties.length}), checking next page');
+          currentPage++;
+        }
+      }
 
       print('🟢 [TenantHomeView] Total properties fetched: ${allProperties.length}');
       print('🟢 [TenantHomeView] Featured properties count: ${allProperties.where((p) => p.isFeatured).length}');
@@ -356,8 +385,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
       setState(() {
         _properties = allProperties;
-        _currentPage = lastPage;
-        _lastPage = lastPage;
+        _currentPage = currentPage;
+        _lastPage = currentPage;
         _hasMorePages = false;
         _isLoadingProperties = false;
       });
@@ -1660,9 +1689,24 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   bool _shouldBlurAddress(PropertyModel property) {
     final isShortlet = property.type.toLowerCase() == 'shortlet';
     if (!isShortlet) return false;
-    
+
     final bookingsCacheService = BookingsCacheService();
     return !bookingsCacheService.hasBookedProperty(property.id.toString());
+  }
+
+  /// Check if address should be blurred for shortlets (Map version)
+  bool _shouldBlurAddressFromMap(Map<String, dynamic> property) {
+    final type = property['type'] as String?;
+    if (type == null) return false;
+
+    final isShortlet = type.toLowerCase() == 'shortlet';
+    if (!isShortlet) return false;
+
+    final propertyId = property['id']?.toString();
+    if (propertyId == null) return false;
+
+    final bookingsCacheService = BookingsCacheService();
+    return !bookingsCacheService.hasBookedProperty(propertyId);
   }
 
   /// Build blurred text widget
@@ -2537,13 +2581,15 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         ),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: Text(
-                            property['location'] as String,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF868686),
-                            ),
-                          ),
+                          child: _shouldBlurAddressFromMap(property)
+                              ? _buildBlurredText(property['location'] as String)
+                              : Text(
+                                  property['location'] as String,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF868686),
+                                  ),
+                                ),
                         ),
                       ],
                     ),

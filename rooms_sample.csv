@@ -1,0 +1,4 @@
+name,type,price,capacity,count,features
+Deluxe Room,Suite,150.00,2,5,wifi|ac|balcony
+Standard Room,Single,80.00,1,10,wifi|tv
+Family Suite,Suite,250.00,4,2,wifi|ac|kitchen|pool_view

@@ -31,12 +31,12 @@ class ProfileView extends StatefulWidget {
   State<ProfileView> createState() => _ProfileViewState();
 }
 
-class _ProfileViewState extends State<ProfileView> {
+class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStateMixin {
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
   final ApiService _apiService = ApiService();
   final ImagePicker _imagePicker = ImagePicker();
-  
+
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   bool _isUploadingImage = false;
@@ -44,14 +44,30 @@ class _ProfileViewState extends State<ProfileView> {
   bool _isLoadingKycStatus = true;
   List<PropertyModel> _myProperties = [];
   bool _isLoadingMyProperties = true;
-  
+
   // Ratings and Reviews
   List<Map<String, dynamic>> _agentRatings = [];
   bool _isLoadingRatings = true;
 
+  // KYC Approval Animation
+  bool _showKycApprovedAnimation = false;
+  AnimationController? _approvalAnimationController;
+  Animation<double>? _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
+
+    // Initialize approval animation controller
+    _approvalAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _approvalAnimationController!,
+      curve: Curves.elasticOut,
+    );
+
     _fetchUserProfile();
     // Fetch KYC status for both agents and tenants
     _fetchKycStatus();
@@ -60,6 +76,12 @@ class _ProfileViewState extends State<ProfileView> {
       _fetchMyProperties();
       _fetchAgentRatings();
     }
+  }
+
+  @override
+  void dispose() {
+    _approvalAnimationController?.dispose();
+    super.dispose();
   }
   
   /// Refresh all profile data (called after KYC submission)
@@ -138,28 +160,85 @@ class _ProfileViewState extends State<ProfileView> {
 
   Future<void> _fetchKycStatus() async {
     try {
+      print('🔵🔵🔵 [ProfileView] ========================================');
+      print('🔵 [ProfileView] Fetching KYC status...');
+      print('🔵 [ProfileView] User type: ${widget.isAgent ? "Agent" : "Home Seeker"}');
+
       final response = await _authService.getKycStatus();
-      
-      
+
+      print('🔵 [ProfileView] KYC Status Response:');
+      print('🔵 [ProfileView] - Success: ${response.success}');
+      print('🔵 [ProfileView] - Status Code: ${response.statusCode}');
+      print('🔵 [ProfileView] - Message: ${response.message}');
+      print('🔵 [ProfileView] - Data: ${response.data}');
+
+      if (response.data != null) {
+        print('🔵 [ProfileView] KYC Data Details:');
+        print('🔵 [ProfileView] - status: ${response.data!.status}');
+        print('🔵 [ProfileView] - isRequired: ${response.data!.isRequired}');
+        print('🔵 [ProfileView] - message: ${response.data!.message}');
+        print('🔵 [ProfileView] - details: ${response.data!.details}');
+        print('🔵 [ProfileView] - isKycVerified(): ${response.data!.isKycVerified()}');
+        print('🔵 [ProfileView] - isKycPending(): ${response.data!.isKycPending()}');
+        print('🔵 [ProfileView] - isKycRejected(): ${response.data!.isKycRejected()}');
+        print('🔵 [ProfileView] - shouldShowKycDialog(): ${response.data!.shouldShowKycDialog()}');
+      }
+
       if (response.success) {
+        final previousStatus = _kycStatus?.status;
+        print('🔵 [ProfileView] - Previous status: $previousStatus');
+
         setState(() {
           _kycStatus = response.data;
           _isLoadingKycStatus = false;
         });
-        
-        if (_kycStatus != null) {
+
+        // Handle verified KYC status
+        if (_kycStatus != null && _kycStatus!.isKycVerified()) {
+          print('🔵 [ProfileView] KYC is VERIFIED!');
+          // Only trigger animation if status just changed (not on first load)
+          if (previousStatus != null && previousStatus != 'verified' && previousStatus != 'approved') {
+            print('🔵 [ProfileView] Status changed to verified/approved - triggering animation');
+            // Status just changed to verified/approved - show approval animation
+            _triggerApprovalAnimation();
+          } else {
+            print('🔵 [ProfileView] KYC already verified (first load or refresh)');
+          }
         } else {
+          print('🔵 [ProfileView] KYC is NOT verified');
         }
       } else {
+        print('🔵 [ProfileView] Response not successful');
         setState(() {
           _isLoadingKycStatus = false;
         });
       }
+
+      print('🔵 [ProfileView] ========================================');
     } catch (e) {
+      print('🔴 [ProfileView] Error fetching KYC status: $e');
       setState(() {
         _isLoadingKycStatus = false;
       });
     }
+  }
+
+  void _triggerApprovalAnimation() {
+    setState(() {
+      _showKycApprovedAnimation = true;
+    });
+
+    // Start scale animation
+    _approvalAnimationController?.forward();
+
+    // Wait 2 seconds then hide the animation
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _showKycApprovedAnimation = false;
+        });
+      }
+    });
   }
 
   // Refresh KYC status when profile view becomes visible
@@ -815,11 +894,41 @@ class _ProfileViewState extends State<ProfileView> {
               ),
               
               const SizedBox(height: 20),
-                    
+
+              // Verified Badge (show if KYC is approved)
+              if (!_isLoadingKycStatus && _kycStatus != null && _kycStatus!.isKycVerified())
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(
+                        Icons.verified,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'Verified',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                     // Name
                     Text(
-                      _isLoadingProfile 
-                          ? 'Loading...' 
+                      _isLoadingProfile
+                          ? 'Loading...'
                           : _currentUser?.fullName ?? 'User Name',
                       style: const TextStyle(
                         fontSize: 24,
@@ -985,7 +1094,7 @@ class _ProfileViewState extends State<ProfileView> {
     // Determine button text and layout based on KYC status
     String kycButtonText = 'Complete KYC';
     bool isKycApproved = false;
-    
+
     if (!_isLoadingKycStatus && _kycStatus != null) {
       if (_kycStatus!.isKycVerified()) {
         kycButtonText = 'View KYC Status';
@@ -1000,8 +1109,8 @@ class _ProfileViewState extends State<ProfileView> {
     } else if (_isLoadingKycStatus) {
       kycButtonText = 'Loading...';
     }
-    
-    // If KYC is approved, only show the "List a property" button
+
+    // If KYC is approved, only show "List a property" button
     if (isKycApproved) {
       return Container(
         width: double.infinity,
@@ -1095,68 +1204,116 @@ class _ProfileViewState extends State<ProfileView> {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Container(
-            height: 52,
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFF426DC2), width: 1),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: ElevatedButton(
-              onPressed: _isLoadingKycStatus ? null : () async {
-                // Navigate based on KYC status
-                if (_kycStatus?.status == 'pending') {
-                  // Show KYC status review screen
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => KycStatusReviewView(
-                        statusMessage: _kycStatus?.message,
+          child: _showKycApprovedAnimation
+              ? ScaleTransition(
+                  scale: _scaleAnimation!,
+                  child: Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment(-1.0, -0.02),
+                        end: Alignment(1.0, 0.02),
+                        stops: [0.0113, 0.4555, 1.1245],
+                        colors: [
+                          Color(0xFF33CC99),
+                          Color(0xFF66D9B0),
+                          Color(0xFF99E6C7),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Color(0xFF33CC99),
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Approved',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                } else {
-                  // Navigate to KYC form and refresh on return
-                  final result = await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const AgentKycView(),
+                  ),
+                )
+              : Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFF426DC2), width: 1),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _isLoadingKycStatus ? null : () async {
+                      // Navigate based on KYC status
+                      if (_kycStatus?.status == 'pending') {
+                        // Show KYC status review screen
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => KycStatusReviewView(
+                              statusMessage: _kycStatus?.message,
+                            ),
+                          ),
+                        );
+                      } else {
+                        // Navigate to KYC form and refresh on return
+                        final result = await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const AgentKycView(),
+                          ),
+                        );
+
+                        // Refresh profile if KYC was submitted
+                        if (result == true && mounted) {
+                          print('🔄 [ProfileView] Refreshing after agent KYC submission...');
+                          _refreshProfile();
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
                     ),
-                  );
-                  
-                  // Refresh profile if KYC was submitted
-                  if (result == true && mounted) {
-                    print('🔄 [ProfileView] Refreshing after agent KYC submission...');
-                    _refreshProfile();
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                    child: Text(
+                      kycButtonText,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _isLoadingKycStatus
+                            ? const Color(0xFF868686)
+                            : const Color(0xFF426DC2),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              child: Text(
-                kycButtonText,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: _isLoadingKycStatus 
-                      ? const Color(0xFF868686)
-                      : const Color(0xFF426DC2),
-                ),
-              ),
-            ),
-          ),
         ),
       ],
     );
   }
 
   Widget _buildKycInfoMessage() {
-    // Don't show info message if KYC is approved
+    // Don't show info message if KYC is approved, but add spacing
     if (!_isLoadingKycStatus && _kycStatus != null && _kycStatus!.isKycVerified()) {
-      return const SizedBox.shrink();
+      return const SizedBox(height: 32);
     }
     
     String message = 'You are currently limited to listing 3 properties. To list more, please complete your KYC process.';
@@ -1221,10 +1378,12 @@ class _ProfileViewState extends State<ProfileView> {
   Widget _buildTenantKycSection(BuildContext context) {
     // Determine button text and layout based on KYC status
     String kycButtonText = 'Complete KYC';
-    
+    bool isKycApproved = false;
+
     if (!_isLoadingKycStatus && _kycStatus != null) {
       if (_kycStatus!.isKycVerified()) {
         kycButtonText = 'View KYC Status';
+        isKycApproved = true;
       } else if (_kycStatus!.isKycPending()) {
         kycButtonText = 'View KYC Status';
       } else if (_kycStatus!.isKycRejected()) {
@@ -1235,7 +1394,12 @@ class _ProfileViewState extends State<ProfileView> {
     } else if (_isLoadingKycStatus) {
       kycButtonText = 'Loading...';
     }
-    
+
+    // Hide entire KYC section if approved
+    if (isKycApproved) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1247,9 +1411,9 @@ class _ProfileViewState extends State<ProfileView> {
             color: Colors.black,
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // KYC Status Card
         Container(
           padding: const EdgeInsets.all(20),
@@ -1264,12 +1428,9 @@ class _ProfileViewState extends State<ProfileView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-             
-             
-              
               // Status message
               Text(
-                _isLoadingKycStatus 
+                _isLoadingKycStatus
                     ? 'Loading KYC status...'
                     : _getTenantKycStatusMessage(),
                 style: const TextStyle(
@@ -1278,65 +1439,113 @@ class _ProfileViewState extends State<ProfileView> {
                   height: 1.5,
                 ),
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // KYC Action Button
-              Container(
-                width: double.infinity,
-                height: 50,
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF426DC2)),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: ElevatedButton(
-                  
-                  onPressed: _isLoadingKycStatus ? null : () async {
-                    // Navigate based on KYC status
-                    if (_kycStatus?.status == 'pending') {
-                      // Show KYC status review screen
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => UserKycStatusReviewView(
-                            statusMessage: _kycStatus?.message,
+              _showKycApprovedAnimation
+                  ? ScaleTransition(
+                      scale: _scaleAnimation!,
+                      child: Container(
+                        width: double.infinity,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment(-1.0, -0.02),
+                            end: Alignment(1.0, 0.02),
+                            stops: [0.0113, 0.4555, 1.1245],
+                            colors: [
+                              Color(0xFF33CC99),
+                              Color(0xFF66D9B0),
+                              Color(0xFF99E6C7),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: Color(0xFF33CC99),
+                                  size: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Approved',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    } else {
-                      // Navigate to KYC form and refresh on return
-                      final result = await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const CompleteKycView(),
+                      ),
+                    )
+                  : Container(
+                      width: double.infinity,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFF426DC2)),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isLoadingKycStatus ? null : () async {
+                          // Navigate based on KYC status
+                          if (_kycStatus?.status == 'pending') {
+                            // Show KYC status review screen
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => UserKycStatusReviewView(
+                                  statusMessage: _kycStatus?.message,
+                                ),
+                              ),
+                            );
+                          } else {
+                            // Navigate to KYC form and refresh on return
+                            final result = await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const CompleteKycView(),
+                              ),
+                            );
+
+                            // Refresh profile if KYC was submitted
+                            if (result == true && mounted) {
+                              print('🔄 [ProfileView] Refreshing after homeseeker KYC submission...');
+                              _refreshProfile();
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          shadowColor: Colors.transparent,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
                         ),
-                      );
-                      
-                      // Refresh profile if KYC was submitted
-                      if (result == true && mounted) {
-                        print('🔄 [ProfileView] Refreshing after homeseeker KYC submission...');
-                        _refreshProfile();
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    shadowColor: Colors.transparent,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                        child: Text(
+                          kycButtonText,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: _isLoadingKycStatus
+                                ? const Color(0xFF868686)
+                                : const Color(0xFF426DC2),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    kycButtonText,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _isLoadingKycStatus 
-                          ? const Color(0xFF868686)
-                          : const Color(0xFF426DC2),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),

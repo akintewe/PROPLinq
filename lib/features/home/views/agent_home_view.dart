@@ -293,22 +293,51 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       });
 
       // Fetch ALL pages at once
+      // Note: API has a bug where lastPage is always 1 and total is always 0
+      // So we fetch pages until we get less than 12 items (empty or partial page)
       List<PropertyModel> allProperties = [];
       int currentPage = 1;
-      int lastPage = 1;
+      bool hasMorePages = true;
 
-      do {
+      while (hasMorePages) {
+        print('🟡🟡🟡 [AgentHomeView] ========================================');
+        print('🟡 [AgentHomeView] Requesting page: $currentPage');
+
         final response = await _propertyService.fetchPropertiesPaginated(page: currentPage);
+
+        print('🟡 [AgentHomeView] Response received:');
+        print('   - currentPage: ${response.currentPage}');
+        print('   - lastPage: ${response.lastPage}');
+        print('   - total: ${response.total}');
+        print('   - perPage: ${response.perPage}');
+        print('   - hasMorePages: ${response.hasMorePages}');
+        print('   - properties in response: ${response.properties.length}');
+        print('   - nextPageUrl: ${response.nextPageUrl}');
+        print('🟡 [AgentHomeView] Full response: $response');
+
         final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
+        // If no properties returned, stop fetching
+        if (properties.isEmpty) {
+          print('🟡 [AgentHomeView] No more properties, stopping at page $currentPage');
+          break;
+        }
+
         allProperties.addAll(properties);
-        currentPage = response.currentPage;
-        lastPage = response.lastPage;
 
-        print('🟡 [AgentHomeView] Fetched page $currentPage/$lastPage with ${properties.length} properties');
+        print('🟡 [AgentHomeView] Fetched page $currentPage with ${properties.length} properties');
+        print('🟡 [AgentHomeView] Total accumulated so far: ${allProperties.length}');
 
-        currentPage++;
-      } while (currentPage <= lastPage);
+        // Check if we should continue fetching
+        // If we got a full page (12 items), there might be more
+        if (properties.length < 12) {
+          print('🟡 [AgentHomeView] Received partial page (${properties.length} < 12), no more pages');
+          hasMorePages = false;
+        } else {
+          print('🟡 [AgentHomeView] Received full page (${properties.length}), checking next page');
+          currentPage++;
+        }
+      }
 
       print('🟡 [AgentHomeView] Total properties fetched: ${allProperties.length}');
       print('🟡 [AgentHomeView] Featured properties count: ${allProperties.where((p) => p.isFeatured).length}');
@@ -328,8 +357,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
       setState(() {
         _properties = allProperties;
-        _currentPage = lastPage;
-        _lastPage = lastPage;
+        _currentPage = currentPage;
+        _lastPage = currentPage;
         _hasMorePages = false;
         _isLoadingProperties = false;
       });
@@ -1288,13 +1317,15 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       ),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          property.location,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.black,
-                          ),
-                        ),
+                        child: _shouldBlurAddress(property)
+                            ? _buildBlurredText(property.location)
+                            : Text(
+                                property.location,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.black,
+                                ),
+                              ),
                       ),
                     ],
                   ),
@@ -1976,12 +2007,14 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                        ),
                             const SizedBox(width: 4),
                             Expanded(
-                              child: Text(
-                                property.location,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white,
-                                ),
+                              child: _shouldBlurAddress(property)
+                                  ? _buildBlurredText(property.location)
+                                  : Text(
+                                      property.location,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.white,
+                                      ),
                               ),
                             ),
                           ],
@@ -2337,13 +2370,15 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                        ),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: Text(
-                            property.location,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF868686),
-                            ),
-                          ),
+                          child: _shouldBlurAddress(property)
+                              ? _buildBlurredText(property.location)
+                              : Text(
+                                  property.location,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF868686),
+                                  ),
+                                ),
                         ),
                       ],
                     ),

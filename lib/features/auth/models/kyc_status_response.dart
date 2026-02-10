@@ -38,7 +38,7 @@ class KycStatusResponse {
 
   // Helper method to check if KYC is completed and verified
   bool isKycVerified() {
-    return status == 'verified';
+    return status == 'verified' || status == 'approved';
   }
 
   // Helper method to check if KYC is pending review

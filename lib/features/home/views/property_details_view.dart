@@ -13,6 +13,8 @@ import 'in_app_chat_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../services/recently_viewed_service.dart';
 import '../services/property_service.dart';
+import '../services/hotel_service.dart';
+import '../models/room_model.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   final Map<String, dynamic>? propertyData;
@@ -37,6 +39,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   final AuthService _authService = AuthService();
   final RecentlyViewedService _recentlyViewedService = RecentlyViewedService();
   final PropertyService _propertyService = PropertyService();
+  final HotelService _hotelService = HotelService();
   final BookingsCacheService _bookingsCacheService = BookingsCacheService();
   bool _isOwner = false;
   Map<String, dynamic>? _currentPropertyData;
@@ -44,6 +47,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   final TextEditingController _inlineCommentController = TextEditingController();
   bool _isSubmittingRating = false;
   late bool _hasBookedProperty;
+
+  // Hotel rooms state
+  List<RoomModel> _hotelRooms = [];
+  bool _isLoadingRooms = false;
   
   // Default fallback images for when property has no images
   final List<String> _fallbackImages = [
@@ -83,7 +90,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     try {
       final property = widget.propertyData ?? _getDefaultProperty();
       final propertyId = property['id'];
-      
+
       if (propertyId != null) {
         final updatedProperty = await _propertyService.fetchPropertyDetails(int.parse(propertyId.toString()));
         if (updatedProperty != null && mounted) {
@@ -91,9 +98,51 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
             _currentPropertyData = updatedProperty.rawJson;
           });
         }
+
+        // If property is a hotel, fetch rooms
+        final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
+        if (propertyType == 'hotel') {
+          _fetchHotelRooms(int.parse(propertyId.toString()));
+        }
       }
     } catch (e) {
       print('Error refreshing property data: $e');
+    }
+  }
+
+  /// Fetch hotel rooms if property is a hotel
+  Future<void> _fetchHotelRooms(int hotelId) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingRooms = true;
+    });
+
+    try {
+      print('🏨 [PropertyDetailsView] Fetching rooms for hotel: $hotelId');
+      final response = await _hotelService.getHotelRooms(hotelId);
+
+      if (mounted && response.success && response.data != null) {
+        setState(() {
+          _hotelRooms = response.data!;
+          _isLoadingRooms = false;
+        });
+        print('🏨 [PropertyDetailsView] Loaded ${_hotelRooms.length} rooms');
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoadingRooms = false;
+          });
+        }
+        print('⚠️ [PropertyDetailsView] Failed to load rooms: ${response.message}');
+      }
+    } catch (e) {
+      print('❌ [PropertyDetailsView] Error fetching hotel rooms: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingRooms = false;
+        });
+      }
     }
   }
 
@@ -406,8 +455,8 @@ If you don't have the app, the link will open in your browser where you can down
     // Check if we have user data with KYC status
     final user = property['user'] as Map<String, dynamic>?;
     final kyc = user?['kyc'] as Map<String, dynamic>?;
-    final kycStatus = kyc?['status'] as String?;
-    
+    final kycStatus = kyc?['status']?.toString().toLowerCase();
+
     IconData icon;
     Color iconColor;
     String text;
@@ -416,6 +465,7 @@ If you don't have the app, the link will open in your browser where you can down
 
     switch (kycStatus) {
       case 'verified':
+      case 'approved':
         icon = Icons.verified;
         iconColor = Colors.green;
         text = 'Verified';
@@ -477,14 +527,15 @@ If you don't have the app, the link will open in your browser where you can down
     // Check if we have user data with KYC status
     final user = property['user'] as Map<String, dynamic>?;
     final kyc = user?['kyc'] as Map<String, dynamic>?;
-    final kycStatus = kyc?['status'] as String?;
-    
+    final kycStatus = kyc?['status']?.toString().toLowerCase();
+
     IconData icon;
     Color iconColor;
     String text;
 
     switch (kycStatus) {
       case 'verified':
+      case 'approved':
         icon = Icons.verified;
         iconColor = Colors.green;
         text = 'Verified';
@@ -890,6 +941,328 @@ If you don't have the app, the link will open in your browser where you can down
       default:
         return '';
     }
+  }
+
+  /// Check if property is a hotel
+  bool _isHotelProperty(Map<String, dynamic> property) {
+    final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
+    return propertyType == 'hotel';
+  }
+
+  /// Build hotel rooms section
+  Widget _buildHotelRoomsSection(Map<String, dynamic> property) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.0),
+          child: Text(
+            'Available Rooms',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Loading state
+        if (_isLoadingRooms)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
+              ),
+            ),
+          )
+        // Empty state
+        else if (_hotelRooms.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.hotel_outlined,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No rooms available',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        // Rooms list
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            itemCount: _hotelRooms.length,
+            itemBuilder: (context, index) {
+              return _buildRoomCard(_hotelRooms[index]);
+            },
+          ),
+      ],
+    );
+  }
+
+  /// Build individual room card
+  Widget _buildRoomCard(RoomModel room) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Room image (if available)
+          if (room.imageUrl != null && room.imageUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              child: Image.network(
+                room.imageUrl!,
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 180,
+                    color: const Color(0xFFF0F0F0),
+                    child: const Center(
+                      child: Icon(
+                        Icons.hotel,
+                        size: 48,
+                        color: Color(0xFFCCCCCC),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+          // Room header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FA),
+              borderRadius: room.imageUrl != null && room.imageUrl!.isNotEmpty
+                  ? BorderRadius.zero
+                  : const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        room.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        room.type,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF666666),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: room.count > 0 ? const Color(0xFF10B981) : Colors.red,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${room.count} available',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Room details
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Price and capacity
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.payments_outlined,
+                      size: 20,
+                      color: Color(0xFF426DC2),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '₦${room.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF426DC2),
+                      ),
+                    ),
+                    const Text(
+                      ' / night',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF666666),
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(
+                      Icons.people_outline,
+                      size: 20,
+                      color: Color(0xFF666666),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${room.capacity} ${room.capacity == 1 ? 'guest' : 'guests'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF666666),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Features
+                if (room.features.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Features:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: room.features.map((feature) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECF0F9),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF426DC2).withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              size: 14,
+                              color: Color(0xFF426DC2),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              feature,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF426DC2),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+
+                // Book button
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: room.count > 0 ? () => _bookRoom(room) : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF426DC2),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey[300],
+                      disabledForegroundColor: Colors.grey[600],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      room.count > 0 ? 'Book This Room' : 'Fully Booked',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Handle room booking
+  void _bookRoom(RoomModel room) {
+    // TODO: Implement room booking flow
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Booking ${room.name}...'),
+        backgroundColor: const Color(0xFF426DC2),
+      ),
+    );
+
+    // Navigate to booking view or show booking dialog
+    // For now, just show a placeholder message
+    print('🏨 Booking room: ${room.name} - ₦${room.price}/night');
   }
 
   Widget _buildRatingsSection(Map<String, dynamic> property) {
@@ -2097,7 +2470,11 @@ If you don't have the app, the link will open in your browser where you can down
                                   shouldBlur: isShortlet && !_hasBookedProperty,
                                 ),
                                 const SizedBox(height: 16),
-                                _buildContactRow('assets/icons/majesticons_mail.svg', _getAgentEmail(property)),
+                                _buildContactRow(
+                                  'assets/icons/majesticons_mail.svg',
+                                  _getAgentEmail(property),
+                                  shouldBlur: isShortlet && !_hasBookedProperty,
+                                ),
                                 const SizedBox(height: 16),
                                 _buildContactRow(
                                   'assets/icons/logos_whatsapp-icon.svg', 
@@ -2584,7 +2961,13 @@ If you don't have the app, the link will open in your browser where you can down
                           ],
                           
                           const SizedBox(height: 40),
-                          
+
+                          // Hotel Rooms Section - Show only for hotels
+                          if (_isHotelProperty(property)) ...[
+                            _buildHotelRoomsSection(property),
+                            const SizedBox(height: 40),
+                          ],
+
                           // Ratings and Reviews Section - Always show
                           _buildRatingsSection(property),
                           

@@ -71,7 +71,9 @@ class UserModel {
       phoneVerifiedAt: json['phone_verified_at'] != null 
           ? DateTime.tryParse(json['phone_verified_at']) 
           : null,
-      kycStatus: json['kyc_status'] ?? (json['kyc'] != null),
+      kycStatus: json['kyc_status'] is bool
+          ? json['kyc_status']
+          : (json['kyc'] != null ? true : null),
       kycData: json['kyc'] is Map<String, dynamic> ? json['kyc'] : null,
       createdAt: json['created_at'] != null 
           ? DateTime.tryParse(json['created_at']) 
@@ -102,5 +104,30 @@ class UserModel {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
+  }
+
+  /// Get verification status badge text based on KYC data
+  String get verificationStatus {
+    // Check if kycData contains status information
+    if (kycData != null && kycData!['status'] != null) {
+      final status = kycData!['status'].toString().toLowerCase();
+      if (status == 'approved' || status == 'verified') {
+        return 'Verified';
+      } else if (status == 'pending') {
+        return 'Pending';
+      } else if (status == 'rejected') {
+        return 'Rejected';
+      }
+    }
+
+    // Fallback to kycStatus boolean field
+    if (kycStatus == true) {
+      return 'Verified';
+    } else if (kycStatus == false) {
+      return 'Unverified';
+    }
+
+    // Default
+    return 'Unverified';
   }
 } 

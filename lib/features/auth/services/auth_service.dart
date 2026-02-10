@@ -372,21 +372,32 @@ class AuthService {
   Future<ApiResponse<KycStatusResponse>> getKycStatus() async {
     // Get current user to determine their type
     final userType = await getUserType();
-    
-    
+
+    print('🟢🟢🟢 [AuthService] getKycStatus called');
+    print('🟢 [AuthService] User type: $userType');
+
     if (userType == 'agent') {
+      print('🟢 [AuthService] Fetching AGENT KYC status from: ${ApiConstants.kycAgentStatus}');
       final response = await _apiService.get<KycStatusResponse>(
         ApiConstants.kycAgentStatus,
         requiresAuth: true,
         fromJson: (json) => KycStatusResponse.fromJson(json),
       );
-      
+
+      print('🟢 [AuthService] Agent KYC Response:');
+      print('🟢   - Success: ${response.success}');
+      print('🟢   - Status Code: ${response.statusCode}');
+      print('🟢   - Message: ${response.message}');
+      print('🟢   - Data: ${response.data}');
+
       // If agent endpoint returns 404, try user endpoint as fallback
       if (response.statusCode == 404) {
+        print('🟢 [AuthService] Agent endpoint returned 404, trying user endpoint as fallback');
         return await _getUserKycStatus();
       }
       return response;
     } else {
+      print('🟢 [AuthService] User is not agent, fetching USER KYC status');
       return await _getUserKycStatus();
     }
   }

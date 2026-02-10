@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+12
+version: 1.0.0+14
 
 environment:
   sdk: ^3.6.1
@@ -53,8 +53,8 @@ dependencies:
   # Dotted border for upload areas
   dotted_border: ^2.1.0
   
-  # File picker for document uploads
-  file_picker: ^8.0.0+1
+  # File picker for document uploads and CSV upload
+  file_picker: ^8.1.6
   
   # Image picker for camera and gallery
   image_picker: ^1.0.7
@@ -117,6 +117,9 @@ dependencies:
 
   # Carousel slider for bookings and other carousels
   carousel_slider: ^5.0.0
+
+  # CSV parsing for hotel rooms upload
+  csv: ^6.0.0
 
 dev_dependencies:
   flutter_test:

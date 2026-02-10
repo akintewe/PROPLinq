@@ -42,6 +42,7 @@ class ApiConstants {
   static const String kycSubmission = '/kyc/submit';
   static const String kycAgentStatus = '/kyc/agent/status';   // For agents
   static const String kycUserStatus = '/kyc/user/status';     // For home seekers
+  static const String kycAgentDetails = '/kyc/agent';         // Get agent KYC details
   static const String kycAgentSubmit = '/kyc/agent';          // For agent KYC submission
   static const String kycUserSubmit = '/kyc/user';            // For user KYC submission
   

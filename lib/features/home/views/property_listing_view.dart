@@ -3,11 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/location_autocomplete_field.dart';
 import '../services/property_service.dart';
+import '../services/hotel_service.dart';
+import '../models/room_model.dart';
+import '../../../core/utils/csv_utils.dart';
 import 'property_listing_success_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../../finance/views/agent_kyc_view.dart';
@@ -88,7 +92,19 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   
   // Hotel amenities state
   List<String> _selectedAmenities = [];
-  
+
+  // Hotel rooms state
+  List<RoomModel> _hotelRooms = [];
+  String? _roomsCsvPath; // Path to uploaded CSV file for rooms
+
+  // Room form controllers for manual entry
+  final TextEditingController _roomNameController = TextEditingController();
+  final TextEditingController _roomTypeController = TextEditingController();
+  final TextEditingController _roomPriceController = TextEditingController();
+  final TextEditingController _roomCapacityController = TextEditingController();
+  final TextEditingController _roomCountController = TextEditingController();
+  final TextEditingController _roomFeaturesController = TextEditingController();
+
   // File upload state
   List<File> _selectedImages = [];
   List<File> _selected360Images = [];
@@ -123,6 +139,12 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     _locationController.dispose();
     _roomsController.dispose();
     _bathroomsController.dispose();
+    _roomNameController.dispose();
+    _roomTypeController.dispose();
+    _roomPriceController.dispose();
+    _roomCapacityController.dispose();
+    _roomCountController.dispose();
+    _roomFeaturesController.dispose();
     super.dispose();
   }
 
@@ -185,7 +207,10 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   }
 
   bool _isStep2Valid() {
-    if (_isHotelType || _isShortletType) {
+    if (_isHotelType) {
+      // Hotels need amenities AND rooms
+      return _selectedAmenities.isNotEmpty && _hotelRooms.isNotEmpty;
+    } else if (_isShortletType) {
       return _selectedAmenities.isNotEmpty;
     } else {
       return _roomsController.text.isNotEmpty &&
@@ -586,6 +611,17 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Hotel Amenities Section
+        const Text(
+          'Hotel Amenities',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // Hotel Amenities Grid
         GridView.builder(
           shrinkWrap: true,
@@ -600,18 +636,18 @@ class _PropertyListingViewState extends State<PropertyListingView> {
           itemBuilder: (context, index) {
             final amenity = _hotelAmenities[index];
             final isSelected = _selectedAmenities.contains(amenity['name']);
-            
+
             return GestureDetector(
               onTap: () => _toggleAmenity(amenity['name']),
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: isSelected 
+                  color: isSelected
                       ? const Color(0xFFECF0F9)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isSelected 
+                    color: isSelected
                         ? const Color(0xFF426DC2)
                         : const Color(0xFFE0E0E0),
                     width: isSelected ? 2.0 : 1.0,
@@ -661,18 +697,428 @@ class _PropertyListingViewState extends State<PropertyListingView> {
             );
           },
         ),
-        
+
         const SizedBox(height: 40),
-        
+
+        // Divider
+        const Divider(height: 1, color: Color(0xFFE0E0E0)),
+
+        const SizedBox(height: 40),
+
+        // Hotel Rooms Section
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Hotel Rooms',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _hotelRooms.isNotEmpty ? const Color(0xFF426DC2) : const Color(0xFFE5E5E5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_hotelRooms.length} ${_hotelRooms.length == 1 ? 'room' : 'rooms'}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _hotelRooms.isNotEmpty ? Colors.white : const Color(0xFF666666),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Rooms List
+        if (_hotelRooms.isNotEmpty) ...[
+          ..._hotelRooms.asMap().entries.map((entry) {
+            final index = entry.key;
+            final room = entry.value;
+            return _buildRoomCard(room, index);
+          }).toList(),
+          const SizedBox(height: 16),
+        ],
+
+        // Add Room Buttons
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _showAddRoomDialog,
+                icon: const Icon(Icons.add, size: 20),
+                label: const Text('Add Room Manually'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF426DC2),
+                  side: const BorderSide(color: Color(0xFF426DC2)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _uploadCsvFile,
+                icon: const Icon(Icons.upload_file, size: 20),
+                label: const Text('Upload CSV'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF426DC2),
+                  side: const BorderSide(color: Color(0xFF426DC2)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // Download Sample CSV Button
+        Center(
+          child: TextButton.icon(
+            onPressed: _downloadSampleCsv,
+            icon: const Icon(Icons.download, size: 18),
+            label: const Text('Download Sample CSV'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF426DC2),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 40),
+
         GradientButton(
           text: 'Next',
           onPressed: _isStep2Valid() ? _nextStep : null,
           isEnabled: _isStep2Valid(),
         ),
-        
+
         const SizedBox(height: 40),
       ],
     );
+  }
+
+  Widget _buildRoomCard(RoomModel room, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  room.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _hotelRooms.removeAt(index);
+                  });
+                },
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Type: ${room.type} • Price: ₦${room.price.toStringAsFixed(2)}/night',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF666666),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Capacity: ${room.capacity} • Available: ${room.count}',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF666666),
+            ),
+          ),
+          if (room.features.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: room.features.map((feature) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF426DC2).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    feature,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF426DC2),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showAddRoomDialog() {
+    // Clear controllers
+    _roomNameController.clear();
+    _roomTypeController.clear();
+    _roomPriceController.clear();
+    _roomCapacityController.clear();
+    _roomCountController.clear();
+    _roomFeaturesController.clear();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Add Room',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CustomTextField(
+                  label: 'Room Name',
+                  hintText: 'e.g., Deluxe Suite',
+                  controller: _roomNameController,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  label: 'Room Type',
+                  hintText: 'e.g., Suite, Single, Double',
+                  controller: _roomTypeController,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  label: 'Price per Night (₦)',
+                  hintText: 'Enter price',
+                  controller: _roomPriceController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  label: 'Capacity',
+                  hintText: 'Number of guests',
+                  controller: _roomCapacityController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  label: 'Number of Rooms Available',
+                  hintText: 'e.g., 5',
+                  controller: _roomCountController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  label: 'Features (comma-separated)',
+                  hintText: 'e.g., wifi, ac, balcony',
+                  controller: _roomFeaturesController,
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _addRoomManually();
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF426DC2),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Add Room'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addRoomManually() {
+    try {
+      // Validate fields
+      if (_roomNameController.text.trim().isEmpty ||
+          _roomTypeController.text.trim().isEmpty ||
+          _roomPriceController.text.trim().isEmpty ||
+          _roomCapacityController.text.trim().isEmpty ||
+          _roomCountController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill in all required fields'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Parse features
+      final featuresText = _roomFeaturesController.text.trim();
+      final features = featuresText.isNotEmpty
+          ? featuresText.split(',').map((f) => f.trim()).where((f) => f.isNotEmpty).toList()
+          : <String>[];
+
+      // Create room
+      final room = RoomModel(
+        name: _roomNameController.text.trim(),
+        type: _roomTypeController.text.trim(),
+        price: double.parse(_roomPriceController.text.trim()),
+        capacity: int.parse(_roomCapacityController.text.trim()),
+        count: int.parse(_roomCountController.text.trim()),
+        features: features,
+      );
+
+      setState(() {
+        _hotelRooms.add(room);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Room added successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding room: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _uploadCsvFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      if (file.path == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read file'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Parse CSV
+      final rows = await CsvUtils.parseCsvFile(file.path!);
+
+      if (rows.isEmpty || rows.length < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('CSV file is empty or invalid'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Skip header row and parse rooms
+      final newRooms = <RoomModel>[];
+      for (int i = 1; i < rows.length; i++) {
+        try {
+          final room = RoomModel.fromCsvRow(rows[i]);
+          newRooms.add(room);
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error parsing row ${i + 1}: $e'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+
+      if (newRooms.isNotEmpty) {
+        setState(() {
+          _hotelRooms.addAll(newRooms);
+          _roomsCsvPath = file.path; // Store CSV path for submission
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${newRooms.length} room(s) imported from CSV!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading CSV: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _downloadSampleCsv() async {
+    try {
+      await CsvUtils.downloadRoomsSampleCsv();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sample CSV ready to share!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error downloading sample: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildStep2Regular() {
@@ -1684,31 +2130,81 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       // Clean price (remove currency symbols and commas)
       String cleanPrice = _priceController.text.replaceAll(RegExp(r'[^\d]'), '');
 
-      // Create property using the service
-      final propertyService = PropertyService();
-      
-      // For Hotels and Shortlets, use the property type as category
-      // For Apartments, use the listing type (For rent/For sale)
-      final String propertyCategory = (_isHotelType || _isShortletType) 
-          ? _selectedPropertyType 
-          : _listingType;
-      
-      final response = await propertyService.createProperty(
-        type: _selectedPropertyType,
-        title: _propertyTitleController.text,
-        description: _descriptionController.text,
-        price: cleanPrice,
-        category: propertyCategory,
-        location: _locationController.text,
-        bedrooms: (_isHotelType || _isShortletType) ? '1' : _roomsController.text,
-        bathrooms: (_isHotelType || _isShortletType) ? '1' : _bathroomsController.text,
-        gated: (_isHotelType || _isShortletType) ? 'No' : _gatedStatus,
-        parking: (_isHotelType || _isShortletType) ? 'No' : _parkingStatus,
-        features: features,
-        images: _selectedImages,
-        images360: (_isHotelType || _isShortletType) ? [] : _selected360Images,
-        video: (_isHotelType || _isShortletType) ? null : _selectedVideo,
-      );
+      // Create property/hotel using the appropriate service
+      dynamic response;
+
+      if (_isHotelType) {
+        // Use HotelService for hotels
+        final hotelService = HotelService();
+
+        // Prepare hotel fields
+        final Map<String, String> hotelFields = {
+          'type': _selectedPropertyType.toLowerCase(),
+          'title': _propertyTitleController.text,
+          'description': _descriptionController.text,
+          'price': cleanPrice,
+          'category': _selectedPropertyType.toLowerCase(),
+          'location': _locationController.text,
+          'bedrooms': '1',
+          'bathrooms': '1',
+          'gated': '0',
+          'parking': '0',
+        };
+
+        // Add features as indexed fields
+        for (int i = 0; i < features.length; i++) {
+          hotelFields['features[$i]'] = features[i];
+        }
+
+        // Prepare image files
+        final Map<String, File> hotelFiles = {};
+        for (int i = 0; i < _selectedImages.length; i++) {
+          hotelFiles['images[$i]'] = _selectedImages[i];
+        }
+
+        // Check if CSV was used for rooms
+        if (_roomsCsvPath != null && _roomsCsvPath!.isNotEmpty) {
+          // Use CSV upload method
+          response = await hotelService.createHotelWithCsv(
+            fields: hotelFields,
+            propertyImages: hotelFiles,
+            csvFilePath: _roomsCsvPath!,
+          );
+        } else {
+          // Use manual rooms entry method
+          response = await hotelService.createHotel(
+            fields: hotelFields,
+            files: hotelFiles,
+            rooms: _hotelRooms,
+          );
+        }
+      } else {
+        // Use PropertyService for regular properties and shortlets
+        final propertyService = PropertyService();
+
+        // For Shortlets, use the property type as category
+        // For Apartments, use the listing type (For rent/For sale)
+        final String propertyCategory = _isShortletType
+            ? _selectedPropertyType
+            : _listingType;
+
+        response = await propertyService.createProperty(
+          type: _selectedPropertyType,
+          title: _propertyTitleController.text,
+          description: _descriptionController.text,
+          price: cleanPrice,
+          category: propertyCategory,
+          location: _locationController.text,
+          bedrooms: _isShortletType ? '1' : _roomsController.text,
+          bathrooms: _isShortletType ? '1' : _bathroomsController.text,
+          gated: _isShortletType ? 'No' : _gatedStatus,
+          parking: _isShortletType ? 'No' : _parkingStatus,
+          features: features,
+          images: _selectedImages,
+          images360: _isShortletType ? [] : _selected360Images,
+          video: _isShortletType ? null : _selectedVideo,
+        );
+      }
 
       // Close loading dialog
       Navigator.of(context).pop();

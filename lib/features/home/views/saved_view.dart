@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/services/bookings_cache_service.dart';
 import '../services/favorite_service.dart';
 import '../services/recently_viewed_service.dart';
 import '../models/property_model.dart';
@@ -192,6 +194,56 @@ class _SavedViewState extends State<SavedView> {
         );
       }
     }
+  }
+
+  /// Check if address should be blurred for PropertyModel
+  bool _shouldBlurAddress(PropertyModel property) {
+    // Only blur for shortlets
+    if (property.type.toLowerCase() != 'shortlet') return false;
+
+    // Check if user has booked this property
+    final bookingsCacheService = BookingsCacheService();
+    return !bookingsCacheService.hasBookedProperty(property.id.toString());
+  }
+
+  /// Check if address should be blurred for Map-based property
+  bool _shouldBlurAddressFromMap(Map<String, dynamic> property) {
+    final type = property['type'] as String?;
+    if (type == null) return false;
+
+    final isShortlet = type.toLowerCase() == 'shortlet';
+    if (!isShortlet) return false;
+
+    final propertyId = property['id']?.toString();
+    if (propertyId == null) return false;
+
+    final bookingsCacheService = BookingsCacheService();
+    return !bookingsCacheService.hasBookedProperty(propertyId);
+  }
+
+  /// Build blurred text widget
+  Widget _buildBlurredText(String text) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Text(
+            'Book to view',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -609,15 +661,17 @@ class _SavedViewState extends State<SavedView> {
                           ),
                           const SizedBox(width: 2),
                           Expanded(
-                            child: Text(
-                              property.location,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF868686),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: _shouldBlurAddress(property)
+                                ? _buildBlurredText(property.location)
+                                : Text(
+                                    property.location,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF868686),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                           ),
                         ],
                       ),
@@ -955,15 +1009,17 @@ class _SavedViewState extends State<SavedView> {
                           ),
                           const SizedBox(width: 2),
                           Expanded(
-                            child: Text(
-                              property['location'] ?? 'Location',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF868686),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: _shouldBlurAddressFromMap(property)
+                                ? _buildBlurredText(property['location'] ?? 'Location')
+                                : Text(
+                                    property['location'] ?? 'Location',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF868686),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                           ),
                         ],
                       ),

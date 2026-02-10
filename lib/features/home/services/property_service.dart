@@ -246,8 +246,25 @@ class PropertyService {
       if (response.success && response.data != null) {
         final data = response.data!;
 
+        print('📦 [PropertyService] RAW RESPONSE DATA:');
+        print(data);
+        print('📦 [PropertyService] ========================================');
+
         // Handle pagination structure
         if (data is Map<String, dynamic>) {
+          print('   - Response is a Map');
+          print('   - Contains "data" key: ${data.containsKey('data')}');
+          print('   - Contains "current_page" key: ${data.containsKey('current_page')}');
+          print('   - Contains "last_page" key: ${data.containsKey('last_page')}');
+          print('   - Contains "total" key: ${data.containsKey('total')}');
+
+          if (data.containsKey('data')) {
+            print('   - data["data"] type: ${data['data']?.runtimeType}');
+            if (data['data'] is List) {
+              print('   - data["data"] length: ${(data['data'] as List).length}');
+            }
+          }
+
           // Check if it has pagination structure
           if (data.containsKey('data') && data['data'] is List) {
             print('   - Paginated response: ${data['current_page']}/${data['last_page']}');

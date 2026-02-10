@@ -395,8 +395,9 @@ class PropertyUser {
   /// Get verification status text
   String get verificationStatus {
     if (kyc == null) return 'Unverified';
-    switch (kyc!.status) {
+    switch (kyc!.status.toLowerCase()) {
       case 'verified':
+      case 'approved':
         return 'Verified';
       case 'pending':
         return 'Pending';
@@ -409,7 +410,8 @@ class PropertyUser {
 
   /// Check if user is verified
   bool get isVerified {
-    return kyc?.status == 'verified';
+    final status = kyc?.status.toLowerCase();
+    return status == 'verified' || status == 'approved';
   }
 
   /// Check if user is pending verification
