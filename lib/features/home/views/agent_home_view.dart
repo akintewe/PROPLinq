@@ -174,7 +174,7 @@ class AgentHomeView extends StatefulWidget {
 }
 
 class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateMixin {
-  int _currentIndex = 0;
+  int _currentIndex = 3; // Start with Profile tab for agents
   late AnimationController _animationController;
   late ScrollController _featuredScrollController;
   late ScrollController _homeScrollController;
@@ -1083,6 +1083,15 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               return GestureDetector(
                 onTap: () {
                   final property = filteredResults[index];
+
+                  // DEBUG: Check property user data before navigation
+                  print('🔍 [AgentHome-Search] Property ID: ${property.id}');
+                  print('🔍 [AgentHome-Search] Has user: ${property.user != null}');
+                  print('🔍 [AgentHome-Search] Verification status: ${property.user?.verificationStatus}');
+                  print('🔍 [AgentHome-Search] User KYC: ${property.user?.kyc}');
+                  print('🔍 [AgentHome-Search] User KYC status: ${property.user?.kyc?.status}');
+                  print('🔍 [AgentHome-Search] User.toJson(): ${property.user?.toJson()}');
+
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
                       'id': property.id,
@@ -1100,9 +1109,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images from API
                       'property360_images': property.property360Images, // Pass 360 images from API
                       'video_url': property.videoUrl, // Pass video URL from API
-                      'description': property.type == 'Hotel' 
+                      'description': property.type == 'Hotel'
                           ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property.location}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                           : 'Step into luxury with this fully furnished ${property.type.toLowerCase()} located in the heart of ${property.location}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+                      'user': property.user?.toJson(), // Pass actual user data with KYC info
                       'agent': {
                         'name': property.user?.fullName ?? 'Agent',
                         'title': 'Agent',
@@ -1673,9 +1683,18 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                         return GestureDetector(
                           onTap: () async {
                             final property = _promotedProperties[index];
+
+                            // DEBUG: Check property user data before navigation
+                            print('🔍 [AgentHome-Featured] Property ID: ${property.id}');
+                            print('🔍 [AgentHome-Featured] Has user: ${property.user != null}');
+                            print('🔍 [AgentHome-Featured] Verification status: ${property.user?.verificationStatus}');
+                            print('🔍 [AgentHome-Featured] User KYC: ${property.user?.kyc}');
+                            print('🔍 [AgentHome-Featured] User KYC status: ${property.user?.kyc?.status}');
+                            print('🔍 [AgentHome-Featured] User.toJson(): ${property.user?.toJson()}');
+
                             // Test property details endpoint first
                             await _testPropertyDetails(property.id);
-                            
+
                             // Then navigate to property details
                             Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {

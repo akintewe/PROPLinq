@@ -95,7 +95,21 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
         final updatedProperty = await _propertyService.fetchPropertyDetails(int.parse(propertyId.toString()));
         if (updatedProperty != null && mounted) {
           setState(() {
-            _currentPropertyData = updatedProperty.rawJson;
+            // Preserve the original user data with KYC info when updating property
+            final updatedData = Map<String, dynamic>.from(updatedProperty.rawJson ?? {});
+
+            // If original property had user data with KYC, preserve it
+            if (property['user'] != null) {
+              final originalUser = property['user'];
+              // Check if original user has KYC data
+              if (originalUser is Map && originalUser['kyc'] != null) {
+                // Preserve the full user object with KYC from navigation
+                updatedData['user'] = originalUser;
+                debugPrint('🔒 [PropertyDetailsView] Preserved original user data with KYC status: ${originalUser['kyc']?['status']}');
+              }
+            }
+
+            _currentPropertyData = updatedData;
           });
         }
 
@@ -457,6 +471,13 @@ If you don't have the app, the link will open in your browser where you can down
     final kyc = user?['kyc'] as Map<String, dynamic>?;
     final kycStatus = kyc?['status']?.toString().toLowerCase();
 
+    // Debug logging
+    debugPrint('🔍 [VerificationBadge] Property ID: ${property['id']}');
+    debugPrint('🔍 [VerificationBadge] User data exists: ${user != null}');
+    debugPrint('🔍 [VerificationBadge] KYC data exists: ${kyc != null}');
+    debugPrint('🔍 [VerificationBadge] KYC status: $kycStatus');
+    debugPrint('🔍 [VerificationBadge] Full KYC data: $kyc');
+
     IconData icon;
     Color iconColor;
     String text;
@@ -529,9 +550,17 @@ If you don't have the app, the link will open in your browser where you can down
     final kyc = user?['kyc'] as Map<String, dynamic>?;
     final kycStatus = kyc?['status']?.toString().toLowerCase();
 
+    // Debug logging
+    debugPrint('🔍 [SmallVerificationBadge] Property ID: ${property['id']}');
+    debugPrint('🔍 [SmallVerificationBadge] KYC status: $kycStatus');
+
     IconData icon;
     Color iconColor;
     String text;
+
+    debugPrint('🔍 [SmallVerificationBadge] About to enter switch with kycStatus: "$kycStatus"');
+    debugPrint('🔍 [SmallVerificationBadge] kycStatus == "approved": ${kycStatus == "approved"}');
+    debugPrint('🔍 [SmallVerificationBadge] kycStatus == "verified": ${kycStatus == "verified"}');
 
     switch (kycStatus) {
       case 'verified':
@@ -539,21 +568,25 @@ If you don't have the app, the link will open in your browser where you can down
         icon = Icons.verified;
         iconColor = Colors.green;
         text = 'Verified';
+        debugPrint('✅ [SmallVerificationBadge] MATCHED verified/approved case!');
         break;
       case 'pending':
         icon = Icons.pending;
         iconColor = Colors.orange;
         text = 'Pending';
+        debugPrint('⚠️ [SmallVerificationBadge] Matched pending case');
         break;
       case 'rejected':
         icon = Icons.cancel;
         iconColor = Colors.red;
         text = 'Rejected';
+        debugPrint('❌ [SmallVerificationBadge] Matched rejected case');
         break;
       default:
         icon = Icons.pending;
         iconColor = Colors.orange;
         text = 'Unverified';
+        debugPrint('🚫 [SmallVerificationBadge] Hit DEFAULT case - kycStatus was: "$kycStatus"');
     }
 
     return Container(
