@@ -416,21 +416,51 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
     return GestureDetector(
       onTap: () async {
         Navigator.of(context).pop();
-        
-        
+
         // First, set the location name
         widget.onLocationSelected?.call(location['title']);
-        
+
         // Then filter properties by location
         List<PropertyModel> filteredProperties;
-        
+
         // Check if this is "Near You" location
         if (location['locationQuery'] == 'near me' || location['isNearYou'] == true) {
-          // Use location service to filter by distance
-          filteredProperties = await LocationService.instance.filterPropertiesByDistance(
-            widget.properties,
-            10.0, // 10km radius
-          );
+          // Get user's current position to determine their region
+          final position = await LocationService.instance.getCurrentLocation();
+
+          if (position != null && LocationService.instance.isLocationInNigeria(position.latitude, position.longitude)) {
+            // Determine user's region and filter properties by that region
+            final userRegion = await LocationService.instance.getUserRegionName(position);
+            debugPrint('🎯 [SearchBottomSheet] User is in region: $userRegion, filtering properties...');
+            debugPrint('📊 [SearchBottomSheet] Total properties to search: ${widget.properties.length}');
+
+            // Filter properties that match the user's region
+            filteredProperties = widget.properties.where((property) {
+              final propertyLocation = property.location.toLowerCase();
+              final regionLower = userRegion.toLowerCase();
+
+              // Check if property location contains the user's region
+              // This handles cases like "Garki, Abuja", "Lekki, Lagos", etc.
+              final matches = propertyLocation.contains(regionLower);
+
+              if (matches) {
+                debugPrint('✓ Property "${property.title}" in "${property.location}" matches region $userRegion');
+              }
+
+              return matches;
+            }).toList();
+
+            debugPrint('✅ [SearchBottomSheet] Found ${filteredProperties.length} properties near you in $userRegion');
+
+            // If no properties found, show helpful message
+            if (filteredProperties.isEmpty) {
+              debugPrint('⚠️ [SearchBottomSheet] No properties found in $userRegion. Check if properties have correct location data.');
+            }
+          } else {
+            // Fallback: show all properties
+            debugPrint('⚠️ [SearchBottomSheet] Could not determine user region, showing all properties');
+            filteredProperties = widget.properties;
+          }
         } else {
           // Use regular location search for specific locations
           filteredProperties = PropertySearchService.instance.searchPropertiesByLocation(
@@ -438,8 +468,7 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
             location['locationQuery'] ?? location['title'],
           );
         }
-        for (var prop in filteredProperties) {
-        }
+
         widget.onPropertiesSelected?.call(filteredProperties);
       },
       child: Container(

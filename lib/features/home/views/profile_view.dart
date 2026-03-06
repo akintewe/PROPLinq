@@ -929,7 +929,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                     Text(
                       _isLoadingProfile
                           ? 'Loading...'
-                          : _currentUser?.fullName ?? 'User Name',
+                          : FormatUtils.toTitleCase(_currentUser?.fullName ?? 'User Name'),
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
@@ -2089,7 +2089,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                     children: [
                       Expanded(
                         child: Text(
-                            property.title,
+                            FormatUtils.toTitleCase(property.title),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -2207,17 +2207,25 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                       ),
                       ],
                       const Spacer(),
-                      Flexible(
-                        child: Text(
-                        FormatUtils.formatPrice(property.price),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF426DC2),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (property.type.toLowerCase() == 'hotel')
+                            const Text(
+                              'From',
+                              style: TextStyle(fontSize: 11, color: Color(0xFF868686)),
+                            ),
+                          Text(
+                            FormatUtils.formatPrice(property.price),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF426DC2),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        ],
                       ),
                     ],
                   ),

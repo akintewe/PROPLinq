@@ -15,6 +15,7 @@ import '../services/recently_viewed_service.dart';
 import '../services/property_service.dart';
 import '../services/hotel_service.dart';
 import '../models/room_model.dart';
+import '../../../core/utils/format_utils.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   final Map<String, dynamic>? propertyData;
@@ -51,6 +52,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   // Hotel rooms state
   List<RoomModel> _hotelRooms = [];
   bool _isLoadingRooms = false;
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _roomsSectionKey = GlobalKey();
   
   // Default fallback images for when property has no images
   final List<String> _fallbackImages = [
@@ -79,6 +82,21 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     _startTextRotation();
     _checkPropertyOwnership();
     _addToRecentlyViewed();
+    // Pre-load rooms from navigation data if available
+    final property = widget.propertyData ?? _getDefaultProperty();
+    final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
+    if (propertyType == 'hotel') {
+      final embeddedRooms = property['rooms'];
+      debugPrint('🏨 [PropertyDetailsView] Navigation rooms data: $embeddedRooms');
+      if (embeddedRooms != null && embeddedRooms is List && embeddedRooms.isNotEmpty) {
+        _hotelRooms = embeddedRooms
+            .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
+            .toList();
+        debugPrint('🏨 [PropertyDetailsView] Pre-loaded ${_hotelRooms.length} rooms from navigation data');
+      } else {
+        debugPrint('🏨 [PropertyDetailsView] No rooms in navigation data, will load from API');
+      }
+    }
     _refreshPropertyData();
     
     // Refresh bookings cache in background if needed
@@ -113,10 +131,26 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
           });
         }
 
-        // If property is a hotel, fetch rooms
+        // If property is a hotel, load rooms
         final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
         if (propertyType == 'hotel') {
-          _fetchHotelRooms(int.parse(propertyId.toString()));
+          // Try to use rooms embedded in the refreshed property response first
+          final embeddedRooms = updatedProperty?.rawJson?['rooms'];
+          debugPrint('🏨 [PropertyDetailsView] Embedded rooms from refresh: $embeddedRooms');
+          if (embeddedRooms != null && embeddedRooms is List && embeddedRooms.isNotEmpty) {
+            if (mounted) {
+              setState(() {
+                _hotelRooms = embeddedRooms
+                    .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
+                    .toList();
+                _isLoadingRooms = false;
+              });
+              debugPrint('🏨 [PropertyDetailsView] Loaded ${_hotelRooms.length} rooms from property response');
+            }
+          } else {
+            // Fall back to dedicated rooms endpoint
+            _fetchHotelRooms(int.parse(propertyId.toString()));
+          }
         }
       }
     } catch (e) {
@@ -461,6 +495,7 @@ If you don't have the app, the link will open in your browser where you can down
     _textAnimationController.dispose();
     _textTimer?.cancel();
     _inlineCommentController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -1036,12 +1071,18 @@ If you don't have the app, the link will open in your browser where you can down
               ),
             ),
           )
-        // Rooms list
+        // Rooms grid
         else
-          ListView.builder(
+          GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            padding: EdgeInsets.zero,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 12,
+              mainAxisExtent: 340,
+            ),
             itemCount: _hotelRooms.length,
             itemBuilder: (context, index) {
               return _buildRoomCard(_hotelRooms[index]);
@@ -1051,18 +1092,17 @@ If you don't have the app, the link will open in your browser where you can down
     );
   }
 
-  /// Build individual room card
+  /// Build individual room card (compact grid card)
   Widget _buildRoomCard(RoomModel room) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE0E0E0)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -1070,190 +1110,136 @@ If you don't have the app, the link will open in your browser where you can down
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Room image (if available)
-          if (room.imageUrl != null && room.imageUrl!.isNotEmpty)
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-              child: Image.network(
-                room.imageUrl!,
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 180,
+          // Room image
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
+            ),
+            child: room.imageUrl != null && room.imageUrl!.isNotEmpty
+                ? Image.network(
+                    room.imageUrl!,
+                    height: 110,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 110,
+                      color: const Color(0xFFF0F0F0),
+                      child: const Center(
+                        child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
+                      ),
+                    ),
+                  )
+                : Container(
+                    height: 110,
                     color: const Color(0xFFF0F0F0),
                     child: const Center(
-                      child: Icon(
-                        Icons.hotel,
-                        size: 48,
-                        color: Color(0xFFCCCCCC),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-          // Room header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F9FA),
-              borderRadius: room.imageUrl != null && room.imageUrl!.isNotEmpty
-                  ? BorderRadius.zero
-                  : const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        room.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        room.type,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF666666),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: room.count > 0 ? const Color(0xFF10B981) : Colors.red,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${room.count} available',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
                     ),
                   ),
-                ),
-              ],
-            ),
           ),
 
-          // Room details
+          // Card body
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Price and capacity
+                // Name + availability badge
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.payments_outlined,
-                      size: 20,
-                      color: Color(0xFF426DC2),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '₦${room.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF426DC2),
+                    Expanded(
+                      child: Text(
+                        room.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const Text(
-                      ' / night',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF666666),
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(
-                      Icons.people_outline,
-                      size: 20,
-                      color: Color(0xFF666666),
                     ),
                     const SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: room.count > 0 ? const Color(0xFF10B981) : Colors.red,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${room.count}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+
+                // Price
+                Text(
+                  '₦${room.price.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF426DC2),
+                  ),
+                ),
+                const Text(
+                  'per night',
+                  style: TextStyle(fontSize: 10, color: Color(0xFF666666)),
+                ),
+                const SizedBox(height: 4),
+
+                // Capacity
+                Row(
+                  children: [
+                    const Icon(Icons.people_outline, size: 12, color: Color(0xFF666666)),
+                    const SizedBox(width: 3),
                     Text(
                       '${room.capacity} ${room.capacity == 1 ? 'guest' : 'guests'}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF666666),
-                      ),
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
                     ),
                   ],
                 ),
 
                 // Features
                 if (room.features.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Features:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: room.features.map((feature) {
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: room.features.take(3).map((feature) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: const Color(0xFFECF0F9),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFF426DC2).withValues(alpha: 0.2)),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.check_circle,
-                              size: 14,
-                              color: Color(0xFF426DC2),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              feature,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF426DC2),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          FormatUtils.toTitleCase(feature),
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: Color(0xFF426DC2),
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       );
                     }).toList(),
                   ),
                 ],
 
+                const SizedBox(height: 8),
+
                 // Book button
-                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 32,
                   child: ElevatedButton(
                     onPressed: room.count > 0 ? () => _bookRoom(room) : null,
                     style: ElevatedButton.styleFrom(
@@ -1261,15 +1247,16 @@ If you don't have the app, the link will open in your browser where you can down
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: Colors.grey[300],
                       disabledForegroundColor: Colors.grey[600],
+                      padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: 0,
                     ),
                     child: Text(
-                      room.count > 0 ? 'Book This Room' : 'Fully Booked',
+                      room.count > 0 ? 'Book Room' : 'Fully Booked',
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -2116,6 +2103,7 @@ If you don't have the app, the link will open in your browser where you can down
       body: Stack(
         children: [
           SingleChildScrollView(
+            controller: _scrollController,
             child: Column(
               children: [
                 // Image carousel section
@@ -2268,7 +2256,7 @@ If you don't have the app, the link will open in your browser where you can down
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  propertyType,
+                                  FormatUtils.toTitleCase(propertyType),
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -2292,7 +2280,7 @@ If you don't have the app, the link will open in your browser where you can down
                             children: [
                               Expanded(
                                 child: Text(
-                                  property['title'] as String? ?? 'Property',
+                                  FormatUtils.toTitleCase(property['title'] as String? ?? 'Property'),
                                   style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w700,
@@ -2516,10 +2504,10 @@ If you don't have the app, the link will open in your browser where you can down
                                 ),
                               ],
                             ),
+
+                            const SizedBox(height: 32),
                           ],
-                          
-                          const SizedBox(height: 32),
-                          
+
                           // Action buttons for non-hotel properties
                           if (!isHotel) ...[
                             if (isShortlet) ...[
@@ -2692,9 +2680,9 @@ If you don't have the app, the link will open in your browser where you can down
                               ],
                             ],
                           ],
-                          
-                          const SizedBox(height: 1),
-                          
+
+                          const SizedBox(height: 16),
+
                           // What you'll get
                           const Text(
                             'What you\'ll get',
@@ -2997,6 +2985,7 @@ If you don't have the app, the link will open in your browser where you can down
 
                           // Hotel Rooms Section - Show only for hotels
                           if (_isHotelProperty(property)) ...[
+                            SizedBox(key: _roomsSectionKey, width: double.infinity),
                             _buildHotelRoomsSection(property),
                             const SizedBox(height: 40),
                           ],
@@ -3090,7 +3079,7 @@ If you don't have the app, the link will open in your browser where you can down
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        isHotel ? 'Total Price' : _getPriceLabel(propertyType, isForSale),
+                        isHotel ? 'Rooms Ranging From' : _getPriceLabel(propertyType, isForSale),
                         style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF868686),
@@ -3141,8 +3130,18 @@ If you don't have the app, the link will open in your browser where you can down
                           final isHotel = normalizedType == 'hotel';
                           final isShortlet = normalizedType == 'shortlet';
 
-                          if (isHotel || isShortlet) {
-                            // Navigate to reservation screen for hotels and shortlets
+                          if (isHotel) {
+                            // Scroll to rooms section
+                            final ctx = _roomsSectionKey.currentContext;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 600),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          } else if (isShortlet) {
+                            // Navigate to reservation screen for shortlets
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) => HotelReservationView(
@@ -3568,7 +3567,7 @@ If you don't have the app, the link will open in your browser where you can down
   String _getBottomButtonText(String propertyType, bool isForSale) {
     final type = propertyType.toLowerCase();
     if (type == 'hotel') {
-      return 'Book Now';
+      return 'View Rooms';
     } else if (type == 'shortlet') {
       return 'Book Now';
     } else if (isForSale) {

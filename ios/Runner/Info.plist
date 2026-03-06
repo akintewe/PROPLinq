@@ -33,12 +33,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Proplinq uses your location to show nearby properties and improve search recommendations even when the app is running in the background.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>This app needs access to location when in the background to show nearby properties on the map.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs access to location when open to show nearby properties on the map.</string>
+	<string>Proplinq needs your location to show you properties near you and provide accurate location-based property recommendations.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Proplinq needs your location to show you properties near you and provide accurate location-based property recommendations.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Proplinq needs your location to show you properties near you and provide accurate location-based property recommendations.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Proplinq needs access to your photo library so you can upload property photos and personalize your listings.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

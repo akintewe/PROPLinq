@@ -2,12 +2,15 @@ import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import '../../features/home/models/property_model.dart';
+import 'user_preferences_service.dart';
 
 class LocationService {
   static LocationService? _instance;
   static LocationService get instance => _instance ??= LocationService._();
-  
+
   LocationService._();
+
+  final UserPreferencesService _prefsService = UserPreferencesService();
 
   // Cache for location data to avoid repeated API calls
   Position? _cachedPosition;
@@ -15,11 +18,59 @@ class LocationService {
   DateTime? _cacheTimestamp;
   static const Duration _cacheExpiry = Duration(minutes: 10); // Cache for 10 minutes
 
+  // Nigeria boundaries (approximate)
+  static const double nigeriaNorthLat = 13.9;
+  static const double nigeriaSouthLat = 4.0;
+  static const double nigeriaWestLng = 2.7;
+  static const double nigeriaEastLng = 14.7;
+
   /// Clear cached location data
   void clearCache() {
     _cachedPosition = null;
     _cachedNearbyAreas = null;
     _cacheTimestamp = null;
+  }
+
+  /// Check if coordinates are within Nigeria
+  bool isLocationInNigeria(double latitude, double longitude) {
+    return latitude >= nigeriaSouthLat &&
+        latitude <= nigeriaNorthLat &&
+        longitude >= nigeriaWestLng &&
+        longitude <= nigeriaEastLng;
+  }
+
+  /// Detect user's country from GPS coordinates
+  Future<String?> detectUserCountry() async {
+    try {
+      final position = await getCurrentLocation();
+      if (position == null) return null;
+
+      // Check if user is in Nigeria based on coordinates
+      if (isLocationInNigeria(position.latitude, position.longitude)) {
+        await _prefsService.saveUserCountry('Nigeria');
+        return 'Nigeria';
+      } else {
+        // For simplicity, we'll mark as non-Nigeria
+        // In production, you could use a geocoding service to get actual country
+        await _prefsService.saveUserCountry('Other');
+        return 'Other';
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Check if user should use proximity-based discovery
+  /// Returns true only if user is physically in Nigeria
+  Future<bool> shouldUseProximityDiscovery() async {
+    try {
+      final position = await getCurrentLocation();
+      if (position == null) return false;
+
+      return isLocationInNigeria(position.latitude, position.longitude);
+    } catch (e) {
+      return false;
+    }
   }
 
   /// Get current location of the user (with caching)
@@ -68,24 +119,34 @@ class LocationService {
 
   /// Get nearby areas based on current location (with caching)
   /// This uses real Nigerian location names based on coordinates
+  /// Only works for users physically in Nigeria
   Future<List<Map<String, dynamic>>> getNearbyAreas(Position position) async {
     try {
+      // Check if user is in Nigeria
+      if (!isLocationInNigeria(position.latitude, position.longitude)) {
+        // For users outside Nigeria, return empty list
+        // They should select a location manually
+        return [];
+      }
+
       // Check if we have cached nearby areas for this position
-      if (_cachedNearbyAreas != null && 
-          _cacheTimestamp != null && 
+      if (_cachedNearbyAreas != null &&
+          _cacheTimestamp != null &&
           DateTime.now().difference(_cacheTimestamp!) < _cacheExpiry) {
         return _cachedNearbyAreas!;
       }
 
       final lat = position.latitude;
       final lng = position.longitude;
-      
-      
+
       // Determine which region the user is in and return real location names
       final region = _determineRegion(lat, lng);
+      debugPrint('📍 [LocationService] User GPS: Lat $lat, Lng $lng');
+      debugPrint('🏙️ [LocationService] Detected region: $region');
+
       final nearbyAreas = <Map<String, dynamic>>[];
-      
-      // Add "Near You" option first
+
+      // Add "Near You" option first (only for users in Nigeria)
       nearbyAreas.add({
         'title': 'Near You',
         'subtitle': 'Properties within 5km of your location',
@@ -95,10 +156,10 @@ class LocationService {
         'isNearYou': true,
         'locationQuery': 'near me',
       });
-      
+
       // Get real nearby areas based on the region
       final realAreas = _getRealNearbyAreas(region);
-      
+
       for (int i = 0; i < realAreas.length; i++) {
         final area = realAreas[i];
         nearbyAreas.add({
@@ -110,14 +171,34 @@ class LocationService {
           'locationQuery': area['name'], // This will be used for filtering
         });
       }
-      
+
       // Cache the nearby areas
       _cachedNearbyAreas = nearbyAreas;
       _cacheTimestamp = DateTime.now();
-      
+
       return nearbyAreas;
     } catch (e) {
       return [];
+    }
+  }
+
+  /// Get user's region name based on their GPS position
+  /// Returns a user-friendly region name (e.g., "Lagos", "Abuja")
+  Future<String> getUserRegionName(Position position) async {
+    final region = _determineRegion(position.latitude, position.longitude);
+
+    // Convert region code to user-friendly name
+    switch (region) {
+      case 'abuja':
+        return 'Abuja';
+      case 'lagos':
+        return 'Lagos';
+      case 'port_harcourt':
+        return 'Port Harcourt';
+      case 'kano':
+        return 'Kano';
+      default:
+        return 'Nigeria'; // Fallback
     }
   }
 
@@ -139,9 +220,9 @@ class LocationService {
     else if (lat >= 12.0 && lat <= 12.2 && lng >= 8.5 && lng <= 8.7) {
       return 'kano';
     }
-    // Default to Abuja if unknown
+    // Default to Lagos if unknown (most properties are in Lagos)
     else {
-      return 'abuja';
+      return 'lagos';
     }
   }
 
@@ -306,41 +387,57 @@ class LocationService {
   }
 
 
-  /// Get nearby areas without location (fallback)
-  List<Map<String, dynamic>> getDefaultNearbyAreas() {
+  /// Get popular Nigerian areas (for users without location or outside Nigeria)
+  /// Does NOT include "Near You" option
+  List<Map<String, dynamic>> getDefaultNigerianAreas() {
     return [
-      {
-        'title': 'Near You',
-        'subtitle': 'Find properties around your location',
-        'icon': 'assets/icons/duo-icons_location.svg',
-        'iconColor': Color(0xFF426DC2),
-        'isNearYou': true,
-      },
       {
         'title': 'Lekki, Lagos',
         'subtitle': 'Popular area',
         'icon': 'assets/icons/emojione-monotone_houses.svg',
         'iconColor': Color(0xFF63ADDC),
-      },
-      {
-        'title': 'Ikorodu, Lagos',
-        'subtitle': 'Popular area',
-        'icon': 'assets/icons/emojione-monotone_houses.svg',
-        'iconColor': Color(0xFFE91E63),
+        'locationQuery': 'Lekki',
+        'coordinates': {'lat': 6.45, 'lng': 3.45},
       },
       {
         'title': 'Ikeja, Lagos',
         'subtitle': 'Popular area',
         'icon': 'assets/icons/emojione-monotone_houses.svg',
         'iconColor': Color(0xFF4CAF50),
+        'locationQuery': 'Ikeja',
+        'coordinates': {'lat': 6.6, 'lng': 3.35},
       },
       {
-        'title': 'Surulere, Lagos',
+        'title': 'Victoria Island, Lagos',
         'subtitle': 'Popular area',
         'icon': 'assets/icons/emojione-monotone_houses.svg',
+        'iconColor': Color(0xFF9C27B0),
+        'locationQuery': 'Victoria Island',
+        'coordinates': {'lat': 6.42, 'lng': 3.42},
+      },
+      {
+        'title': 'Abuja (FCT)',
+        'subtitle': 'Capital city',
+        'icon': 'assets/icons/emojione-monotone_houses.svg',
         'iconColor': Color(0xFFFF9800),
+        'locationQuery': 'Abuja',
+        'coordinates': {'lat': 9.0765, 'lng': 7.3986},
+      },
+      {
+        'title': 'Port Harcourt',
+        'subtitle': 'Rivers State',
+        'icon': 'assets/icons/emojione-monotone_houses.svg',
+        'iconColor': Color(0xFFE91E63),
+        'locationQuery': 'Port Harcourt',
+        'coordinates': {'lat': 4.8156, 'lng': 7.0498},
       },
     ];
+  }
+
+  /// Get default areas (deprecated - use getDefaultNigerianAreas instead)
+  @Deprecated('Use getDefaultNigerianAreas for non-Nigeria users')
+  List<Map<String, dynamic>> getDefaultNearbyAreas() {
+    return getDefaultNigerianAreas();
   }
 
   /// Filter properties by distance from user's current location

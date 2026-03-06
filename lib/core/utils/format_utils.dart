@@ -2,6 +2,13 @@
 class FormatUtils {
   FormatUtils._();
 
+  /// Capitalises the first letter of each word
+  /// Example: "individual_agent" -> "Individual_agent", "standard room" -> "Standard Room"
+  static String toTitleCase(String s) => s
+      .split(' ')
+      .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+      .join(' ');
+
   /// Format price string with commas for thousands separators
   /// Example: "1000000" -> "₦1,000,000"
   static String formatPrice(String price) {

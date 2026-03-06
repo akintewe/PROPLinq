@@ -7,7 +7,10 @@ import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
+import '../../../core/widgets/location_selection_dialog.dart';
 import '../../../core/services/bookings_cache_service.dart';
+import '../../../core/services/location_service.dart';
+import '../../../core/services/user_preferences_service.dart';
 import 'saved_view.dart';
 import 'messages_view.dart';
 import 'profile_view.dart';
@@ -226,6 +229,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   final PropertyService _propertyService = PropertyService();
   final FavoriteService _favoriteService = FavoriteService();
   final ChatService _chatService = ChatService();
+  final LocationService _locationService = LocationService.instance;
+  final UserPreferencesService _prefsService = UserPreferencesService();
+
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   List<PropertyModel> _properties = [];
@@ -235,6 +241,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   bool _isLoadingPromotedProperties = true;
   int _unreadMessageCount = 0;
   Timer? _unreadCountTimer;
+
+  // Location-based discovery state
+  bool _useProximityDiscovery = false;
+  String? _userSelectedLocation;
 
   // Pagination state
   int _currentPage = 1;
@@ -256,6 +266,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     // Fetch user profile, properties, and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserProfile();
+      await _initializeLocationBasedDiscovery();
       await _fetchProperties();
       await _fetchPromotedProperties();
       await _fetchUnreadMessageCount();
@@ -306,6 +317,76 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     } catch (e) {
       setState(() {
         _isLoadingProfile = false;
+      });
+    }
+  }
+
+  /// Initialize location-based discovery
+  /// Handles Nigeria vs non-Nigeria users differently
+  Future<void> _initializeLocationBasedDiscovery() async {
+    try {
+      // Proactively request location permission and get current location
+      // This ensures "Near You" data is ready when user taps search
+      debugPrint('🌍 [TenantHomeView] Requesting location permission...');
+      final position = await _locationService.getCurrentLocation();
+
+      if (position != null) {
+        debugPrint('📍 [TenantHomeView] Location acquired: ${position.latitude}, ${position.longitude}');
+
+        // Check if user should use proximity-based discovery (only for users in Nigeria)
+        final useProximity = await _locationService.shouldUseProximityDiscovery();
+
+        setState(() {
+          _useProximityDiscovery = useProximity;
+        });
+
+        if (useProximity) {
+          // User is in Nigeria - pre-load nearby areas for search
+          debugPrint('🇳🇬 [TenantHomeView] User in Nigeria, loading nearby areas...');
+          await _locationService.getNearbyAreas(position);
+          debugPrint('✅ [TenantHomeView] Nearby areas cached and ready for search');
+        } else {
+          // User is outside Nigeria
+          debugPrint('🌎 [TenantHomeView] User outside Nigeria');
+          final savedLocation = await _prefsService.getSelectedLocation();
+
+          if (savedLocation == null) {
+            // Show location selection dialog
+            if (mounted) {
+              _showLocationSelectionDialog();
+            }
+          } else {
+            // Use saved location for discovery
+            setState(() {
+              _userSelectedLocation = savedLocation;
+              _selectedLocation = savedLocation;
+            });
+          }
+        }
+      } else {
+        // Location permission denied or location services disabled
+        debugPrint('⚠️ [TenantHomeView] Could not get location, using default areas');
+        setState(() {
+          _useProximityDiscovery = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ [TenantHomeView] Error initializing location discovery: $e');
+    }
+  }
+
+  /// Show location selection dialog for non-Nigeria users
+  Future<void> _showLocationSelectionDialog() async {
+    final selectedLocation = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const LocationSelectionDialog(),
+    );
+
+    if (selectedLocation != null && mounted) {
+      setState(() {
+        _userSelectedLocation = selectedLocation;
+        _selectedLocation = selectedLocation;
       });
     }
   }
@@ -381,6 +462,12 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         setState(() {
           _promotedProperties = [];
         });
+      }
+
+      // Shuffle properties on refresh for variety (within same preference segment)
+      if (isRefresh && allProperties.isNotEmpty) {
+        allProperties.shuffle();
+        debugPrint('🔀 [TenantHomeView] Shuffled properties for fresh discovery');
       }
 
       setState(() {
@@ -860,9 +947,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       backgroundColor: Colors.white,
       body: RefreshIndicator(
         onRefresh: () async {
-          // Refresh both properties and featured properties
+          // Refresh both properties and featured properties with shuffling
           await Future.wait([
-            _fetchProperties(),
+            _fetchProperties(isRefresh: true),
             _fetchPromotedProperties(),
           ]);
         },
@@ -1526,11 +1613,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             return Transform.translate(
               offset: Offset(_animationController.value * -200, 0),
               child: Row(
-                children: List.generate(10, (index) => 
+                children: List.generate(10, (index) =>
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'WELCOME TO PROPLINQ',
+                      'DISCOVER AND BOOK VERIFIED PROPERTIES WITH CONFIDENCE',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -1862,6 +1949,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           'property360_images': property.property360Images,
           'video_url': property.videoUrl,
           'user': property.user?.toJson(),
+          'rooms': property.rawJson?['rooms'],
           'agent': {
             'name': property.user?.fullName ?? 'Agent',
             'title': 'Agent',
@@ -1870,7 +1958,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
           },
         };
-        
+
         // Add ratings from rawJson if available
         if (property.rawJson != null) {
           final rawJson = property.rawJson!;
@@ -1880,7 +1968,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           print('📊 [Navigation] rawJson ratings value: ${rawJson['ratings']}');
           print('📊 [Navigation] rawJson average_rating: ${rawJson['average_rating']}');
           print('📊 [Navigation] rawJson rating_count: ${rawJson['rating_count']}');
-          
+
           if (rawJson['ratings'] != null) {
             propertyData['ratings'] = rawJson['ratings'];
             print('✅ [Navigation] Added ratings to propertyData');
@@ -1899,10 +1987,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           print('⚠️ [Navigation] property.rawJson is NULL for property ID: ${property.id}');
           print('⚠️ [Navigation] This means ratings data was lost during PropertyModel creation');
         }
-        
+
         print('📊 [Navigation] Final propertyData keys: ${propertyData.keys.toList()}');
         print('📊 [Navigation] Final propertyData has ratings: ${propertyData.containsKey('ratings')}');
-        
+
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: propertyData)),
         );
@@ -1987,21 +2075,23 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                                                        Text(
-                                property.rawJson?['average_rating']?.toString() ?? '0.0',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                                 const SizedBox(width: 4),
-                               const Icon(
-                                Icons.star,
-                                size: 16,
-                                color: Colors.amber,
-                              ),
-                              if (property.rawJson?['rating_count'] != null) ...[
+                              // Only show rating if property has been rated
+                              if (property.rawJson?['rating_count'] != null &&
+                                  (property.rawJson!['rating_count'] as num) > 0) ...[
+                                Text(
+                                  property.rawJson?['average_rating']?.toString() ?? '0.0',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.star,
+                                  size: 16,
+                                  color: Colors.amber,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '(${property.rawJson!['rating_count']})',
@@ -2009,16 +2099,29 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                                     fontSize: 12,
                                     color: Colors.white,
                                   ),
-                              ),
+                                ),
                               ],
                               const Spacer(),
-                              Text(
-                                FormatUtils.formatPrice(property.price),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  if (property.type.toLowerCase() == 'hotel')
+                                    const Text(
+                                      'From',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  Text(
+                                    FormatUtils.formatPrice(property.price),
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -2211,6 +2314,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           'property360_images': property.property360Images,
           'video_url': property.videoUrl,
           'user': property.user?.toJson(),
+          'rooms': property.rawJson?['rooms'],
           'agent': {
             'name': property.user?.fullName ?? 'Agent',
             'title': 'Agent',
@@ -2219,7 +2323,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
           },
         };
-        
+
         // Add ratings from rawJson if available
         if (property.rawJson != null) {
           final rawJson = property.rawJson!;
@@ -2354,7 +2458,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            property.type,
+                            FormatUtils.toTitleCase(property.type),
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -2396,21 +2500,23 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Text(
-                          property.rawJson?['average_rating']?.toString() ?? '0.0',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF868686),
-                            fontWeight: FontWeight.w600,
+                        // Only show rating if property has been rated
+                        if (property.rawJson?['rating_count'] != null &&
+                            (property.rawJson!['rating_count'] as num) > 0) ...[
+                          Text(
+                            property.rawJson?['average_rating']?.toString() ?? '0.0',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF868686),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.star,
-                          size: 16,
-                          color: Colors.amber,
-                        ),
-                        if (property.rawJson?['rating_count'] != null) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.star,
+                            size: 16,
+                            color: Colors.amber,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             '(${property.rawJson!['rating_count']})',
@@ -2418,20 +2524,28 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                               fontSize: 12,
                               color: Color(0xFF868686),
                             ),
-                        ),
+                          ),
                         ],
                         const Spacer(),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
+                            if (property.type.toLowerCase() == 'hotel')
+                              const Text(
+                                'From',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF868686),
+                                ),
+                              ),
                             Text(
                               FormatUtils.formatPrice(property.price),
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                  color: Color(0xFF426DC2),
-                                ),
+                                color: Color(0xFF426DC2),
                               ),
+                            ),
                           ],
                         ),
                       ],
@@ -2541,7 +2655,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       children: [
                         Expanded(
                           child: Text(
-                            property['title'] as String,
+                            FormatUtils.toTitleCase(property['title'] as String? ?? ''),
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
@@ -2556,7 +2670,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            property['type'] as String,
+                            FormatUtils.toTitleCase(property['type'] as String? ?? ''),
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -2615,6 +2729,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
+                            if ((property['type'] as String?)?.toLowerCase() == 'hotel')
+                              const Text(
+                                'From',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF868686)),
+                              ),
                             Text(
                               FormatUtils.formatPrice(property['price'] as String),
                               style: const TextStyle(
@@ -2958,9 +3077,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       onTap: () {
         // If clicking on home tab (index 0) when already on home, scroll to top and refresh
         if (index == 0 && _currentIndex == 0) {
-          // Refresh both properties and featured properties
+          // Refresh both properties and featured properties with shuffling
           Future.wait([
-            _fetchProperties(),
+            _fetchProperties(isRefresh: true),
             _fetchPromotedProperties(),
           ]);
           // Scroll to top

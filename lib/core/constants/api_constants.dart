@@ -1,6 +1,6 @@
 class ApiConstants {
   // Base URL
-  static const String baseUrl = 'https://proapi.proplinq.com';
+  static const String baseUrl = 'https://api.v2.proplinq.com';
   
   // API Version
   static const String apiVersion = '/api/v1';

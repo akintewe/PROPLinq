@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/bookings_cache_service.dart';
 import '../services/favorite_service.dart';
@@ -970,7 +971,7 @@ class _SavedViewState extends State<SavedView> {
                         children: [
                           Expanded(
                             child: Text(
-                              property['title'] ?? 'Property',
+                              FormatUtils.toTitleCase(property['title']?.toString() ?? 'Property'),
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -989,7 +990,7 @@ class _SavedViewState extends State<SavedView> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                property['type'],
+                                FormatUtils.toTitleCase(property['type']?.toString() ?? ''),
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w600,

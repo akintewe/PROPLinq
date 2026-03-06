@@ -98,11 +98,10 @@ class HotelService {
         '/hotels/$hotelId/rooms',
         requiresAuth: true,
         fromJson: (json) {
-          final data = json;
-          final roomsData = data['data'] as List<dynamic>?;
-
+          debugPrint('🏨 [HotelService] Raw rooms response: $json');
+          final roomsData = (json['data'] ?? json['rooms'] ?? json) as List<dynamic>?;
+          debugPrint('🏨 [HotelService] Rooms array: $roomsData');
           if (roomsData == null) return <RoomModel>[];
-
           return roomsData
               .map((room) => RoomModel.fromJson(room as Map<String, dynamic>))
               .toList();

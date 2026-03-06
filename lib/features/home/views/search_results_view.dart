@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../core/utils/format_utils.dart';
 
 class SearchResultsView extends StatefulWidget {
   final String selectedLocation;
@@ -344,7 +345,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                     children: [
                       Expanded(
                         child: Text(
-                          property['title'] as String,
+                          FormatUtils.toTitleCase(property['title'] as String? ?? ''),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -359,7 +360,7 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          property['type'] as String,
+                          FormatUtils.toTitleCase(property['type'] as String? ?? ''),
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

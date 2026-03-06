@@ -1,3 +1,8 @@
+String _toTitleCase(String s) => s
+    .split(' ')
+    .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+    .join(' ');
+
 /// Room model for hotel rooms
 class RoomModel {
   final int? id;
@@ -23,29 +28,35 @@ class RoomModel {
   });
 
   factory RoomModel.fromJson(Map<String, dynamic> json) {
-    // Handle price - could be string or number from API
-    double parsePrice(dynamic priceValue) {
-      if (priceValue is num) {
-        return priceValue.toDouble();
-      } else if (priceValue is String) {
-        return double.parse(priceValue);
-      }
+    double parsePrice(dynamic v) {
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? 0.0;
       return 0.0;
     }
 
+    int parseInt(dynamic v) {
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? 0;
+      return 0;
+    }
+
     return RoomModel(
-      id: json['id'] as int?,
-      uuid: json['uuid'] as String?,
-      name: json['name'] as String,
-      type: json['type'] as String,
+      id: json['id'] == null ? null : parseInt(json['id']),
+      uuid: json['uuid']?.toString(),
+      name: _toTitleCase(json['custom_name']?.toString() ?? json['proplinq_name']?.toString() ?? json['name']?.toString() ?? ''),
+      type: json['type']?.toString() ?? '',
       price: parsePrice(json['price']),
-      capacity: json['capacity'] as int,
-      count: json['count'] as int,
+      capacity: parseInt(json['capacity']),
+      count: parseInt(json['count']),
       features: (json['features'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      imageUrl: json['image_url'] as String?,
+      imageUrl: json['image_url']?.toString() ??
+          ((json['images'] as List<dynamic>?)?.isNotEmpty == true
+              ? (json['images'] as List<dynamic>).first['url']?.toString()
+              : null),
     );
   }
 

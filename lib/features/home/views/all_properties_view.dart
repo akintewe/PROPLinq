@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/property_model.dart';
+import '../../../core/utils/format_utils.dart';
 import '../../auth/models/user_model.dart';
 import 'property_details_view.dart';
 import 'edit_property_view.dart';
@@ -541,7 +542,7 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        property.category,
+                        FormatUtils.toTitleCase(property.category),
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -683,7 +684,7 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        property.category,
+                        FormatUtils.toTitleCase(property.category),
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,

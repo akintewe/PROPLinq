@@ -6,6 +6,9 @@ import 'dart:ui';
 import 'package:proplinq/core/constants/app_colors.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/services/bookings_cache_service.dart';
+import '../../../core/services/location_service.dart';
+import '../../../core/services/user_preferences_service.dart';
+import '../../../core/widgets/location_selection_dialog.dart';
 import 'saved_view.dart';
 import 'messages_view.dart';
 import 'profile_view.dart';
@@ -195,6 +198,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   final PropertyService _propertyService = PropertyService();
   final FavoriteService _favoriteService = FavoriteService();
   final ChatService _chatService = ChatService();
+  final LocationService _locationService = LocationService.instance;
+  final UserPreferencesService _prefsService = UserPreferencesService();
+
   UserModel? _currentUser;
   bool _isLoadingProfile = true;
   List<PropertyModel> _properties = [];
@@ -204,6 +210,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   bool _isLoadingPromotedProperties = true;
   int _unreadMessageCount = 0;
   Timer? _unreadCountTimer;
+
+  // Location-based discovery state
+  bool _useProximityDiscovery = false;
+  String? _userSelectedLocation;
 
   // Pagination state
   int _currentPage = 1;
@@ -233,6 +243,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     // Fetch user profile, properties, and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserProfile();
+      await _initializeLocationBasedDiscovery();
       await _fetchProperties();
       await _fetchPromotedProperties();
       await _fetchUnreadMessageCount();
@@ -278,6 +289,76 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     } catch (e) {
       setState(() {
         _isLoadingProfile = false;
+      });
+    }
+  }
+
+  /// Initialize location-based discovery
+  /// Handles Nigeria vs non-Nigeria users differently
+  Future<void> _initializeLocationBasedDiscovery() async {
+    try {
+      // Proactively request location permission and get current location
+      // This ensures "Near You" data is ready when user taps search
+      debugPrint('🌍 [AgentHomeView] Requesting location permission...');
+      final position = await _locationService.getCurrentLocation();
+
+      if (position != null) {
+        debugPrint('📍 [AgentHomeView] Location acquired: ${position.latitude}, ${position.longitude}');
+
+        // Check if user should use proximity-based discovery (only for users in Nigeria)
+        final useProximity = await _locationService.shouldUseProximityDiscovery();
+
+        setState(() {
+          _useProximityDiscovery = useProximity;
+        });
+
+        if (useProximity) {
+          // User is in Nigeria - pre-load nearby areas for search
+          debugPrint('🇳🇬 [AgentHomeView] User in Nigeria, loading nearby areas...');
+          await _locationService.getNearbyAreas(position);
+          debugPrint('✅ [AgentHomeView] Nearby areas cached and ready for search');
+        } else {
+          // User is outside Nigeria
+          debugPrint('🌎 [AgentHomeView] User outside Nigeria');
+          final savedLocation = await _prefsService.getSelectedLocation();
+
+          if (savedLocation == null) {
+            // Show location selection dialog
+            if (mounted) {
+              _showLocationSelectionDialog();
+            }
+          } else {
+            // Use saved location for discovery
+            setState(() {
+              _userSelectedLocation = savedLocation;
+              _selectedLocation = savedLocation;
+            });
+          }
+        }
+      } else {
+        // Location permission denied or location services disabled
+        debugPrint('⚠️ [AgentHomeView] Could not get location, using default areas');
+        setState(() {
+          _useProximityDiscovery = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ [AgentHomeView] Error initializing location discovery: $e');
+    }
+  }
+
+  /// Show location selection dialog for non-Nigeria users
+  Future<void> _showLocationSelectionDialog() async {
+    final selectedLocation = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const LocationSelectionDialog(),
+    );
+
+    if (selectedLocation != null && mounted) {
+      setState(() {
+        _userSelectedLocation = selectedLocation;
+        _selectedLocation = selectedLocation;
       });
     }
   }
@@ -353,6 +434,12 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         setState(() {
           _promotedProperties = [];
         });
+      }
+
+      // Shuffle properties on refresh for variety (within same preference segment)
+      if (isRefresh && allProperties.isNotEmpty) {
+        allProperties.shuffle();
+        debugPrint('🔀 [AgentHomeView] Shuffled properties for fresh discovery');
       }
 
       setState(() {
@@ -868,9 +955,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       backgroundColor: Colors.white,
       body: RefreshIndicator(
         onRefresh: () async {
-          // Refresh both properties and featured properties
+          // Refresh both properties and featured properties with shuffling
           await Future.wait([
-            _fetchProperties(),
+            _fetchProperties(isRefresh: true),
             _fetchPromotedProperties(),
           ]);
         },
@@ -1113,6 +1200,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                           ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property.location}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
                           : 'Step into luxury with this fully furnished ${property.type.toLowerCase()} located in the heart of ${property.location}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
                       'user': property.user?.toJson(), // Pass actual user data with KYC info
+                      'rooms': property.rawJson?['rooms'],
                       'agent': {
                         'name': property.user?.fullName ?? 'Agent',
                         'title': 'Agent',
@@ -1299,7 +1387,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          property.type,
+                          FormatUtils.toTitleCase(property.type),
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -1370,6 +1458,14 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
+                          if (property.type.toLowerCase() == 'hotel')
+                            const Text(
+                              'From',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF868686),
+                              ),
+                            ),
                           Text(
                             FormatUtils.formatPrice(property.price),
                             style: const TextStyle(
@@ -1714,6 +1810,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                                 'property360_images': property.property360Images,
                                 'video_url': property.videoUrl,
                                 'user': property.user?.toJson(),
+                                'rooms': property.rawJson?['rooms'],
                                 'agent': {
                                   'name': property.user?.fullName ?? 'Agent',
                                   'title': 'Agent',
@@ -1952,6 +2049,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'property360_images': property.property360Images, // Pass 360 images from API
                       'video_url': property.videoUrl, // Pass video URL from API
             'user': property.user?.toJson(), // Pass actual user data from API
+            'rooms': property.rawJson?['rooms'],
             'agent': {
               'name': property.user?.fullName ?? 'Agent',
               'title': 'Agent',
@@ -2066,13 +2164,26 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                               ),
                             ],
                             const Spacer(),
-                            Text(
-                              FormatUtils.formatPrice(property.price),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (property.type.toLowerCase() == 'hotel')
+                                  const Text(
+                                    'From',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                Text(
+                                  FormatUtils.formatPrice(property.price),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -2260,6 +2371,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'property360_images': property.property360Images, // Pass 360 images from API
                       'video_url': property.videoUrl, // Pass video URL from API
               'user': property.user?.toJson(), // Pass actual user data from API
+              'rooms': property.rawJson?['rooms'],
               'agent': {
                 'name': property.user?.fullName ?? 'Agent',
                 'title': 'Agent',
@@ -2432,6 +2544,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
+                            if (property.type.toLowerCase() == 'hotel')
+                              const Text(
+                                'From',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF868686)),
+                              ),
                             Text(
                               FormatUtils.formatPrice(property.price),
                               style: const TextStyle(
@@ -2610,9 +2727,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       onTap: () {
         // If clicking on home tab (index 0) when already on home, scroll to top and refresh
         if (index == 0 && _currentIndex == 0) {
-          // Refresh both properties and featured properties
+          // Refresh both properties and featured properties with shuffling
           Future.wait([
-            _fetchProperties(),
+            _fetchProperties(isRefresh: true),
             _fetchPromotedProperties(),
           ]);
           // Scroll to top
@@ -3077,6 +3194,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'property360_images': property.property360Images, // Pass 360 images from API
                       'video_url': property.videoUrl, // Pass video URL from API
                                 'user': property.user?.toJson(), // Pass actual user data from API
+                                'rooms': property.rawJson?['rooms'],
                                 'agent': {
                                   'name': property.user?.fullName ?? 'Agent',
                                   'title': 'Agent',
@@ -3237,7 +3355,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          property.type,
+                          FormatUtils.toTitleCase(property.type),
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -3297,13 +3415,23 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                         ),
                       ],
                       const Spacer(),
-                      Text(
-                        FormatUtils.formatPrice(property.price),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF426DC2),
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (property.type.toLowerCase() == 'hotel')
+                            const Text(
+                              'From',
+                              style: TextStyle(fontSize: 11, color: Color(0xFF868686)),
+                            ),
+                          Text(
+                            FormatUtils.formatPrice(property.price),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF426DC2),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

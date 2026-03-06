@@ -1,3 +1,8 @@
+String _toTitleCase(String s) => s
+    .split(' ')
+    .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+    .join(' ');
+
 /// Property model representing a real estate property
 class PropertyModel {
   final int id;
@@ -257,11 +262,11 @@ class PropertyModel {
     return PropertyModel(
       id: json['id'] as int,
       userId: json['user_id'] as int,
-      type: json['type'] as String,
-      title: json['title'] as String,
+      type: _toTitleCase(json['type'] as String),
+      title: _toTitleCase(json['title'] as String),
       description: json['description'] as String,
       price: json['price'] as String,
-      category: json['category'] as String,
+      category: _toTitleCase(json['category'] as String),
       location: json['location'] as String,
       imageUrl: imageUrl,
       images: images,

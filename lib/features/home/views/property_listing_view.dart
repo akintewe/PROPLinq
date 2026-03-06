@@ -12,6 +12,7 @@ import '../services/property_service.dart';
 import '../services/hotel_service.dart';
 import '../models/room_model.dart';
 import '../../../core/utils/csv_utils.dart';
+import '../../../core/utils/format_utils.dart';
 import 'property_listing_success_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../../finance/views/agent_kyc_view.dart';
@@ -72,7 +73,7 @@ class PropertyListingView extends StatefulWidget {
 
 class _PropertyListingViewState extends State<PropertyListingView> {
   int _currentStep = 0;
-  final int _totalSteps = 3;
+  int get _totalSteps => (_isHotelType || _isShortletType) ? 4 : 3; // 4 steps for hotels/shortlets, 3 for regular
 
   // Property form controllers
   final TextEditingController _propertyTitleController = TextEditingController();
@@ -207,12 +208,12 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   }
 
   bool _isStep2Valid() {
-    if (_isHotelType) {
-      // Hotels need amenities AND rooms
-      return _selectedAmenities.isNotEmpty && _hotelRooms.isNotEmpty;
-    } else if (_isShortletType) {
+    if (_isHotelType || _isShortletType) {
+      // Hotels and shortlets only need amenities in Step 2
+      // Rooms are now validated in Step 3
       return _selectedAmenities.isNotEmpty;
     } else {
+      // Regular properties need room/bathroom counts and parking/gated status
       return _roomsController.text.isNotEmpty &&
              _bathroomsController.text.isNotEmpty &&
              _gatedStatus.isNotEmpty &&
@@ -285,26 +286,30 @@ class _PropertyListingViewState extends State<PropertyListingView> {
 
             // Title and subtitle
             Text(
-              _currentStep == 0 
+              _currentStep == 0
                   ? 'Tell us about your property'
                   : _currentStep == 1
                       ? ((_isHotelType || _isShortletType) ? 'What will your guest get' : 'What will your tenants get')
-                      : ((_isHotelType || _isShortletType) ? 'Upload property' : 'Upload property'),
+                      : _currentStep == 2
+                          ? ((_isHotelType || _isShortletType) ? 'Hotel Rooms' : 'Upload property')
+                          : 'Upload property',
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
                 color: Colors.black,
               ),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             Text(
-              _currentStep == 0 
+              _currentStep == 0
                   ? 'Let us know the type of property you want to list'
                   : _currentStep == 1
                       ? ((_isHotelType || _isShortletType) ? 'Let us know what you have to offer your guest' : 'Let us know what your property has')
-                      : ((_isHotelType || _isShortletType) ? 'kindly upload pictures and video of your property' : 'kindly upload pictures and video of your property'),
+                      : _currentStep == 2
+                          ? ((_isHotelType || _isShortletType) ? 'Add rooms available for booking in your property' : 'kindly upload pictures and video of your property')
+                          : 'kindly upload pictures and video of your property',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
@@ -370,7 +375,12 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       case 1:
         return (_isHotelType || _isShortletType) ? _buildStep2Hotel() : _buildStep2Regular();
       case 2:
-        return _buildStep3();
+        // For hotels/shortlets: Hotel Rooms step
+        // For regular properties: Images step
+        return (_isHotelType || _isShortletType) ? _buildStep3HotelRooms() : _buildStep3();
+      case 3:
+        // Only for hotels/shortlets: Images step
+        return _buildStep4();
       default:
         return _buildStep1();
     }
@@ -700,106 +710,6 @@ class _PropertyListingViewState extends State<PropertyListingView> {
 
         const SizedBox(height: 40),
 
-        // Divider
-        const Divider(height: 1, color: Color(0xFFE0E0E0)),
-
-        const SizedBox(height: 40),
-
-        // Hotel Rooms Section
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Hotel Rooms',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _hotelRooms.isNotEmpty ? const Color(0xFF426DC2) : const Color(0xFFE5E5E5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${_hotelRooms.length} ${_hotelRooms.length == 1 ? 'room' : 'rooms'}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _hotelRooms.isNotEmpty ? Colors.white : const Color(0xFF666666),
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 16),
-
-        // Rooms List
-        if (_hotelRooms.isNotEmpty) ...[
-          ..._hotelRooms.asMap().entries.map((entry) {
-            final index = entry.key;
-            final room = entry.value;
-            return _buildRoomCard(room, index);
-          }).toList(),
-          const SizedBox(height: 16),
-        ],
-
-        // Add Room Buttons
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _showAddRoomDialog,
-                icon: const Icon(Icons.add, size: 20),
-                label: const Text('Add Room Manually'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF426DC2),
-                  side: const BorderSide(color: Color(0xFF426DC2)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _uploadCsvFile,
-                icon: const Icon(Icons.upload_file, size: 20),
-                label: const Text('Upload CSV'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF426DC2),
-                  side: const BorderSide(color: Color(0xFF426DC2)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // Download Sample CSV Button
-        Center(
-          child: TextButton.icon(
-            onPressed: _downloadSampleCsv,
-            icon: const Icon(Icons.download, size: 18),
-            label: const Text('Download Sample CSV'),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF426DC2),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 40),
-
         GradientButton(
           text: 'Next',
           onPressed: _isStep2Valid() ? _nextStep : null,
@@ -877,7 +787,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    feature,
+                    FormatUtils.toTitleCase(feature),
                     style: const TextStyle(
                       fontSize: 11,
                       color: Color(0xFF426DC2),
@@ -1366,7 +1276,139 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     );
   }
 
+  // New Step 3: Hotel Rooms (only for hotels/shortlets)
+  Widget _buildStep3HotelRooms() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Hotel Rooms Section Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Hotel Rooms',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _hotelRooms.isNotEmpty ? const Color(0xFF426DC2) : const Color(0xFFE5E5E5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_hotelRooms.length} ${_hotelRooms.length == 1 ? 'room' : 'rooms'}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _hotelRooms.isNotEmpty ? Colors.white : const Color(0xFF666666),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Info text
+        const Text(
+          'Add rooms that guests can book in your hotel or shortlet property.',
+          style: TextStyle(
+            fontSize: 14,
+            color: Color(0xFF666666),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Rooms List
+        if (_hotelRooms.isNotEmpty) ...[
+          ..._hotelRooms.asMap().entries.map((entry) {
+            final index = entry.key;
+            final room = entry.value;
+            return _buildRoomCard(room, index);
+          }).toList(),
+          const SizedBox(height: 16),
+        ],
+
+        // Add Room Buttons
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _showAddRoomDialog,
+                icon: const Icon(Icons.add, size: 20),
+                label: const Text('Add Room Manually'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF426DC2),
+                  side: const BorderSide(color: Color(0xFF426DC2)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _uploadCsvFile,
+                icon: const Icon(Icons.upload_file, size: 20),
+                label: const Text('Upload CSV'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF426DC2),
+                  side: const BorderSide(color: Color(0xFF426DC2)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // Download Sample CSV Button
+        Center(
+          child: TextButton.icon(
+            onPressed: _downloadSampleCsv,
+            icon: const Icon(Icons.download, size: 18),
+            label: const Text('Download Sample CSV'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF426DC2),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 40),
+
+        GradientButton(
+          text: 'Next',
+          onPressed: _hotelRooms.isNotEmpty ? _nextStep : null,
+          isEnabled: _hotelRooms.isNotEmpty,
+        ),
+
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // Renamed from _buildStep3 to _buildStep4 for hotels
+  // Still _buildStep3 for regular properties
   Widget _buildStep3() {
+    if (_isHotelType || _isShortletType) {
+      return _buildStep3Hotel();
+    } else {
+      return _buildStep3Regular();
+    }
+  }
+
+  Widget _buildStep4() {
     if (_isHotelType || _isShortletType) {
       return _buildStep3Hotel();
     } else {

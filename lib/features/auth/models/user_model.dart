@@ -5,6 +5,7 @@ class UserModel {
   final String userType;
   final String phoneNumber;
   final String location;
+  final String? country; // User's country (detected from IP or manually set)
   final String? agencyName;
   final String? agentType;
   final String? whatsappNumber;
@@ -24,6 +25,7 @@ class UserModel {
     required this.userType,
     required this.phoneNumber,
     required this.location,
+    this.country,
     this.agencyName,
     this.agentType,
     this.whatsappNumber,
@@ -60,26 +62,27 @@ class UserModel {
       userType: userType,
       phoneNumber: json['phone_number'] ?? '',
       location: json['location'] ?? '',
+      country: json['country'],
       agencyName: json['agency_name'],
       agentType: json['agent_type'],
       whatsappNumber: json['whatsapp_number'],
       emailVerified: json['email_verified'],
       profilePicture: json['profile_image_url'] ?? json['profile_picture'],
-      emailVerifiedAt: json['email_verified_at'] != null 
-          ? DateTime.tryParse(json['email_verified_at']) 
+      emailVerifiedAt: json['email_verified_at'] != null
+          ? DateTime.tryParse(json['email_verified_at'])
           : null,
-      phoneVerifiedAt: json['phone_verified_at'] != null 
-          ? DateTime.tryParse(json['phone_verified_at']) 
+      phoneVerifiedAt: json['phone_verified_at'] != null
+          ? DateTime.tryParse(json['phone_verified_at'])
           : null,
       kycStatus: json['kyc_status'] is bool
           ? json['kyc_status']
           : (json['kyc'] != null ? true : null),
       kycData: json['kyc'] is Map<String, dynamic> ? json['kyc'] : null,
-      createdAt: json['created_at'] != null 
-          ? DateTime.tryParse(json['created_at']) 
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
           : null,
-      updatedAt: json['updated_at'] != null 
-          ? DateTime.tryParse(json['updated_at']) 
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'])
           : null,
     );
   }
@@ -92,6 +95,7 @@ class UserModel {
       'user_type': userType,
       'phone_number': phoneNumber,
       'location': location,
+      'country': country,
       'agency_name': agencyName,
       'agent_type': agentType,
       'whatsapp_number': whatsappNumber,
@@ -104,6 +108,11 @@ class UserModel {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
+  }
+
+  /// Check if user is in Nigeria
+  bool get isInNigeria {
+    return country?.toLowerCase() == 'nigeria' || country?.toLowerCase() == 'ng';
   }
 
   /// Get verification status badge text based on KYC data
