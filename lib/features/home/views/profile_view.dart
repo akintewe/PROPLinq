@@ -7,6 +7,8 @@ import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_constants.dart';
 import 'property_listing_view.dart';
 import 'property_details_view.dart';
+import 'agent_calendar_view.dart';
+import '../models/room_model.dart';
 import 'subscription_view.dart';
 import 'all_properties_view.dart';
 import 'edit_property_view.dart';
@@ -329,7 +331,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
       return widget.isAgent ? 'Agent' : 'Home Seeker';
     }
     
-    if (userType == 'agent') {
+    if (userType != 'home_seeker') {
       // For agents, show their specific agent type if available
       if (_currentUser!.agentType != null && _currentUser!.agentType!.trim().isNotEmpty) {
         final display = _currentUser!.agentType!
@@ -754,6 +756,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         // Agent-specific sections
         if (widget.isAgent) ...[
           _buildCurrentListingSection(),
+          const SizedBox(height: 32),
+          _buildCalendarSection(),
           const SizedBox(height: 32),
           _buildSubscriptionSection(),
               const SizedBox(height: 32),
@@ -1976,7 +1980,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
             child: Stack(
               children: [
                 // Badge - Only show for rent/for sale for apartments and shortlets (not hotels)
-                if ((property.category == 'for_rent' || property.category == 'for_sale') &&
+                if ((property.category.toLowerCase() == 'for_rent' || property.category.toLowerCase() == 'for_sale') &&
                     property.type.toLowerCase() != 'hotel')
                 Positioned(
                   top: 12,
@@ -2116,12 +2120,12 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                         ),
                           ),
                           // Show "For Rent" or "For Sale" only for apartments and shortlets (not hotels)
-                          if ((property.category == 'for_rent' || property.category == 'for_sale') &&
+                          if ((property.category.toLowerCase() == 'for_rent' || property.category.toLowerCase() == 'for_sale') &&
                               property.type.toLowerCase() != 'hotel')
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
                               child: Text(
-                                property.category == 'for_rent' ? 'For Rent' : 'For Sale',
+                                property.category.toLowerCase() == 'for_rent' ? 'For Rent' : 'For Sale',
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w500,
@@ -2230,8 +2234,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                     ],
                   ),
                   const Spacer(),
-                  // Show both buttons side by side only for hotels
-                  if (property.type.toLowerCase() == 'hotel')
+                  // Show both buttons side by side for hotels and shortlets
+                  if (property.type.toLowerCase() == 'hotel' || property.type.toLowerCase() == 'shortlet')
                     Row(
                       children: [
                         Expanded(
@@ -2270,40 +2274,32 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                         Expanded(
                           child: SizedBox(
                             height: 32,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment(-0.99, 0.0),
-                                  end: Alignment(0.99, 0.0),
-                                  stops: [0.0113, 0.4555, 1.1245],
-                                  colors: [
-                                    Color(0xFF426DC2),
-                                    Color(0xFF75CFEA),
-                                    Color(0xCC33CC99),
-                                  ],
+                            child: OutlinedButton(
+                              onPressed: () => _openCalendarForProperty(property),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF426DC2),
+                                side: const BorderSide(color: Color(0xFF426DC2), width: 1),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
-                                borderRadius: BorderRadius.circular(16),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                               ),
-                              child: ElevatedButton(
-                                onPressed: () {},
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.calendar_month, size: 13),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Calendar',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                ),
-                                child: const Text(
-                                  'Confirm check-in',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                ],
                               ),
                             ),
                           ),
@@ -2348,6 +2344,151 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCalendarSection() {
+    final calendarProperties = _myProperties
+        .where((p) =>
+            p.type.toLowerCase() == 'hotel' ||
+            p.type.toLowerCase() == 'shortlet')
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Availability Calendar',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Manage booking availability for your hotel & shortlet rooms',
+          style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+        ),
+        const SizedBox(height: 16),
+        if (_isLoadingMyProperties)
+          const Center(child: CircularProgressIndicator())
+        else if (calendarProperties.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE9ECEF)),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.calendar_month_outlined, size: 40, color: Color(0xFF999999)),
+                const SizedBox(height: 12),
+                const Text(
+                  'No hotel or shortlet listings yet',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF666666)),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'List a hotel or shortlet to manage room availability',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 36,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PropertyListingView()),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF426DC2),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                    ),
+                    child: const Text('List a property', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...calendarProperties.map((property) {
+            final rawRooms = property.rawJson?['rooms'] as List<dynamic>?;
+            final hasRooms = rawRooms != null && rawRooms.isNotEmpty;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE0E0E0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECF0F9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.calendar_month, color: Color(0xFF426DC2), size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          property.title,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          hasRooms
+                              ? '${rawRooms.length} ${rawRooms.length == 1 ? 'room' : 'rooms'}'
+                              : 'No rooms set up yet',
+                          style: TextStyle(fontSize: 12, color: hasRooms ? const Color(0xFF666666) : Colors.orange),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    height: 36,
+                    child: ElevatedButton(
+                      onPressed: hasRooms ? () => _openCalendarForProperty(property) : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF426DC2),
+                        disabledBackgroundColor: const Color(0xFFCCCCCC),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        elevation: 0,
+                      ),
+                      child: const Text('Manage', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+      ],
     );
   }
 
@@ -2649,6 +2790,63 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
       }
     } catch (e) {
       return dateString;
+    }
+  }
+
+  void _openCalendarForProperty(PropertyModel property) {
+    final rawRooms = property.rawJson?['rooms'] as List<dynamic>?;
+    if (rawRooms == null || rawRooms.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No rooms found for this property.')),
+      );
+      return;
+    }
+
+    // Build RoomModel list from rawJson rooms
+    final rooms = rawRooms
+        .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
+        .toList();
+
+    if (rooms.length == 1) {
+      // Only one room — open calendar directly
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => AgentCalendarView(
+          room: rooms.first,
+          propertyData: property.rawJson ?? {},
+        ),
+      ));
+    } else {
+      // Multiple rooms — show picker
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Select a Room', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+            ...rooms.map((room) => ListTile(
+              leading: const Icon(Icons.hotel_outlined, color: Color(0xFF426DC2)),
+              title: Text(room.name),
+              subtitle: Text('₦${room.price.toStringAsFixed(0)}/night · ${room.count} left'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => AgentCalendarView(
+                    room: room,
+                    propertyData: property.rawJson ?? {},
+                  ),
+                ));
+              },
+            )),
+            const SizedBox(height: 16),
+          ],
+        ),
+      );
     }
   }
 

@@ -188,7 +188,7 @@ class _LoginViewState extends State<LoginView> {
   void _navigateToHome([String? userType]) {
     
     // Navigate based on user type from API response
-    if (userType == 'agent') {
+    if (userType != null && userType != 'home_seeker') {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const AgentHomeView(),

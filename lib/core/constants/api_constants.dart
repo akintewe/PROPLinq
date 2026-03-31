@@ -70,6 +70,14 @@ class ApiConstants {
   // Booking Endpoints
   static const String bookings = '/bookings';
   static String cancelBooking(int bookingId) => '/bookings/$bookingId/cancel';
+
+  // Room Availability (Public)
+  static String roomAvailability(int roomId) => '/rooms/$roomId/availability';
+
+  // Agent Calendar Management
+  static String agentCalendarRoom(int roomId) => '/agent/calendar/room/$roomId';
+  static String agentBlockRoom(int roomId) => '/agent/calendar/room/$roomId/block';
+  static String agentUnblockDates(String uuid) => '/agent/calendar/unblock/$uuid';
   
   // Agent Ratings Endpoints
   static const String agentPropertiesRatings = '/agent/properties/ratings';
@@ -109,6 +117,12 @@ class ApiConstants {
     return uri.toString();
   }
   
+  // AI Chat WebSocket (Laravel Reverb / Pusher-compatible)
+  // Note: pusher_channels_flutter package only supports apiKey, cluster, useTLS in init()
+  static const bool reverbUseTLS = false;
+  // The Reverb app key — update when backend provides the actual key
+  static const String reverbAppKey = 'proplinq-reverb-key';
+
   // Headers
   static Map<String, String> get defaultHeaders => {
     'Accept': 'application/json',

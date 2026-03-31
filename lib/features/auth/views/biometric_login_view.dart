@@ -79,7 +79,7 @@ class _BiometricLoginViewState extends State<BiometricLoginView> {
     
     if (mounted) {
       // Navigate based on user type
-      if (userType == 'agent') {
+      if (userType != null && userType != 'home_seeker') {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => const AgentHomeView(),

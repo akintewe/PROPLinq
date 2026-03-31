@@ -127,7 +127,7 @@ class _SecondSplashViewState extends State<SecondSplashView> {
     _handlePendingDeepLink();
     
     // Navigate based on user type
-    if (userType == 'agent') {
+    if (userType != null && userType != 'home_seeker') {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>

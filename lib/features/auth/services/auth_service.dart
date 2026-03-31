@@ -376,7 +376,7 @@ class AuthService {
     print('🟢🟢🟢 [AuthService] getKycStatus called');
     print('🟢 [AuthService] User type: $userType');
 
-    if (userType == 'agent') {
+    if (userType != null && userType != 'home_seeker') {
       print('🟢 [AuthService] Fetching AGENT KYC status from: ${ApiConstants.kycAgentStatus}');
       final response = await _apiService.get<KycStatusResponse>(
         ApiConstants.kycAgentStatus,

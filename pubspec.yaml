@@ -121,6 +121,9 @@ dependencies:
   # CSV parsing for hotel rooms upload
   csv: ^6.0.0
 
+  # Real-time WebSocket for AI Chat (Laravel Reverb / Pusher-compatible)
+  pusher_channels_flutter: ^2.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -4,6 +4,7 @@ import 'package:proplinq/core/constants/api_constants.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'dart:convert';
+import '../services/hotel_service.dart';
 
 class HotelReservationView extends StatefulWidget {
   final Map<String, dynamic> propertyData;
@@ -18,16 +19,67 @@ class _HotelReservationViewState extends State<HotelReservationView> {
   int _nights = 2;
   int _guests = 1;
   int _adults = 1;
-  DateTime _checkInDate = DateTime(2025, 8, 25);
-  DateTime _checkOutDate = DateTime(2025, 8, 25);
-  DateTime _currentMonth = DateTime(2025, 8, 1);
+  DateTime _checkInDate = DateTime.now();
+  DateTime _checkOutDate = DateTime.now();
+  DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
   int? _selectedDay;
+
+  final HotelService _hotelService = HotelService();
+  Set<String> _blockedDates = {};
+  Set<String> _bookedDates = {};
 
   @override
   void initState() {
     super.initState();
-    _selectedDay = 25;
+    _selectedDay = DateTime.now().day;
     _updateCheckOutDate();
+    _loadAvailabilityFromRooms();
+  }
+
+  void _loadAvailabilityFromRooms() {
+    final rooms = widget.propertyData['rooms'];
+    if (rooms == null || rooms is! List || rooms.isEmpty) return;
+    // Use the first room's id; if multiple rooms, pick the cheapest
+    final sortedRooms = List<dynamic>.from(rooms);
+    sortedRooms.sort((a, b) {
+      final pa = double.tryParse(a['price']?.toString() ?? '0') ?? 0;
+      final pb = double.tryParse(b['price']?.toString() ?? '0') ?? 0;
+      return pa.compareTo(pb);
+    });
+    final roomId = sortedRooms.first['id'];
+    if (roomId == null) return;
+    _loadAvailability(int.parse(roomId.toString()));
+  }
+
+  Future<void> _loadAvailability(int roomId) async {
+    final now = DateTime.now();
+    final start = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
+    final end3Months = DateTime(now.year, now.month + 3, 0);
+    final end = '${end3Months.year}-${end3Months.month.toString().padLeft(2, '0')}-${end3Months.day.toString().padLeft(2, '0')}';
+    try {
+      final response = await _hotelService.getRoomAvailability(
+        roomId: roomId,
+        startDate: start,
+        endDate: end,
+      );
+      if (response.success && response.data != null && mounted) {
+        final blocked = <String>{};
+        final booked = <String>{};
+        for (final entry in response.data!) {
+          final date = entry['date'] as String?;
+          final status = entry['status'] as String?;
+          if (date == null) continue;
+          if (status == 'blocked') blocked.add(date);
+          if (status == 'booked') booked.add(date);
+        }
+        setState(() {
+          _blockedDates = blocked;
+          _bookedDates = booked;
+        });
+      }
+    } catch (e) {
+      // Availability load failure is non-critical — calendar still works
+    }
   }
 
   void _updateCheckOutDate() {
@@ -531,16 +583,21 @@ class _HotelReservationViewState extends State<HotelReservationView> {
     
     // Add days of the month
     for (int day = 1; day <= daysInMonth; day++) {
-      final isSelected = day == _selectedDay && 
-                        _currentMonth.month == _checkInDate.month && 
+      final dateKey = '${_currentMonth.year}-${_currentMonth.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+      final isBlocked = _blockedDates.contains(dateKey) || _bookedDates.contains(dateKey);
+      final isPast = DateTime(_currentMonth.year, _currentMonth.month, day).isBefore(DateTime.now().subtract(const Duration(days: 1)));
+      final isDisabled = isBlocked || isPast;
+
+      final isSelected = day == _selectedDay &&
+                        _currentMonth.month == _checkInDate.month &&
                         _currentMonth.year == _checkInDate.year;
-      final isToday = day == DateTime.now().day && 
-                     _currentMonth.month == DateTime.now().month && 
+      final isToday = day == DateTime.now().day &&
+                     _currentMonth.month == DateTime.now().month &&
                      _currentMonth.year == DateTime.now().year;
-      
+
       dayWidgets.add(
         GestureDetector(
-          onTap: () {
+          onTap: isDisabled ? null : () {
             setState(() {
               _selectedDay = day;
               _checkInDate = DateTime(_currentMonth.year, _currentMonth.month, day);
@@ -549,28 +606,33 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           },
           child: Container(
             height: 40,
-                  decoration: BoxDecoration(
-              color: isSelected 
+            decoration: BoxDecoration(
+              color: isSelected
                   ? const Color(0xFF426DC2)
-                  : isToday 
-                      ? const Color(0xFFE3F2FD)
-                      : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text(
+                  : isBlocked
+                      ? const Color(0xFFEEEEEE)
+                      : isToday
+                          ? const Color(0xFFE3F2FD)
+                          : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
                 day.toString(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: isSelected 
-                            ? Colors.white 
-                      : isToday 
-                          ? const Color(0xFF426DC2)
-                          : Colors.black,
-                      ),
-                    ),
-                  ),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isSelected
+                      ? Colors.white
+                      : isDisabled
+                          ? Colors.grey.shade400
+                          : isToday
+                              ? const Color(0xFF426DC2)
+                              : Colors.black,
+                  decoration: isBlocked ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ),
           ),
         ),
       );
@@ -1283,17 +1345,20 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
         setState(() {
           _isLoading = false;
         });
-        
-        final errorMessage = response.message ?? 'Failed to create booking';
-        print('❌ Booking failed: $errorMessage');
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+
+        if (response.statusCode == 409) {
+          _showUnavailableDatesDialog();
+        } else {
+          final errorMessage = response.message ?? 'Failed to create booking';
+          print('❌ Booking failed: $errorMessage');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -1311,6 +1376,24 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
         ),
       );
     }
+  }
+
+  void _showUnavailableDatesDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Dates Unavailable'),
+        content: const Text(
+          'This property is not available for the selected dates. Please choose different check-in or check-out dates.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showPaymentWebView(String paymentUrl, Map<String, dynamic> bookingData) async {

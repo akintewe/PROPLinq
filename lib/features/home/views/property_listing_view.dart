@@ -73,7 +73,7 @@ class PropertyListingView extends StatefulWidget {
 
 class _PropertyListingViewState extends State<PropertyListingView> {
   int _currentStep = 0;
-  int get _totalSteps => (_isHotelType || _isShortletType) ? 4 : 3; // 4 steps for hotels/shortlets, 3 for regular
+  int get _totalSteps => _isHotelType ? 4 : 3; // 4 steps for hotels only, 3 for all others
 
   // Property form controllers
   final TextEditingController _propertyTitleController = TextEditingController();
@@ -308,7 +308,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                   : _currentStep == 1
                       ? ((_isHotelType || _isShortletType) ? 'Let us know what you have to offer your guest' : 'Let us know what your property has')
                       : _currentStep == 2
-                          ? ((_isHotelType || _isShortletType) ? 'Add rooms available for booking in your property' : 'kindly upload pictures and video of your property')
+                          ? (_isHotelType ? 'Add rooms available for booking in your property' : 'kindly upload pictures and video of your property')
                           : 'kindly upload pictures and video of your property',
               style: const TextStyle(
                 fontSize: 14,
@@ -375,11 +375,10 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       case 1:
         return (_isHotelType || _isShortletType) ? _buildStep2Hotel() : _buildStep2Regular();
       case 2:
-        // For hotels/shortlets: Hotel Rooms step
-        // For regular properties: Images step
-        return (_isHotelType || _isShortletType) ? _buildStep3HotelRooms() : _buildStep3();
+        // For hotels: Hotel Rooms step; for all others (including shortlets): Images step
+        return _isHotelType ? _buildStep3HotelRooms() : _buildStep3();
       case 3:
-        // Only for hotels/shortlets: Images step
+        // Only for hotels: Images step
         return _buildStep4();
       default:
         return _buildStep1();
@@ -584,7 +583,9 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         
         // Price
         CustomTextField(
-          label: (_isHotelType || _isShortletType) ? 'Price per night' : 'Price',
+          label: _isHotelType
+              ? 'Minimum Room Rate (per night)'
+              : _isShortletType ? 'Price per night' : 'Price',
           hintText: (_isHotelType || _isShortletType) ? 'Enter property price' : 'Enter property price',
           controller: _priceController,
           keyboardType: TextInputType.number,
@@ -2355,7 +2356,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
               onPressed: () {
                 Navigator.of(context).pop();
                 // Navigate to appropriate KYC screen based on user type
-                if (userType == 'agent') {
+                if (userType != 'home_seeker') {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const AgentKycView(),

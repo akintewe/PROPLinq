@@ -9,6 +9,7 @@ import 'package:proplinq/core/services/bookings_cache_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'virtual_tour_360_view.dart';
 import 'hotel_reservation_view.dart';
+import 'agent_calendar_view.dart';
 import 'in_app_chat_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../services/recently_viewed_service.dart';
@@ -1169,7 +1170,7 @@ If you don't have the app, the link will open in your browser where you can down
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '${room.count}',
+                        room.count > 0 ? '${room.count} left' : 'Sold out',
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -1262,6 +1263,38 @@ If you don't have the app, the link will open in your browser where you can down
                     ),
                   ),
                 ),
+
+                // Manage Calendar button (owner only)
+                if (_isOwner) ...[
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 32,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        final property = widget.propertyData ?? _getDefaultProperty();
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => AgentCalendarView(
+                            room: room,
+                            propertyData: property,
+                          ),
+                        ));
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF426DC2),
+                        side: const BorderSide(color: Color(0xFF426DC2)),
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Manage Calendar',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1272,17 +1305,14 @@ If you don't have the app, the link will open in your browser where you can down
 
   /// Handle room booking
   void _bookRoom(RoomModel room) {
-    // TODO: Implement room booking flow
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Booking ${room.name}...'),
-        backgroundColor: const Color(0xFF426DC2),
+    final property = widget.propertyData ?? _getDefaultProperty();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => HotelReservationView(
+          propertyData: property,
+        ),
       ),
     );
-
-    // Navigate to booking view or show booking dialog
-    // For now, just show a placeholder message
-    print('🏨 Booking room: ${room.name} - ₦${room.price}/night');
   }
 
   Widget _buildRatingsSection(Map<String, dynamic> property) {
@@ -3086,7 +3116,13 @@ If you don't have the app, the link will open in your browser where you can down
                         ),
                       ),
                       Text(
-                        _formatPrice(property['price'] as String? ?? '0'),
+                        () {
+                          if (isHotel && _hotelRooms.isNotEmpty) {
+                            final minPrice = _hotelRooms.map((r) => r.price).reduce((a, b) => a < b ? a : b);
+                            return _formatPrice(minPrice.toStringAsFixed(0));
+                          }
+                          return _formatPrice(property['price'] as String? ?? '0');
+                        }(),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,

@@ -1567,9 +1567,19 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       Row(
                         children: [
                           Text(
-                            _isLoadingProfile 
-                                ? 'Welcome User '
-                                : 'Welcome ${_currentUser != null && _currentUser!.fullName.isNotEmpty ? _currentUser!.fullName.split(' ').first : 'User'} ',
+                            () {
+                              final hour = DateTime.now().hour;
+                              final greeting = hour >= 5 && hour < 12
+                                  ? 'Good morning'
+                                  : hour >= 12 && hour < 17
+                                      ? 'Good afternoon'
+                                      : 'Good evening';
+                              if (_isLoadingProfile) return '$greeting, User ';
+                              final name = _currentUser != null && _currentUser!.fullName.isNotEmpty
+                                  ? _currentUser!.fullName.split(' ').first
+                                  : 'User';
+                              return '$greeting, $name ';
+                            }(),
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -1931,10 +1941,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     
     // Check if we should show "For Rent" or "For Sale"
     // Exclude shortlet and hotel from showing "For Rent" tag
-    final showForRentSale = (property.category == 'for_rent' || property.category == 'for_sale') &&
+    final categoryLower = property.category.toLowerCase();
+    final showForRentSale = (categoryLower == 'for_rent' || categoryLower == 'for_sale') &&
         property.type.toLowerCase() != 'hotel' &&
         property.type.toLowerCase() != 'shortlet';
-    final forRentSaleText = property.category == 'for_rent' ? 'For Rent' : 'For Sale';
+    final forRentSaleText = categoryLower == 'for_rent' ? 'For Rent' : 'For Sale';
     
     IconData icon;
     Color iconColor;

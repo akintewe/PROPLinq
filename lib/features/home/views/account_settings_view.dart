@@ -208,7 +208,7 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   }
 
   void _navigateToKycScreen() {
-    if (_currentUser?.userType == 'agent') {
+    if (_currentUser?.userType != 'home_seeker') {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -333,11 +333,11 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
                       _buildInfoItem(
                         icon: Icons.badge_outlined,
                         title: 'Account Type',
-                        value: _currentUser!.userType == 'agent' ? 'Agent' : 'Home Seeker',
+                        value: _currentUser!.userType != 'home_seeker' ? 'Agent' : 'Home Seeker',
                       ),
-                      
+
                       // Show agency details for agents
-                      if (_currentUser!.userType == 'agent') ...[
+                      if (_currentUser!.userType != 'home_seeker') ...[
                         const SizedBox(height: 16),
                         _buildInfoItem(
                           icon: Icons.business_outlined,

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../models/room_model.dart';
 
@@ -112,6 +113,97 @@ class HotelService {
       return response;
     } catch (e) {
       debugPrint('🏨 [HotelService] Error fetching rooms: $e');
+      rethrow;
+    }
+  }
+
+  /// Get availability for a specific room over a date range (public, no auth)
+  /// GET /api/v1/rooms/{room_id}/availability?start_date=...&end_date=...
+  Future<ApiResponse<List<Map<String, dynamic>>>> getRoomAvailability({
+    required int roomId,
+    required String startDate,
+    required String endDate,
+  }) async {
+    try {
+      debugPrint('🏨 [HotelService] Fetching availability for room $roomId: $startDate → $endDate');
+      final response = await _apiService.get<List<Map<String, dynamic>>>(
+        ApiConstants.roomAvailability(roomId),
+        queryParams: {'start_date': startDate, 'end_date': endDate},
+        requiresAuth: false,
+        fromJson: (json) {
+          final list = (json['data'] ?? json) as List<dynamic>;
+          return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        },
+      );
+      debugPrint('🏨 [HotelService] Availability response: ${response.data?.length ?? 0} entries');
+      return response;
+    } catch (e) {
+      debugPrint('🏨 [HotelService] Error fetching availability: $e');
+      rethrow;
+    }
+  }
+
+  /// Get agent calendar for a room
+  /// GET /api/v1/agent/calendar/room/{room_id}?start_date=...&end_date=...
+  Future<ApiResponse<List<Map<String, dynamic>>>> getAgentCalendar({
+    required int roomId,
+    required String startDate,
+    required String endDate,
+  }) async {
+    try {
+      debugPrint('🏨 [HotelService] Fetching agent calendar for room $roomId');
+      final response = await _apiService.get<List<Map<String, dynamic>>>(
+        ApiConstants.agentCalendarRoom(roomId),
+        queryParams: {'start_date': startDate, 'end_date': endDate},
+        requiresAuth: true,
+        fromJson: (json) {
+          final list = (json['data'] ?? json) as List<dynamic>;
+          return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        },
+      );
+      return response;
+    } catch (e) {
+      debugPrint('🏨 [HotelService] Error fetching agent calendar: $e');
+      rethrow;
+    }
+  }
+
+  /// Block dates for a room (agent only)
+  /// POST /api/v1/agent/calendar/room/{room_id}/block
+  Future<ApiResponse<Map<String, dynamic>>> blockRoomDates({
+    required int roomId,
+    required String startDate,
+    required String endDate,
+    required String reason,
+  }) async {
+    try {
+      debugPrint('🏨 [HotelService] Blocking dates for room $roomId: $startDate → $endDate ($reason)');
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiConstants.agentBlockRoom(roomId),
+        body: {'start_date': startDate, 'end_date': endDate, 'reason': reason},
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+      return response;
+    } catch (e) {
+      debugPrint('🏨 [HotelService] Error blocking dates: $e');
+      rethrow;
+    }
+  }
+
+  /// Unblock dates for a room (agent only)
+  /// DELETE /api/v1/agent/calendar/unblock/{uuid}
+  Future<ApiResponse<Map<String, dynamic>>> unblockDates(String uuid) async {
+    try {
+      debugPrint('🏨 [HotelService] Unblocking dates with uuid: $uuid');
+      final response = await _apiService.delete<Map<String, dynamic>>(
+        ApiConstants.agentUnblockDates(uuid),
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+      return response;
+    } catch (e) {
+      debugPrint('🏨 [HotelService] Error unblocking dates: $e');
       rethrow;
     }
   }
