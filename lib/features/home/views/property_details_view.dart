@@ -1082,7 +1082,7 @@ If you don't have the app, the link will open in your browser where you can down
               crossAxisCount: 2,
               crossAxisSpacing: 10,
               mainAxisSpacing: 12,
-              mainAxisExtent: 340,
+              mainAxisExtent: 300,
             ),
             itemCount: _hotelRooms.length,
             itemBuilder: (context, index) {
@@ -1142,7 +1142,7 @@ If you don't have the app, the link will open in your browser where you can down
 
           // Card body
           Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1180,7 +1180,7 @@ If you don't have the app, the link will open in your browser where you can down
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
 
                 // Price
                 Text(
@@ -1235,9 +1235,10 @@ If you don't have the app, the link will open in your browser where you can down
                   ),
                 ],
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
-                // Book button
+                // Book button (hidden for property owner)
+                if (!_isOwner)
                 SizedBox(
                   width: double.infinity,
                   height: 32,
@@ -3613,7 +3614,7 @@ If you don't have the app, the link will open in your browser where you can down
     }
   }
 
-  Map<String, double> _getPropertyCoordinates(Map<String, dynamic> property) {
+  Map<String, double?> _getPropertyCoordinates(Map<String, dynamic> property) {
     
     // Try to get coordinates from property data
     final coordinates = property['coordinates'] as Map<String, dynamic>?;
@@ -3628,23 +3629,10 @@ If you don't have the app, the link will open in your browser where you can down
       }
     }
 
-    // Try to get coordinates from location string using geocoding
-    // For now, use the location string directly in Google Maps URL
-    // The Google Maps widget will handle geocoding via the location string
-    final location = property['location'] as String?;
-    if (location != null && location.isNotEmpty) {
-      // Return default coordinates but we'll pass location string to Google Maps
-      // The GoogleMapWidget will need to be updated to accept location string
-      return {
-        'latitude': 6.5244, // Default Lagos
-        'longitude': 3.3792, // Default Lagos
-      };
-    }
-
-    // Default coordinates (Lagos, Nigeria)
+    // No real coordinates — return nulls so GoogleMapWidget knows to use locationString
     return {
-      'latitude': 6.5244,
-      'longitude': 3.3792,
+      'latitude': null,
+      'longitude': null,
     };
   }
 

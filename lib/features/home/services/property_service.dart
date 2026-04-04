@@ -824,4 +824,43 @@ class PropertyService {
       );
     }
   }
+
+  /// Search properties using the API natural language search endpoint
+  /// GET /api/v1/properties/search?q=...&type=...&location=...
+  Future<ApiResponse<List<PropertyModel>>> searchProperties({
+    required String query,
+    String? type,
+    String? location,
+    int? bedrooms,
+    double? priceMin,
+    double? priceMax,
+    int page = 1,
+  }) async {
+    try {
+      final params = <String, String>{};
+      if (query.trim().isNotEmpty) params['q'] = query.trim();
+      if (type != null && type.isNotEmpty) params['type'] = type;
+      if (location != null && location.isNotEmpty) params['location'] = location;
+      if (bedrooms != null) params['bedrooms'] = bedrooms.toString();
+      if (priceMin != null) params['price_min'] = priceMin.toString();
+      if (priceMax != null) params['price_max'] = priceMax.toString();
+      params['page'] = page.toString();
+
+      final response = await _apiService.get<List<PropertyModel>>(
+        ApiConstants.searchProperties,
+        queryParams: params,
+        requiresAuth: false,
+        fromJson: (json) {
+          final dataList = (json['data']?['data'] ?? json['data'] ?? json) as List<dynamic>?;
+          if (dataList == null) return <PropertyModel>[];
+          return dataList
+              .map((item) => PropertyModel.fromJson(item as Map<String, dynamic>))
+              .toList();
+        },
+      );
+      return response;
+    } catch (e) {
+      return ApiResponse.error(message: 'Search failed: $e', statusCode: 0);
+    }
+  }
 } 

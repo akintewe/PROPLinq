@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../services/location_service.dart';
 import '../services/property_search_service.dart';
 import '../../features/home/models/property_model.dart';
+import '../../features/home/services/property_service.dart';
 import '../../features/home/views/property_details_view.dart';
 
 class SearchBottomSheet extends StatefulWidget {
@@ -26,12 +27,14 @@ class SearchBottomSheet extends StatefulWidget {
 class _SearchBottomSheetState extends State<SearchBottomSheet> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  
+  final PropertyService _propertyService = PropertyService();
+
   List<Map<String, dynamic>> _locations = [];
   List<PropertyModel> _searchResults = [];
   bool _isSearching = false;
   bool _isLoadingLocation = true;
   String _searchQuery = '';
+  String? _debounceQuery;
 
   @override
   void initState() {
@@ -73,12 +76,13 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
     }
   }
 
-  /// Search properties based on the query
+  /// Search properties — tries API first, falls back to local
   void _searchProperties(String query) {
     if (query.trim().isEmpty) {
       setState(() {
         _searchResults = [];
         _isSearching = false;
+        _debounceQuery = null;
       });
       return;
     }
@@ -86,17 +90,47 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
     setState(() {
       _isSearching = true;
       _searchQuery = query;
+      _debounceQuery = query;
     });
 
-    // Perform search
-    final results = PropertySearchService.instance.searchPropertiesByName(
-      widget.properties,
-      query,
-    );
-
-    setState(() {
-      _searchResults = results;
+    // Debounce: wait 400ms then fire API search
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (!mounted || _debounceQuery != query) return;
+      _runApiSearch(query);
     });
+  }
+
+  Future<void> _runApiSearch(String query) async {
+    try {
+      final response = await _propertyService.searchProperties(query: query);
+      if (!mounted || _debounceQuery != query) return;
+      if (response.success && response.data != null && response.data!.isNotEmpty) {
+        setState(() {
+          _searchResults = response.data!;
+          _isSearching = false;
+        });
+      } else {
+        // Fall back to local search if API returns nothing
+        final local = PropertySearchService.instance.searchPropertiesByName(
+          widget.properties,
+          query,
+        );
+        setState(() {
+          _searchResults = local;
+          _isSearching = false;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      final local = PropertySearchService.instance.searchPropertiesByName(
+        widget.properties,
+        query,
+      );
+      setState(() {
+        _searchResults = local;
+        _isSearching = false;
+      });
+    }
   }
 
   @override
@@ -187,9 +221,9 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
           
           const SizedBox(height: 24),
           
-          // Content area - shows search results or location suggestions
+          // Content area - shows search results when query is typed, locations when empty
           Expanded(
-            child: _isSearching 
+            child: _searchQuery.isNotEmpty
               ? _buildSearchResults()
               : _buildLocationSuggestions(),
           ),
@@ -200,6 +234,9 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
 
   /// Build search results
   Widget _buildSearchResults() {
+    if (_isSearching) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF426DC2)));
+    }
     if (_searchResults.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),

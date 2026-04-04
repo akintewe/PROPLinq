@@ -7,14 +7,16 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class MapDirectionsView extends StatefulWidget {
-  final double destinationLatitude;
-  final double destinationLongitude;
+  final double? destinationLatitude;
+  final double? destinationLongitude;
+  final String? destinationAddress;
   final String propertyTitle;
 
   const MapDirectionsView({
     super.key,
-    required this.destinationLatitude,
-    required this.destinationLongitude,
+    this.destinationLatitude,
+    this.destinationLongitude,
+    this.destinationAddress,
     required this.propertyTitle,
   });
 
@@ -34,13 +36,56 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
   String _duration = '';
   bool _isLoadingDirections = false;
 
+  // Resolved destination coordinates (set in initState from widget params or geocoding)
+  late double _destLat;
+  late double _destLng;
+
   // Google Maps API key
   static const String _googleMapsApiKey = 'AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ';
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
+    if (widget.destinationLatitude != null && widget.destinationLongitude != null) {
+      _destLat = widget.destinationLatitude!;
+      _destLng = widget.destinationLongitude!;
+      _getCurrentLocation();
+    } else if (widget.destinationAddress != null && widget.destinationAddress!.isNotEmpty) {
+      _geocodeAddressThenLoad(widget.destinationAddress!);
+    } else {
+      // Fallback: Lagos
+      _destLat = 6.5244;
+      _destLng = 3.3792;
+      _getCurrentLocation();
+    }
+  }
+
+  Future<void> _geocodeAddressThenLoad(String address) async {
+    try {
+      final encoded = Uri.encodeComponent(address);
+      final url = 'https://maps.googleapis.com/maps/api/geocode/json'
+          '?address=$encoded&key=$_googleMapsApiKey';
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['results'] != null && (data['results'] as List).isNotEmpty) {
+          final loc = data['results'][0]['geometry']['location'];
+          _destLat = (loc['lat'] as num).toDouble();
+          _destLng = (loc['lng'] as num).toDouble();
+        } else {
+          // Geocode failed — fallback to Lagos
+          _destLat = 6.5244;
+          _destLng = 3.3792;
+        }
+      } else {
+        _destLat = 6.5244;
+        _destLng = 3.3792;
+      }
+    } catch (_) {
+      _destLat = 6.5244;
+      _destLng = 3.3792;
+    }
+    if (mounted) _getCurrentLocation();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -162,7 +207,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
         // Destination marker
         Marker(
           markerId: const MarkerId('destination'),
-          position: LatLng(widget.destinationLatitude, widget.destinationLongitude),
+          position: LatLng(_destLat, _destLng),
           infoWindow: InfoWindow(
             title: widget.propertyTitle,
             snippet: 'Destination',
@@ -185,7 +230,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
     try {
       
       final origin = '${_currentPosition!.latitude},${_currentPosition!.longitude}';
-      final destination = '${widget.destinationLatitude},${widget.destinationLongitude}';
+      final destination = '${_destLat},${_destLng}';
       
       final url = 'https://maps.googleapis.com/maps/api/directions/json?'
           'origin=$origin&'
@@ -279,8 +324,8 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
       final distanceInMeters = Geolocator.distanceBetween(
         _currentPosition!.latitude,
         _currentPosition!.longitude,
-        widget.destinationLatitude,
-        widget.destinationLongitude,
+        _destLat,
+        _destLng,
       );
 
       // Convert to km if > 1000m
@@ -297,7 +342,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
       // Draw a straight line between the two points
       final straightLine = [
         LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-        LatLng(widget.destinationLatitude, widget.destinationLongitude),
+        LatLng(_destLat, _destLng),
       ];
 
       setState(() {
@@ -324,20 +369,20 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
     try {
       final bounds = LatLngBounds(
         southwest: LatLng(
-          _currentPosition!.latitude < widget.destinationLatitude
+          _currentPosition!.latitude < _destLat
               ? _currentPosition!.latitude
-              : widget.destinationLatitude,
-          _currentPosition!.longitude < widget.destinationLongitude
+              : _destLat,
+          _currentPosition!.longitude < _destLng
               ? _currentPosition!.longitude
-              : widget.destinationLongitude,
+              : _destLng,
         ),
         northeast: LatLng(
-          _currentPosition!.latitude > widget.destinationLatitude
+          _currentPosition!.latitude > _destLat
               ? _currentPosition!.latitude
-              : widget.destinationLatitude,
-          _currentPosition!.longitude > widget.destinationLongitude
+              : _destLat,
+          _currentPosition!.longitude > _destLng
               ? _currentPosition!.longitude
-              : widget.destinationLongitude,
+              : _destLng,
         ),
       );
 
@@ -349,7 +394,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
       try {
         _mapController!.animateCamera(
           CameraUpdate.newLatLngZoom(
-            LatLng(widget.destinationLatitude, widget.destinationLongitude),
+            LatLng(_destLat, _destLng),
             12,
           ),
         );
@@ -372,8 +417,8 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: LatLng(
-                _currentPosition?.latitude ?? widget.destinationLatitude,
-                _currentPosition?.longitude ?? widget.destinationLongitude,
+                _currentPosition?.latitude ?? _destLat,
+                _currentPosition?.longitude ?? _destLng,
               ),
               zoom: _currentPosition != null ? 14 : 15,
             ),
@@ -382,7 +427,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
                     // Show at least the destination marker if current location is not available
                     Marker(
                       markerId: const MarkerId('destination'),
-                      position: LatLng(widget.destinationLatitude, widget.destinationLongitude),
+                      position: LatLng(_destLat, _destLng),
                       infoWindow: InfoWindow(
                         title: widget.propertyTitle,
                         snippet: 'Destination',
@@ -408,7 +453,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
                       // Just center on destination if current location is not available
                       _mapController?.animateCamera(
                         CameraUpdate.newLatLngZoom(
-                          LatLng(widget.destinationLatitude, widget.destinationLongitude),
+                          LatLng(_destLat, _destLng),
                           15,
                         ),
                       );

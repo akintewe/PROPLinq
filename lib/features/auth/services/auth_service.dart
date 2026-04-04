@@ -175,7 +175,7 @@ class AuthService {
     return await _apiService.post<Map<String, dynamic>>(
       ApiConstants.verifyOtp,
       body: {
-        'otp': otp,
+        'code': otp, // API expects 'code' field
       },
       requiresAuth: true,
       fromJson: (json) => json,
@@ -193,15 +193,14 @@ class AuthService {
 
   // Verify email
   Future<ApiResponse<Map<String, dynamic>>> verifyEmail({
-    required String email,
-    required String token,
+    required String code,
   }) async {
     return await _apiService.post<Map<String, dynamic>>(
       ApiConstants.verifyEmail,
       body: {
-        'email': email,
-        'token': token,
+        'code': code, // API expects 'code' field
       },
+      requiresAuth: true,
       fromJson: (json) => json,
     );
   }

@@ -224,6 +224,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
   String _selectedCategory = 'All';
+  Map<String, dynamic> _activeFilters = {};
+  bool _hasActiveFilters = false;
+  List<PropertyModel> _filteredProperties = [];
+  bool _isShowingFilterResults = false;
   
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
@@ -876,19 +880,18 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             _isShowingSearchResults = true;
             _selectedLocation = location;
             _selectedCategory = 'All';
+            // Clear selected properties so the location-filtered list from
+            // onPropertiesSelected (fired right after) takes over; if it never
+            // fires, _getFilteredSearchResults falls back to all _properties.
+            _selectedProperties = [];
           });
         },
         onPropertiesSelected: (properties) {
           setState(() {
             _isShowingSearchResults = true;
-            // Don't clear location - it should be set by onLocationSelected
             _selectedCategory = 'All';
-            // Store selected properties for display
             _selectedProperties = properties;
           });
-          
-          // Force UI rebuild by calling _getFilteredProperties to verify state
-          final filteredProps = _getFilteredProperties();
         },
       ),
     );
@@ -906,40 +909,256 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     FilterBottomSheet.show(
       context,
       onFiltersApplied: (filters) {
-        // Handle filter application
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Filters applied: ${filters.toString()}'),
-          ),
-        );
+        setState(() {
+          _activeFilters = filters;
+          _hasActiveFilters = _checkHasActiveFilters(filters);
+          _filteredProperties = _applyFilters(filters);
+          _isShowingFilterResults = true;
+        });
+        Future.delayed(const Duration(milliseconds: 300), () {
+          _showFilteredResultsBottomSheet();
+        });
       },
     );
   }
 
-  String _getUserRoleDisplay() {
-    if (_currentUser?.userType == null || _currentUser!.userType.trim().isEmpty) {
-      return 'Home seeker'; // Default for tenant home view
-    }
-    
-    final userType = _currentUser!.userType.trim();
-    
-    switch (userType) {
-      case 'home_seeker':
-        return 'Home seeker';
-      case 'agent':
-        return 'Agent';
-      case 'realtor':
-        return 'Realtor';
-      case 'hotel':
-        return 'Hotel';
-      case 'apartment':
-        return 'Apartment';
-      default:
-        return userType.replaceAll('_', ' ').split(' ').map((word) => 
-          word.isNotEmpty ? (word[0].toUpperCase() + word.substring(1).toLowerCase()) : ''
-        ).where((word) => word.isNotEmpty).join(' ');
-    }
+  bool _checkHasActiveFilters(Map<String, dynamic> filters) {
+    return filters['category'] != 'All' ||
+        filters['status'] != 'All' ||
+        filters['rating'] != 'All' ||
+        (filters['fromPrice'] != null && filters['fromPrice'].toString().isNotEmpty) ||
+        (filters['toPrice'] != null && filters['toPrice'].toString().isNotEmpty) ||
+        (filters['location'] != null && filters['location'].toString().isNotEmpty);
   }
+
+  List<PropertyModel> _applyFilters(Map<String, dynamic> filters) {
+    List<PropertyModel> filtered = List.from(_properties);
+
+    if (filters['category'] != null && filters['category'] != 'All') {
+      final categoryFilter = filters['category'].toString().toLowerCase();
+      filtered = filtered.where((property) {
+        final propertyType = property.type.toLowerCase();
+        final propertyCategory = property.category.toLowerCase();
+        if (categoryFilter == 'hotels') {
+          return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
+        } else if (categoryFilter == 'real estate') {
+          return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
+        } else if (categoryFilter == 'shortlets') {
+          return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
+        }
+        return true;
+      }).toList();
+    }
+
+    if (filters['status'] != null && filters['status'] != 'All') {
+      final statusFilter = filters['status'].toString().toLowerCase().replaceAll(' ', '_');
+      filtered = filtered.where((p) => p.category.toLowerCase() == statusFilter).toList();
+    }
+
+    if (filters['location'] != null && filters['location'].toString().isNotEmpty) {
+      final locationFilter = filters['location'].toString().toLowerCase();
+      filtered = filtered.where((property) {
+        final loc = property.location.toLowerCase();
+        final locParts = loc.split(',').map((p) => p.trim()).toList();
+        final filterParts = locationFilter.split(',').map((p) => p.trim()).toList();
+        return loc.contains(locationFilter) ||
+            locParts.any((lp) => filterParts.any((fp) => lp.contains(fp) || fp.contains(lp)));
+      }).toList();
+    }
+
+    if (filters['fromPrice'] != null && filters['fromPrice'].toString().isNotEmpty) {
+      final fromPrice = double.tryParse(filters['fromPrice'].toString().replaceAll(RegExp(r'[^\d.]'), ''));
+      if (fromPrice != null) {
+        filtered = filtered.where((p) {
+          final price = double.tryParse(p.price.toString().replaceAll(RegExp(r'[^\d.]'), ''));
+          return price != null && price >= fromPrice;
+        }).toList();
+      }
+    }
+
+    if (filters['toPrice'] != null && filters['toPrice'].toString().isNotEmpty) {
+      final toPrice = double.tryParse(filters['toPrice'].toString().replaceAll(RegExp(r'[^\d.]'), ''));
+      if (toPrice != null) {
+        filtered = filtered.where((p) {
+          final price = double.tryParse(p.price.toString().replaceAll(RegExp(r'[^\d.]'), ''));
+          return price != null && price <= toPrice;
+        }).toList();
+      }
+    }
+
+    return filtered;
+  }
+
+  void _showFilteredResultsBottomSheet() {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      enableDrag: true,
+      isDismissible: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0E0E0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Filtered Results (${_filteredProperties.length})',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Icon(Icons.close, color: Color(0xFF868686)),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _filteredProperties.isEmpty
+                  ? _buildEmptyFilterResults()
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: _filteredProperties.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final property = _filteredProperties[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => PropertyDetailsView(propertyData: {
+                                'id': property.id,
+                                'badges': [property.user?.verificationStatus ?? 'Unverified'],
+                                'title': property.title,
+                                'location': property.location,
+                                'average_rating': property.rawJson?['average_rating']?.toString() ?? '0.0',
+                                'rating_count': property.rawJson?['rating_count'] ?? 0,
+                                'price': property.price,
+                                'type': property.type,
+                                'category': property.category,
+                                'description': property.description,
+                                'features': property.features,
+                                'imageUrl': property.imageUrl,
+                                'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null),
+                                'property360_images': property.property360Images,
+                                'video_url': property.videoUrl,
+                                'user': property.user?.toJson(),
+                                'rooms': property.rawJson?['rooms'],
+                                'agent': {
+                                  'name': property.user?.fullName ?? 'Agent',
+                                  'title': 'Agent',
+                                  'phone': property.user?.phoneNumber ?? '',
+                                  'email': property.user?.email ?? '',
+                                  'whatsapp': property.user?.whatsappNumber ?? property.user?.phoneNumber ?? '',
+                                },
+                              }),
+                            ));
+                          },
+                          child: _buildFilteredPropertyCard(property),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyFilterResults() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Color(0xFF999999)),
+            SizedBox(height: 16),
+            Text('No properties found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
+            SizedBox(height: 8),
+            Text('Try adjusting your filters to see more results',
+                style: TextStyle(fontSize: 14, color: Color(0xFF666666)), textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilteredPropertyCard(PropertyModel property) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 180,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(property.title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    const Icon(Icons.location_on, size: 14, color: Color(0xFF666666)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(property.location,
+                          style: const TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text('₦${property.price}',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -1280,11 +1499,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     // Use the same filtering logic as _getFilteredProperties
     List<PropertyModel> propertiesToFilter;
     
-    // If showing search results, use selected properties as base (even if empty)
-    if (_isShowingSearchResults) {
-      propertiesToFilter = _selectedProperties; // Use selected properties even if empty
+    // If showing search results with specific properties selected, use them
+    // Otherwise fall back to all properties (e.g. when only location label was set)
+    if (_isShowingSearchResults && _selectedProperties.isNotEmpty) {
+      propertiesToFilter = _selectedProperties;
     } else {
-      // Otherwise, use all properties
       propertiesToFilter = _properties;
     }
     
@@ -1475,11 +1694,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         ],
                       ),
                       Text(
-                        _isLoadingProfile 
-                            ? 'Loading...'
-                            : _isShowingSearchResults && _selectedLocation.isNotEmpty
-                                ? _selectedLocation
-                                : _getUserRoleDisplay(),
+                        _isShowingSearchResults && _selectedLocation.isNotEmpty
+                            ? _selectedLocation
+                            : 'Find your next stay.',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,

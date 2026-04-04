@@ -293,13 +293,15 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
   }
 
   void _getDirections(double lat, double lng, String title) async {
-    
     try {
+      // If coords are the Lagos default (no real coordinates), use locationString instead
+      final hasRealCoords = widget.latitude != null && widget.longitude != null;
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => MapDirectionsView(
-            destinationLatitude: lat,
-            destinationLongitude: lng,
+            destinationLatitude: hasRealCoords ? lat : null,
+            destinationLongitude: hasRealCoords ? lng : null,
+            destinationAddress: !hasRealCoords ? widget.locationString : null,
             propertyTitle: title,
           ),
         ),
