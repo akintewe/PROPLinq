@@ -78,8 +78,8 @@ class _SubscriptionViewState extends State<SubscriptionView> {
             if (data['data'] is List) {
               plansData = data['data'] as List<dynamic>;
               print('   - Extracted ${plansData.length} plans from data.data (List)');
-            } else if (data['data'] is Map && (data['data'] as Map).containsKey('data')) {
-              final nestedData = (data['data'] as Map<String, dynamic>)['data'];
+            } else if (data['data'] is Map) {
+              final nestedData = (data['data'] as Map)['data'];
               if (nestedData is List) {
                 plansData = nestedData;
                 print('   - Extracted ${plansData.length} plans from nested data.data');

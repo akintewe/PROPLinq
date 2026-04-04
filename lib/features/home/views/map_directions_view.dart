@@ -36,9 +36,9 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
   String _duration = '';
   bool _isLoadingDirections = false;
 
-  // Resolved destination coordinates (set in initState from widget params or geocoding)
-  late double _destLat;
-  late double _destLng;
+  // Resolved destination coordinates — default to Lagos until geocoding completes
+  double _destLat = 6.5244;
+  double _destLng = 3.3792;
 
   // Google Maps API key
   static const String _googleMapsApiKey = 'AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ';

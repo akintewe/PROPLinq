@@ -40,49 +40,61 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    // Debug: Print the raw JSON to see the actual structure
-    print('🔵 [UserModel] Raw JSON response: $json');
-    print('🔵 [UserModel] Checking for user type fields:');
-    print('  - json["role"]: ${json["role"]}');
-    print('  - json["user_type"]: ${json["user_type"]}');
-    print('  - json["userType"]: ${json["userType"]}');
-    
-    // Try multiple field names for user type
-    final userType = json['role'] ?? 
-                     json['user_type'] ?? 
-                     json['userType'] ?? 
-                     '';
-    
-    print('🔵 [UserModel] Final userType: "$userType"');
-    
+    // Resolve user type from whichever field the backend sends
+    final userType = (json['role'] ?? json['user_type'] ?? json['userType'])?.toString() ?? '';
+
+    // kycStatus: accept bool or int (0/1)
+    final rawKyc = json['kyc_status'];
+    bool? kycStatus;
+    if (rawKyc is bool) {
+      kycStatus = rawKyc;
+    } else if (rawKyc == 1 || rawKyc == '1') {
+      kycStatus = true;
+    } else if (rawKyc == 0 || rawKyc == '0') {
+      kycStatus = false;
+    } else if (json['kyc'] != null) {
+      kycStatus = true;
+    }
+
+    // kycData: only accept if it's actually a Map
+    final rawKycData = json['kyc'];
+    final kycData = rawKycData is Map ? Map<String, dynamic>.from(rawKycData) : null;
+
+    // emailVerified: accept bool or int
+    final rawEv = json['email_verified'];
+    bool? emailVerified;
+    if (rawEv is bool) {
+      emailVerified = rawEv;
+    } else if (rawEv != null) {
+      emailVerified = rawEv == 1 || rawEv == '1';
+    }
+
     return UserModel(
       id: json['id']?.toString() ?? '',
-      fullName: json['full_name'] ?? '',
-      email: json['email'] ?? '',
+      fullName: json['full_name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
       userType: userType,
-      phoneNumber: json['phone_number'] ?? '',
-      location: json['location'] ?? '',
-      country: json['country'],
-      agencyName: json['agency_name'],
-      agentType: json['agent_type'],
-      whatsappNumber: json['whatsapp_number'],
-      emailVerified: json['email_verified'],
-      profilePicture: json['profile_image_url'] ?? json['profile_picture'],
+      phoneNumber: json['phone_number']?.toString() ?? '',
+      location: json['location']?.toString() ?? '',
+      country: json['country']?.toString(),
+      agencyName: json['agency_name']?.toString(),
+      agentType: json['agent_type']?.toString(),
+      whatsappNumber: json['whatsapp_number']?.toString(),
+      emailVerified: emailVerified,
+      profilePicture: json['profile_image_url']?.toString() ?? json['profile_picture']?.toString(),
       emailVerifiedAt: json['email_verified_at'] != null
-          ? DateTime.tryParse(json['email_verified_at'])
+          ? DateTime.tryParse(json['email_verified_at'].toString())
           : null,
       phoneVerifiedAt: json['phone_verified_at'] != null
-          ? DateTime.tryParse(json['phone_verified_at'])
+          ? DateTime.tryParse(json['phone_verified_at'].toString())
           : null,
-      kycStatus: json['kyc_status'] is bool
-          ? json['kyc_status']
-          : (json['kyc'] != null ? true : null),
-      kycData: json['kyc'] is Map<String, dynamic> ? json['kyc'] : null,
+      kycStatus: kycStatus,
+      kycData: kycData,
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
   }

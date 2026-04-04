@@ -43,12 +43,13 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
           bookingsList = data;
         } else if (data is Map<String, dynamic>) {
           if (data.containsKey('data')) {
-            if (data['data'] is List) {
-              bookingsList = data['data'] as List<dynamic>;
-            } else if (data['data'] is Map && (data['data'] as Map).containsKey('bookings')) {
-              bookingsList = (data['data'] as Map)['bookings'] as List<dynamic>;
+            final inner = data['data'];
+            if (inner is List) {
+              bookingsList = inner;
+            } else if (inner is Map && inner['bookings'] is List) {
+              bookingsList = inner['bookings'] as List<dynamic>;
             }
-          } else if (data.containsKey('bookings')) {
+          } else if (data['bookings'] is List) {
             bookingsList = data['bookings'] as List<dynamic>;
           }
         }
@@ -281,15 +282,16 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
           itemCount: _bookings.length,
           itemBuilder: (context, index, realIndex) {
             final booking = _bookings[index];
-            final property = booking['property'] as Map<String, dynamic>? ?? {};
-            
+            final rawProperty = booking['property'];
+            final property = rawProperty is Map ? Map<String, dynamic>.from(rawProperty) : <String, dynamic>{};
+
             String propertyImage = 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center';
-            if (property['images'] != null && property['images'] is List) {
+            if (property['images'] is List) {
               final images = property['images'] as List;
               if (images.isNotEmpty && images[0] is Map) {
-                final firstImage = images[0] as Map<String, dynamic>;
-                propertyImage = firstImage['full_url'] ?? 
-                               firstImage['url'] ?? 
+                final firstImage = Map<String, dynamic>.from(images[0] as Map);
+                propertyImage = firstImage['full_url']?.toString() ??
+                               firstImage['url']?.toString() ??
                                propertyImage;
               }
             }
@@ -478,8 +480,7 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
                                 const SizedBox(height: 8),
                                 
                                 // Cancel Booking Button
-                                if (booking['status'] != null && 
-                                    (booking['status'] as String).toLowerCase() != 'cancelled')
+                                if (booking['status']?.toString().toLowerCase() != 'cancelled')
                                   SizedBox(
                                     width: double.infinity,
                                     child: OutlinedButton.icon(

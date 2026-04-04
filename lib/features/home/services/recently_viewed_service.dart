@@ -18,8 +18,10 @@ class RecentlyViewedService {
       List<Map<String, dynamic>> recentlyViewed = [];
       
       if (existingJson != null) {
-        final decoded = json.decode(existingJson) as List<dynamic>;
-        recentlyViewed = decoded.map((e) => e as Map<String, dynamic>).toList();
+        final decoded = json.decode(existingJson);
+        if (decoded is List) {
+          recentlyViewed = decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        }
         print('👁️ [RecentlyViewedService] Found ${recentlyViewed.length} existing recently viewed properties');
       } else {
         print('👁️ [RecentlyViewedService] No existing recently viewed properties');
@@ -98,9 +100,11 @@ class RecentlyViewedService {
       
       if (jsonString == null) return [];
       
-      final decoded = json.decode(jsonString) as List<dynamic>;
-      final recentlyViewed = decoded.map((e) => e as Map<String, dynamic>).toList();
-      
+      final decoded = json.decode(jsonString);
+      final recentlyViewed = decoded is List
+          ? decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
+
       // Filter out expired properties (older than 24 hours)
       final cutoffTime = DateTime.now().subtract(Duration(hours: _expirationHours));
       final validProperties = recentlyViewed.where((p) {
@@ -131,8 +135,10 @@ class RecentlyViewedService {
       
       if (jsonString == null) return;
       
-      final decoded = json.decode(jsonString) as List<dynamic>;
-      final recentlyViewed = decoded.map((e) => e as Map<String, dynamic>).toList();
+      final decoded = json.decode(jsonString);
+      final recentlyViewed = decoded is List
+          ? decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
       
       // Remove property with matching ID
       recentlyViewed.removeWhere((p) => p['id']?.toString() == propertyId.toString());

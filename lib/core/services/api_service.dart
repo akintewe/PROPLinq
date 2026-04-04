@@ -136,19 +136,22 @@ class ApiService {
         String? message = jsonData['message'] ?? 'An error occurred';
         
         if (jsonData.containsKey('errors')) {
-          if (jsonData['errors'] is Map) {
-            // Validation errors
-            errors = [];
-            (jsonData['errors'] as Map).forEach((key, value) {
+          final errorList = <String>[];
+          final rawErrors = jsonData['errors'];
+          if (rawErrors is Map) {
+            rawErrors.forEach((key, value) {
               if (value is List) {
-                errors!.addAll(value.cast<String>());
-              } else {
-                errors!.add(value.toString());
+                errorList.addAll(value.map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty));
+              } else if (value != null) {
+                errorList.add(value.toString());
               }
             });
-          } else if (jsonData['errors'] is List) {
-            errors = (jsonData['errors'] as List).cast<String>();
+          } else if (rawErrors is List) {
+            errorList.addAll(rawErrors.map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty));
+          } else if (rawErrors != null) {
+            errorList.add(rawErrors.toString());
           }
+          errors = errorList;
         }
         
         return ApiResponse.error(

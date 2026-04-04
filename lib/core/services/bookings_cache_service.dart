@@ -75,13 +75,12 @@ class BookingsCacheService {
         if (data is List) {
           bookingsList = data;
         } else if (data is Map<String, dynamic>) {
-          if (data.containsKey('data')) {
-            if (data['data'] is List) {
-              bookingsList = data['data'] as List<dynamic>;
-            } else if (data['data'] is Map && (data['data'] as Map).containsKey('bookings')) {
-              bookingsList = (data['data'] as Map)['bookings'] as List<dynamic>;
-            }
-          } else if (data.containsKey('bookings')) {
+          final inner = data['data'];
+          if (inner is List) {
+            bookingsList = inner;
+          } else if (inner is Map && inner['bookings'] is List) {
+            bookingsList = inner['bookings'] as List<dynamic>;
+          } else if (data['bookings'] is List) {
             bookingsList = data['bookings'] as List<dynamic>;
           }
         }

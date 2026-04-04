@@ -116,18 +116,26 @@ class ChatService {
               final messagesValue = innerData['messages'];
               
               if (messagesValue is List) {
-                final chatData = messagesValue;
-                return List<Map<String, dynamic>>.from(chatData);
+                return messagesValue
+                    .whereType<Map>()
+                    .map((e) => Map<String, dynamic>.from(e))
+                    .toList();
               }
             }
           }
           
           // Fallback: check if data['data'] is directly a List (old API structure)
           if (innerData is List) {
-            return List<Map<String, dynamic>>.from(innerData);
+            return innerData
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
           }
         } else if (data is List) {
-          return List<Map<String, dynamic>>.from(data);
+          return data
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
         }
         return [];
       }
@@ -165,10 +173,18 @@ class ChatService {
         final data = response.data;
         
         if (data is Map<String, dynamic> && data.containsKey('data')) {
-          final chatData = data['data'] as List<dynamic>?;
-          return List<Map<String, dynamic>>.from(chatData ?? []);
+          final chatData = data['data'];
+          if (chatData is List) {
+            return chatData
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          }
         } else if (data is List) {
-          return List<Map<String, dynamic>>.from(data);
+          return data
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
         }
         return [];
       }
@@ -305,7 +321,8 @@ class ChatService {
         if (data is Map<String, dynamic>) {
           // Check for nested data
           if (data.containsKey('data')) {
-            return data['data'] as Map<String, dynamic>?;
+            final inner = data['data'];
+            return inner is Map ? Map<String, dynamic>.from(inner) : null;
           }
           return data;
         }
@@ -515,16 +532,14 @@ class ChatService {
         
         // Handle different response formats
         if (data is Map<String, dynamic>) {
-          // Direct object response
           if (data.containsKey('data')) {
-            final propertyData = data['data'] as Map<String, dynamic>?;
-            return propertyData;
-          } else {
-            return data;
+            final inner = data['data'];
+            return inner is Map ? Map<String, dynamic>.from(inner) : null;
           }
+          return data;
         } else if (data is List && data.isNotEmpty) {
-          // Array response - take first item
-          return data.first as Map<String, dynamic>?;
+          final first = data.first;
+          return first is Map ? Map<String, dynamic>.from(first) : null;
         } else {
           return null;
         }

@@ -298,10 +298,13 @@ class AuthService {
       
       
       if (response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-        
+        final rawData = response.data;
+        final responseData = rawData is Map ? Map<String, dynamic>.from(rawData) : <String, dynamic>{};
+
         // Update local user data with new profile image URL
-        if (responseData['data'] != null && responseData['data']['profile_image_url'] != null) {
+        final innerData = responseData['data'];
+        final profileImageUrl = innerData is Map ? innerData['profile_image_url']?.toString() : null;
+        if (profileImageUrl != null) {
           final currentUser = await getCurrentUser();
           if (currentUser != null) {
             final updatedUser = UserModel(
@@ -315,7 +318,7 @@ class AuthService {
               agentType: currentUser.agentType,
               whatsappNumber: currentUser.whatsappNumber,
               emailVerified: currentUser.emailVerified,
-              profilePicture: responseData['data']['profile_image_url'],
+              profilePicture: profileImageUrl,
               emailVerifiedAt: currentUser.emailVerifiedAt,
               phoneVerifiedAt: currentUser.phoneVerifiedAt,
               kycStatus: currentUser.kycStatus,

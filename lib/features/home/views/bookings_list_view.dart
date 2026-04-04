@@ -65,20 +65,19 @@ class _BookingsListViewState extends State<BookingsListView> {
           // If data is a map, check various nested structures
           if (data.containsKey('data')) {
             print('📋 [BookingsListView] Found "data" key, type: ${data['data'].runtimeType}');
-            if (data['data'] is List) {
-              bookingsList = data['data'] as List<dynamic>;
+            final inner = data['data'];
+            if (inner is List) {
+              bookingsList = inner;
               print('📋 [BookingsListView] Extracted ${bookingsList.length} bookings from data.data (List)');
-            } else if (data['data'] is Map && (data['data'] as Map).containsKey('bookings')) {
-              bookingsList = (data['data'] as Map)['bookings'] as List<dynamic>;
+            } else if (inner is Map && inner['bookings'] is List) {
+              bookingsList = inner['bookings'] as List<dynamic>;
               print('📋 [BookingsListView] Extracted ${bookingsList.length} bookings from data.data.bookings');
             }
-          } else if (data.containsKey('bookings')) {
+          } else if (data['bookings'] is List) {
             bookingsList = data['bookings'] as List<dynamic>;
             print('📋 [BookingsListView] Extracted ${bookingsList.length} bookings from data.bookings');
           } else {
-            // Check all keys to see what we have
             print('📋 [BookingsListView] Data keys: ${data.keys.toList()}');
-            // Try to find any list in the map
             for (var key in data.keys) {
               if (data[key] is List) {
                 bookingsList = data[key] as List<dynamic>;

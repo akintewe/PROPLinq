@@ -15,13 +15,20 @@ class FavoriteService {
       
       
       if (response.success && response.data != null) {
-        final data = response.data!['data'] as List<dynamic>;
-        
-        final properties = data.map((json) {
-          return PropertyModel.fromJson(json);
-        }).toList();
-        
-        return properties;
+        final raw = response.data!['data'] ?? response.data;
+        if (raw is List) {
+          return raw
+              .whereType<Map>()
+              .map((json) {
+                try {
+                  return PropertyModel.fromJson(Map<String, dynamic>.from(json));
+                } catch (_) {
+                  return null;
+                }
+              })
+              .whereType<PropertyModel>()
+              .toList();
+        }
       }
       
       return [];

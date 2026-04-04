@@ -2804,7 +2804,12 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
 
     // Build RoomModel list from rawJson rooms
     final rooms = rawRooms
-        .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
+        .whereType<Map>()
+        .map((r) {
+          try { return RoomModel.fromJson(Map<String, dynamic>.from(r)); }
+          catch (_) { return null; }
+        })
+        .whereType<RoomModel>()
         .toList();
 
     if (rooms.length == 1) {

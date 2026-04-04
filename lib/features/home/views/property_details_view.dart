@@ -85,13 +85,18 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     _addToRecentlyViewed();
     // Pre-load rooms from navigation data if available
     final property = widget.propertyData ?? _getDefaultProperty();
-    final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
+    final propertyType = property['type']?.toString().toLowerCase() ?? '';
     if (propertyType == 'hotel') {
       final embeddedRooms = property['rooms'];
       debugPrint('🏨 [PropertyDetailsView] Navigation rooms data: $embeddedRooms');
       if (embeddedRooms != null && embeddedRooms is List && embeddedRooms.isNotEmpty) {
         _hotelRooms = embeddedRooms
-            .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((r) {
+              try { return RoomModel.fromJson(Map<String, dynamic>.from(r)); }
+              catch (_) { return null; }
+            })
+            .whereType<RoomModel>()
             .toList();
         debugPrint('🏨 [PropertyDetailsView] Pre-loaded ${_hotelRooms.length} rooms from navigation data');
       } else {
@@ -133,7 +138,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
         }
 
         // If property is a hotel, load rooms
-        final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
+        final propertyType = property['type']?.toString().toLowerCase() ?? '';
         if (propertyType == 'hotel') {
           // Try to use rooms embedded in the refreshed property response first
           final embeddedRooms = updatedProperty?.rawJson?['rooms'];
@@ -142,7 +147,12 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
             if (mounted) {
               setState(() {
                 _hotelRooms = embeddedRooms
-                    .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
+                    .whereType<Map>()
+                    .map((r) {
+                      try { return RoomModel.fromJson(Map<String, dynamic>.from(r)); }
+                      catch (_) { return null; }
+                    })
+                    .whereType<RoomModel>()
                     .toList();
                 _isLoadingRooms = false;
               });
@@ -654,81 +664,68 @@ If you don't have the app, the link will open in your browser where you can down
   }
 
 
+  // Helper: safely extract a Map field from property
+  Map<String, dynamic>? _asMap(dynamic v) =>
+      v is Map ? Map<String, dynamic>.from(v) : null;
+
   /// Get agent name from property data
   String _getAgentName(Map<String, dynamic> property) {
-    final user = property['user'] as Map<String, dynamic>?;
-    if (user != null && user['full_name'] != null) {
-      return user['full_name'] as String;
-    }
-    // Fallback to agent data if user data not available
-    final agent = property['agent'] as Map<String, dynamic>?;
-    return agent?['name'] as String? ?? 'Agent';
+    final user = _asMap(property['user']);
+    final name = user?['full_name']?.toString();
+    if (name != null && name.isNotEmpty) return name;
+    final agent = _asMap(property['agent']);
+    return agent?['name']?.toString() ?? 'Agent';
   }
 
   /// Get agent title from property data
   String _getAgentTitle(Map<String, dynamic> property) {
-    final user = property['user'] as Map<String, dynamic>?;
-    if (user != null && user['agent_type'] != null) {
-      final agentType = user['agent_type'] as String;
-      return agentType.replaceAll('_', ' ').split(' ').map((word) => 
-        word[0].toUpperCase() + word.substring(1)
+    final user = _asMap(property['user']);
+    final agentType = user?['agent_type']?.toString();
+    if (agentType != null && agentType.isNotEmpty) {
+      return agentType.replaceAll('_', ' ').split(' ').map((word) =>
+          word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : word
       ).join(' ');
     }
-    // Fallback to agent data if user data not available
-    final agent = property['agent'] as Map<String, dynamic>?;
-    return agent?['title'] as String? ?? 'Agent';
+    final agent = _asMap(property['agent']);
+    return agent?['title']?.toString() ?? 'Agent';
   }
 
   /// Get agent phone from property data
   String _getAgentPhone(Map<String, dynamic> property) {
-    final user = property['user'] as Map<String, dynamic>?;
-    if (user != null && user['phone_number'] != null) {
-      return user['phone_number'] as String;
-    }
-    // Fallback to agent data if user data not available
-    final agent = property['agent'] as Map<String, dynamic>?;
-    return agent?['phone'] as String? ?? '';
+    final user = _asMap(property['user']);
+    final phone = user?['phone_number']?.toString();
+    if (phone != null && phone.isNotEmpty) return phone;
+    final agent = _asMap(property['agent']);
+    return agent?['phone']?.toString() ?? '';
   }
 
   /// Get agent email from property data
   String _getAgentEmail(Map<String, dynamic> property) {
-    final user = property['user'] as Map<String, dynamic>?;
-    if (user != null && user['email'] != null) {
-      return user['email'] as String;
-    }
-    // Fallback to agent data if user data not available
-    final agent = property['agent'] as Map<String, dynamic>?;
-    return agent?['email'] as String? ?? '';
+    final user = _asMap(property['user']);
+    final email = user?['email']?.toString();
+    if (email != null && email.isNotEmpty) return email;
+    final agent = _asMap(property['agent']);
+    return agent?['email']?.toString() ?? '';
   }
 
   /// Get agent WhatsApp from property data
   String _getAgentWhatsApp(Map<String, dynamic> property) {
-    final user = property['user'] as Map<String, dynamic>?;
-    if (user != null && user['whatsapp_number'] != null) {
-      return user['whatsapp_number'] as String;
-    }
-    if (user != null && user['phone_number'] != null) {
-      return user['phone_number'] as String;
-    }
-    // Fallback to agent data if user data not available
-    final agent = property['agent'] as Map<String, dynamic>?;
-    return agent?['whatsapp'] as String? ?? agent?['phone'] as String? ?? '';
+    final user = _asMap(property['user']);
+    final whatsapp = user?['whatsapp_number']?.toString();
+    if (whatsapp != null && whatsapp.isNotEmpty) return whatsapp;
+    final phone = user?['phone_number']?.toString();
+    if (phone != null && phone.isNotEmpty) return phone;
+    final agent = _asMap(property['agent']);
+    return agent?['whatsapp']?.toString() ?? agent?['phone']?.toString() ?? '';
   }
 
   /// Get agent profile image from property data
   String? _getAgentProfileImage(Map<String, dynamic> property) {
-    
-    final user = property['user'] as Map<String, dynamic>?;
-    
-    if (user != null && user['profile_image_full_url'] != null) {
-      final profileImageUrl = user['profile_image_full_url'] as String;
-      return profileImageUrl;
-    }
-    
-    
-    // Fallback to agent data if user data not available
-    final agent = property['agent'] as Map<String, dynamic>?;
-    return agent?['profile_image'] as String?;
+    final user = _asMap(property['user']);
+    final url = user?['profile_image_full_url']?.toString();
+    if (url != null && url.isNotEmpty) return url;
+    final agent = _asMap(property['agent']);
+    return agent?['profile_image']?.toString();
   }
 
 
@@ -1488,7 +1485,7 @@ If you don't have the app, the link will open in your browser where you can down
             ),
           )
         else
-          ...ratings.map((rating) => _buildRatingCard(rating as Map<String, dynamic>)),
+          ...ratings.whereType<Map>().map((rating) => _buildRatingCard(Map<String, dynamic>.from(rating))),
       ],
     );
   }
@@ -2539,177 +2536,36 @@ If you don't have the app, the link will open in your browser where you can down
                             const SizedBox(height: 32),
                           ],
 
-                          // Action buttons for non-hotel properties
-                          if (!isHotel) ...[
-                            if (isShortlet) ...[
-                              // Shortlet buttons
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          begin: Alignment.centerLeft,
-                                          end: Alignment.centerRight,
-                                          stops: [0.0, 1.0, 1.0],
-                                          colors: [
-                                            Color(0xFF426DC2),
-                                            Color(0xFF63ADDC),
-                                            Color(0xFF75CFEA),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                      child: ElevatedButton(
-                                        onPressed: () {},
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(25),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Book shortlet',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                          // Mark as rented button for agents on non-hotel, non-shortlet properties
+                          if (!isHotel && !isShortlet && !widget.isHomeSeeker) ...[
+                            Container(
+                              width: double.infinity,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: const Color(0xFF426DC2)),
+                                borderRadius: BorderRadius.circular(25),
                               ),
-                              
-                              const SizedBox(height: 16),
-                              
-                              // Container(
-                              //   width: double.infinity,
-                              //   height: 50,
-                              //   decoration: BoxDecoration(
-                              //     border: Border.all(color: const Color(0xFF426DC2)),
-                              //     borderRadius: BorderRadius.circular(25),
-                              //   ),
-                              //   child: ElevatedButton(
-                              //     onPressed: () {
-                              //       Navigator.of(context).push(
-                              //         MaterialPageRoute(
-                              //           builder: (context) => const RentNowPayLaterView(),
-                              //         ),
-                              //       );
-                              //     },
-                              //     style: ElevatedButton.styleFrom(
-                              //       backgroundColor: Colors.white,
-                              //       shadowColor: Colors.transparent,
-                              //       elevation: 0,
-                              //       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              //       shape: RoundedRectangleBorder(
-                              //         borderRadius: BorderRadius.circular(25),
-                              //       ),
-                              //     ),
-                              //     child: const Text(
-                              //       'Rent now-pay later',
-                              //       style: TextStyle(
-                              //         fontSize: 15,
-                              //         fontWeight: FontWeight.w600,
-                              //         color: Color(0xFF426DC2),
-                              //       ),
-                              //     ),
-                              //   ),
-                              // ),
-                            ] else ...[
-                              // Apartment buttons (for rent or sale)
-                              // Row(
-                              //   children: [
-                              //     Expanded(
-                              //       child: Container(
-                              //         height: 50,
-                              //         decoration: BoxDecoration(
-                              //           gradient: const LinearGradient(
-                              //             begin: Alignment.centerLeft,
-                              //             end: Alignment.centerRight,
-                              //             stops: [0.0, 1.0, 1.0],
-                              //             colors: [
-                              //               Color(0xFF426DC2),
-                              //               Color(0xFF63ADDC),
-                              //               Color(0xFF75CFEA),
-                              //             ],
-                              //           ),
-                              //           borderRadius: BorderRadius.circular(25),
-                              //         ),
-                              //         child: ElevatedButton(
-                              //           onPressed: () {
-                              //             Navigator.of(context).push(
-                              //               MaterialPageRoute(
-                              //                 builder: (context) => const RentNowPayLaterView(),
-                              //               ),
-                              //             );
-                              //           },
-                              //           style: ElevatedButton.styleFrom(
-                              //             backgroundColor: Colors.transparent,
-                              //             shadowColor: Colors.transparent,
-                              //             elevation: 0,
-                              //             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              //             shape: RoundedRectangleBorder(
-                              //               borderRadius: BorderRadius.circular(25),
-                              //             ),
-                              //           ),
-                              //           child: const Text(
-                              //             'Rent now-pay later',
-                              //             style: TextStyle(
-                              //               fontSize: 15,
-                              //               fontWeight: FontWeight.w600,
-                              //               color: Colors.white,
-                              //             ),
-                              //           ),
-                              //         ),
-                              //       ),
-                              //     ),
-                              //   ],
-                              // ),
-                              
-                          // Removed duplicate Contact Agent button - keeping only the bottom bar button
-                              
-                              // Mark as rented button for agents
-                              if (!widget.isHomeSeeker) ...[
-                                Container(
-                                  width: double.infinity,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: const Color(0xFF426DC2)),
+                              child: ElevatedButton(
+                                onPressed: _markAsRented,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  shadowColor: Colors.transparent,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(25),
                                   ),
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      // For agents, mark as rented
-                                      _markAsRented();
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      shadowColor: Colors.transparent,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(25),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Mark as rented',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF426DC2),
-                                      ),
-                                    ),
+                                ),
+                                child: const Text(
+                                  'Mark as rented',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF426DC2),
                                   ),
                                 ),
-                              ],
-                            ],
+                              ),
+                            ),
                           ],
 
                           const SizedBox(height: 16),

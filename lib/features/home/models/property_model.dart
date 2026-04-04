@@ -120,167 +120,161 @@ class PropertyModel {
     };
   }
 
-  /// Create from JSON
+  /// Create from JSON — tolerant of missing/wrong-type fields
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
-    // Parse features from JSON
+    // Parse features
     List<String>? features;
-    if (json['features'] != null) {
-      final featuresList = json['features'] as List<dynamic>;
-      features = featuresList.map((feature) => feature.toString()).toList();
+    final rawFeatures = json['features'];
+    if (rawFeatures is List) {
+      features = rawFeatures.map((f) => f?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+    } else if (rawFeatures is String && rawFeatures.isNotEmpty) {
+      features = rawFeatures.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
     }
-    
+
+    // Helper: normalise a relative image path to a full URL
+    String normaliseUrl(String raw) {
+      if (raw.startsWith('property-images/') ||
+          raw.startsWith('property-360-images/') ||
+          raw.startsWith('uploads/')) {
+        return 'https://proapi.proplinq.com/storage/$raw';
+      }
+      return raw;
+    }
+
     // Parse images array
     String? imageUrl;
     List<Map<String, dynamic>>? images;
     bool hasFeaturedImage = false;
-    
-    if (json['images'] != null && json['images'] is List && (json['images'] as List).isNotEmpty) {
-      final imagesList = json['images'] as List<dynamic>;
-      
-      // Store all images
-      images = imagesList.map((image) {
-        final imageMap = image as Map<String, dynamic>;
-        // Ensure full URLs are properly formatted
-        if (imageMap['full_url'] != null) {
-          final rawUrl = imageMap['full_url'] as String;
-          if (rawUrl.startsWith('property-images/') || rawUrl.startsWith('uploads/')) {
-            imageMap['full_url'] = 'https://proapi.proplinq.com/storage/$rawUrl';
-          }
-        }
-        // Check if this image is featured
-        if (imageMap['is_featured'] == true) {
-          hasFeaturedImage = true;
-        }
-        return imageMap;
-      }).toList();
-      
-      // Set the first image as the primary imageUrl for backward compatibility
-      final firstImage = images.first;
-      String? rawImageUrl = firstImage['full_url'] as String? ?? firstImage['image_url'] as String?;
-      if (rawImageUrl != null) {
-        // If it's a relative path, construct the full URL
-        if (rawImageUrl.startsWith('property-images/') || rawImageUrl.startsWith('uploads/')) {
-          imageUrl = 'https://proapi.proplinq.com/storage/$rawImageUrl';
-        } else {
-          imageUrl = rawImageUrl;
-        }
-      }
-    } else if (json['images_full_urls'] != null && json['images_full_urls'] is List && (json['images_full_urls'] as List).isNotEmpty) {
-      // Handle alternative structure with images_full_urls array
-      final imagesList = json['images_full_urls'] as List<dynamic>;
-      images = imagesList.map((url) {
-        return {
-          'full_url': url.toString(),
-          'is_featured': false,
-        };
-      }).toList();
-      
-      // Set the first image as the primary imageUrl
+
+    final rawImages = json['images'];
+    if (rawImages is List && rawImages.isNotEmpty) {
+      images = rawImages
+          .whereType<Map>()
+          .map((img) {
+            final m = Map<String, dynamic>.from(img);
+            final rawUrl = m['full_url']?.toString();
+            if (rawUrl != null && rawUrl.isNotEmpty) {
+              m['full_url'] = normaliseUrl(rawUrl);
+            }
+            if (m['is_featured'] == true) hasFeaturedImage = true;
+            return m;
+          })
+          .toList();
+
       if (images.isNotEmpty) {
-        imageUrl = images.first['full_url'] as String;
-      }
-    }
-    
-    // Determine if property is featured
-    // Check property-level is_featured first, then check if any image has is_featured: true
-    bool isFeatured = json['is_featured'] as bool? ?? false;
-    if (!isFeatured && hasFeaturedImage) {
-      isFeatured = true;
-    }
-    
-    // Parse property360_images array
-    List<Map<String, dynamic>>? property360Images;
-    if (json['property360_images'] != null && json['property360_images'] is List && (json['property360_images'] as List).isNotEmpty) {
-      final property360ImagesList = json['property360_images'] as List<dynamic>;
-      
-      // Store all 360 images
-      property360Images = property360ImagesList.map((image) {
-        final imageMap = image as Map<String, dynamic>;
-        // Ensure full URLs are properly formatted
-        if (imageMap['full_url'] != null) {
-          final rawUrl = imageMap['full_url'] as String;
-          if (rawUrl.startsWith('property-360-images/') || rawUrl.startsWith('uploads/')) {
-            imageMap['full_url'] = 'https://proapi.proplinq.com/storage/$rawUrl';
-          }
+        final first = images.first;
+        final rawUrl = first['full_url']?.toString() ?? first['image_url']?.toString();
+        if (rawUrl != null && rawUrl.isNotEmpty) {
+          imageUrl = normaliseUrl(rawUrl);
         }
-        return imageMap;
-      }).toList();
-      
-    } else if (json['property_360_images_full_urls'] != null && json['property_360_images_full_urls'] is List && (json['property_360_images_full_urls'] as List).isNotEmpty) {
-      // Handle alternative field structure
-      final property360ImagesList = json['property_360_images_full_urls'] as List<dynamic>;
-      
-      // Store all 360 images with proper structure
-      property360Images = property360ImagesList.map((image) {
-        final imageMap = image as Map<String, dynamic>;
-        // Convert the alternative structure to match our expected format
-        return {
-          'id': imageMap['id'],
-          'property_id': imageMap['id'], // Use id as property_id if not present
-          'full_url': imageMap['url'], // Map 'url' to 'full_url'
+      }
+    } else {
+      final rawAlt = json['images_full_urls'];
+      if (rawAlt is List && rawAlt.isNotEmpty) {
+        images = rawAlt.map((url) => <String, dynamic>{
+          'full_url': url?.toString() ?? '',
           'is_featured': false,
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        };
-      }).toList();
-      
-    } else {
-      // Check if 360 images are stored in the regular images array
-      if (images != null && images.isNotEmpty) {
-        final image360List = <Map<String, dynamic>>[];
-        for (final image in images) {
-          final imageMap = image;
-          final fullUrl = imageMap['full_url'] as String?;
-          
-          // Check if this is a 360 image based on the URL path
-          if (fullUrl != null && fullUrl.contains('property-360-images/')) {
-            image360List.add(imageMap);
-          }
-        }
-        
-        if (image360List.isNotEmpty) {
-          property360Images = image360List;
-        } else {
-        }
-      } else {
+        }).toList();
+        imageUrl = images.first['full_url']?.toString();
       }
     }
-    
-    // Parse video URL
-    String? videoUrl;
-    if (json['video_url'] != null && json['video_url'].toString().isNotEmpty) {
-      videoUrl = json['video_url'] as String;
-    } else {
+
+    // Determine if property is featured
+    final rawFeatured = json['is_featured'];
+    bool isFeatured = rawFeatured == true || rawFeatured == 1;
+    if (!isFeatured && hasFeaturedImage) isFeatured = true;
+
+    // Parse 360 images
+    List<Map<String, dynamic>>? property360Images;
+    final raw360 = json['property360_images'];
+    final raw360Alt = json['property_360_images_full_urls'];
+    if (raw360 is List && raw360.isNotEmpty) {
+      property360Images = raw360
+          .whereType<Map>()
+          .map((img) {
+            final m = Map<String, dynamic>.from(img);
+            final rawUrl = m['full_url']?.toString();
+            if (rawUrl != null && rawUrl.isNotEmpty) {
+              m['full_url'] = normaliseUrl(rawUrl);
+            }
+            return m;
+          })
+          .toList();
+    } else if (raw360Alt is List && raw360Alt.isNotEmpty) {
+      property360Images = raw360Alt
+          .whereType<Map>()
+          .map((img) {
+            final m = Map<String, dynamic>.from(img);
+            return <String, dynamic>{
+              'id': m['id'],
+              'property_id': m['id'],
+              'full_url': m['url']?.toString() ?? '',
+              'is_featured': false,
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            };
+          })
+          .toList();
+    } else if (images != null) {
+      final list360 = images.where((img) {
+        final u = img['full_url']?.toString() ?? '';
+        return u.contains('property-360-images/');
+      }).toList();
+      if (list360.isNotEmpty) property360Images = list360;
     }
-    
+
+    // Parse video URL
+    final rawVideo = json['video_url']?.toString();
+    final videoUrl = (rawVideo != null && rawVideo.isNotEmpty) ? rawVideo : null;
+
     // Parse user data
     PropertyUser? user;
-    if (json['user'] != null) {
-      user = PropertyUser.fromJson(json['user'] as Map<String, dynamic>);
+    final rawUser = json['user'];
+    if (rawUser is Map) {
+      try {
+        user = PropertyUser.fromJson(Map<String, dynamic>.from(rawUser));
+      } catch (_) {}
     }
-    
+
+    // Parse isFavorite — backend may send bool or int (0/1)
+    final rawLiked = json['is_liked'] ?? json['isLiked'];
+    final isFavorite = rawLiked == true || rawLiked == 1;
+
     return PropertyModel(
-      id: json['id'] as int,
-      userId: json['user_id'] as int,
-      type: _toTitleCase(json['type'] as String),
-      title: _toTitleCase(json['title'] as String),
-      description: json['description'] as String,
-      price: json['price'] as String,
-      category: _toTitleCase(json['category'] as String),
-      location: json['location'] as String,
+      id: _parseInt(json['id']) ?? 0,
+      userId: _parseInt(json['user_id']) ?? 0,
+      type: _toTitleCase(json['type']?.toString() ?? ''),
+      title: _toTitleCase(json['title']?.toString() ?? ''),
+      description: json['description']?.toString() ?? '',
+      price: json['price']?.toString() ?? '0',
+      category: _toTitleCase(json['category']?.toString() ?? ''),
+      location: json['location']?.toString() ?? '',
       imageUrl: imageUrl,
       images: images,
       property360Images: property360Images,
       videoUrl: videoUrl,
-      bedrooms: json['bedrooms'] as int?,
-      bathrooms: json['bathrooms'] as int?,
-      area: json['area'] != null ? (json['area'] as num).toDouble() : null,
+      bedrooms: _parseInt(json['bedrooms']),
+      bathrooms: _parseInt(json['bathrooms']),
+      area: _parseDouble(json['area']),
       features: features,
-      isFavorite: json['is_liked'] as bool? ?? json['isLiked'] as bool? ?? false,
+      isFavorite: isFavorite,
       isFeatured: isFeatured,
       user: user,
-      rawJson: json, // Store raw JSON to preserve ratings and other fields
+      rawJson: json,
     );
+  }
+
+  static int? _parseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is double) return v.toInt();
+    return int.tryParse(v.toString());
+  }
+
+  static double? _parseDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
   }
 
   /// Formatted price string
@@ -344,54 +338,57 @@ class PropertyUser {
     this.kyc,
   });
 
-  /// Create from JSON
+  /// Create from JSON — tolerant of missing/wrong-type fields
   factory PropertyUser.fromJson(Map<String, dynamic> json) {
-    // Handle new structure with full_name or construct from first_name/last_name
+    // Resolve full name from whichever fields exist
     String fullName;
-    if (json['full_name'] != null && json['full_name'].toString().isNotEmpty) {
-      fullName = json['full_name'] as String;
-    } else if (json['first_name'] != null || json['last_name'] != null) {
-      final firstName = json['first_name']?.toString() ?? '';
-      final lastName = json['last_name']?.toString() ?? '';
-      fullName = '$firstName $lastName'.trim();
-      if (fullName.isEmpty) {
-        fullName = json['name']?.toString() ?? 'Unknown';
-      }
+    final rawFullName = json['full_name']?.toString() ?? '';
+    if (rawFullName.isNotEmpty) {
+      fullName = rawFullName;
     } else {
-      fullName = json['name']?.toString() ?? 'Unknown';
+      final first = json['first_name']?.toString() ?? '';
+      final last = json['last_name']?.toString() ?? '';
+      fullName = '$first $last'.trim();
+      if (fullName.isEmpty) fullName = json['name']?.toString() ?? 'Unknown';
     }
-    
-    // Handle profile_image vs profile_image_full_url
-    String? profileImageFullUrl = json['profile_image_full_url'] as String?;
-    if (profileImageFullUrl == null && json['profile_image'] != null) {
-      profileImageFullUrl = json['profile_image'] as String;
-      // Construct full URL if it's a relative path
-      if (profileImageFullUrl.startsWith('profile_images/') || profileImageFullUrl.startsWith('uploads/')) {
-        profileImageFullUrl = 'https://proapi.proplinq.com/storage/$profileImageFullUrl';
+
+    // Resolve profile image URL
+    String? profileImageFullUrl = json['profile_image_full_url']?.toString();
+    if (profileImageFullUrl == null || profileImageFullUrl.isEmpty) {
+      profileImageFullUrl = json['profile_image']?.toString();
+    }
+    if (profileImageFullUrl != null &&
+        (profileImageFullUrl.startsWith('profile_images/') ||
+            profileImageFullUrl.startsWith('uploads/'))) {
+      profileImageFullUrl = 'https://proapi.proplinq.com/storage/$profileImageFullUrl';
+    }
+
+    // Resolve KYC
+    PropertyKyc? kyc;
+    final rawKyc = json['kyc'];
+    if (rawKyc is Map) {
+      try {
+        kyc = PropertyKyc.fromJson(Map<String, dynamic>.from(rawKyc));
+      } catch (_) {}
+    } else {
+      final kycStatus = json['kyc_status']?.toString();
+      if (kycStatus != null && kycStatus.isNotEmpty) {
+        kyc = PropertyKyc(
+          userId: PropertyModel._parseInt(json['id']) ?? 0,
+          status: kycStatus,
+        );
       }
     }
-    
-    // Handle kyc_status - create PropertyKyc if kyc_status exists
-    PropertyKyc? kyc;
-    if (json['kyc'] != null) {
-      kyc = PropertyKyc.fromJson(json['kyc'] as Map<String, dynamic>);
-    } else if (json['kyc_status'] != null) {
-      // Create a minimal KYC object from kyc_status
-      kyc = PropertyKyc(
-        userId: json['id'] as int,
-        status: json['kyc_status'] as String,
-      );
-    }
-    
+
     return PropertyUser(
-      id: json['id'] as int,
+      id: PropertyModel._parseInt(json['id']) ?? 0,
       fullName: fullName,
-      email: json['email'] as String,
-      phoneNumber: json['phone_number'] as String?,
-      location: json['location'] as String?,
-      agencyName: json['agency_name'] as String?,
-      agentType: json['agent_type'] as String?,
-      whatsappNumber: json['whatsapp_number'] as String?,
+      email: json['email']?.toString() ?? '',
+      phoneNumber: json['phone_number']?.toString(),
+      location: json['location']?.toString(),
+      agencyName: json['agency_name']?.toString(),
+      agentType: json['agent_type']?.toString(),
+      whatsappNumber: json['whatsapp_number']?.toString(),
       profileImageFullUrl: profileImageFullUrl,
       kyc: kyc,
     );
@@ -462,14 +459,14 @@ class PropertyKyc {
     this.cacDocumentFullUrl,
   });
 
-  /// Create from JSON
+  /// Create from JSON — tolerant of missing/wrong-type fields
   factory PropertyKyc.fromJson(Map<String, dynamic> json) {
     return PropertyKyc(
-      userId: json['user_id'] as int,
-      status: json['status'] as String,
-      utilityBillFullUrl: json['utility_bill_full_url'] as String?,
-      bankStatementFullUrl: json['bank_statement_full_url'] as String?,
-      cacDocumentFullUrl: json['cac_document_full_url'] as String?,
+      userId: PropertyModel._parseInt(json['user_id']) ?? 0,
+      status: json['status']?.toString() ?? 'unknown',
+      utilityBillFullUrl: json['utility_bill_full_url']?.toString(),
+      bankStatementFullUrl: json['bank_statement_full_url']?.toString(),
+      cacDocumentFullUrl: json['cac_document_full_url']?.toString(),
     );
   }
 

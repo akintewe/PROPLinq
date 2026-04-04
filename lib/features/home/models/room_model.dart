@@ -49,13 +49,14 @@ class RoomModel {
       price: parsePrice(json['price']),
       capacity: parseInt(json['capacity']),
       count: parseInt(json['count']),
-      features: (json['features'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
+      features: json['features'] is List
+          ? (json['features'] as List).map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList()
+          : [],
       imageUrl: json['image_url']?.toString() ??
-          ((json['images'] as List<dynamic>?)?.isNotEmpty == true
-              ? (json['images'] as List<dynamic>).first['url']?.toString()
+          (json['images'] is List && (json['images'] as List).isNotEmpty
+              ? (json['images'] as List).first is Map
+                  ? ((json['images'] as List).first as Map)['url']?.toString()
+                  : null
               : null),
     );
   }

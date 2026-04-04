@@ -276,7 +276,8 @@ class PropertyService {
 
         // Fallback: treat as non-paginated data
         print('   - Non-paginated response, treating as single page');
-        final propertiesData = data is List ? data : (data is Map && data.containsKey('data') ? data['data'] as List : []);
+        final rawData = data is List ? data : (data is Map && data.containsKey('data') ? data['data'] : null);
+        final propertiesData = rawData is List ? rawData : <dynamic>[];
         return PaginatedPropertiesResponse(
           properties: propertiesData,
           currentPage: 1,
@@ -356,7 +357,6 @@ class PropertyService {
           if (data['data'] is List) {
             propertiesData = data['data'] as List<dynamic>;
           } else {
-            // Fallback: treat the whole data as a single property (unlikely but safe)
             propertiesData = [];
           }
         } else {
@@ -364,7 +364,12 @@ class PropertyService {
         }
 
         final List<PropertyModel> properties = propertiesData
-            .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((json) {
+              try { return PropertyModel.fromJson(Map<String, dynamic>.from(json)); }
+              catch (_) { return null; }
+            })
+            .whereType<PropertyModel>()
             .toList();
 
         return properties;
@@ -440,8 +445,10 @@ class PropertyService {
             // Check if data contains a 'data' key with array (paginated)
             if (data.containsKey('data') && data['data'] is List) {
               propertiesData = data['data'] as List<dynamic>;
-              currentPageFromResponse = data['current_page'] as int?;
-              lastPage = data['last_page'] as int?;
+              final rawCp = data['current_page'];
+              final rawLp = data['last_page'];
+              currentPageFromResponse = rawCp is int ? rawCp : int.tryParse(rawCp?.toString() ?? '');
+              lastPage = rawLp is int ? rawLp : int.tryParse(rawLp?.toString() ?? '');
               
               print('   - Found nested data array with ${propertiesData.length} items');
               print('   - Current page: $currentPageFromResponse, Last page: $lastPage');
@@ -465,7 +472,12 @@ class PropertyService {
           }
           
           final List<PropertyModel> pageProperties = propertiesData
-              .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
+              .whereType<Map>()
+              .map((json) {
+                try { return PropertyModel.fromJson(Map<String, dynamic>.from(json)); }
+                catch (_) { return null; }
+              })
+              .whereType<PropertyModel>()
               .toList();
 
           print('📦 [PropertyService] Page $currentPage: Parsed ${pageProperties.length} properties');
@@ -510,8 +522,9 @@ class PropertyService {
         
         // Check if the response has a 'data' wrapper or is direct
         Map<String, dynamic> propertyData;
-        if (data.containsKey('data')) {
-          propertyData = data['data'] as Map<String, dynamic>;
+        final inner = data['data'];
+        if (inner is Map) {
+          propertyData = Map<String, dynamic>.from(inner);
         } else {
           propertyData = data;
         }
@@ -574,10 +587,10 @@ class PropertyService {
             if (data['data'] is List) {
               propertiesData = data['data'] as List<dynamic>;
               print('   - Extracted ${propertiesData.length} properties from data.data (List)');
-            } else if (data['data'] is Map && (data['data'] as Map).containsKey('data')) {
-              final nestedData = (data['data'] as Map<String, dynamic>)['data'];
-              if (nestedData is List) {
-                propertiesData = nestedData;
+            } else if (data['data'] is Map) {
+              final inner = data['data'] as Map;
+              if (inner.containsKey('data') && inner['data'] is List) {
+                propertiesData = inner['data'] as List<dynamic>;
                 print('   - Extracted ${propertiesData.length} properties from nested data.data');
               }
             }
@@ -594,9 +607,14 @@ class PropertyService {
         }
 
         final properties = propertiesData
-            .map((item) => PropertyModel.fromJson(item as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((item) {
+              try { return PropertyModel.fromJson(Map<String, dynamic>.from(item)); }
+              catch (_) { return null; }
+            })
+            .whereType<PropertyModel>()
             .toList();
-        
+
         print('✅ [PropertyService] Successfully parsed ${properties.length} promoted properties');
         print('🔵🔵🔵 [PropertyService] ========================================');
         
@@ -710,7 +728,12 @@ class PropertyService {
         }
         
         final List<PropertyModel> properties = propertiesData
-            .map((json) => PropertyModel.fromJson(json as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((json) {
+              try { return PropertyModel.fromJson(Map<String, dynamic>.from(json)); }
+              catch (_) { return null; }
+            })
+            .whereType<PropertyModel>()
             .toList();
 
         print('✅ [PropertyService] Successfully parsed ${properties.length} agent properties');
@@ -851,10 +874,19 @@ class PropertyService {
         queryParams: params,
         requiresAuth: false,
         fromJson: (json) {
-          final dataList = (json['data']?['data'] ?? json['data'] ?? json) as List<dynamic>?;
-          if (dataList == null) return <PropertyModel>[];
+          final nested = json['data'];
+          final raw = (nested is Map ? nested['data'] : null) ?? nested ?? json;
+          final dataList = raw is List ? raw : <dynamic>[];
           return dataList
-              .map((item) => PropertyModel.fromJson(item as Map<String, dynamic>))
+              .whereType<Map>()
+              .map((item) {
+                try {
+                  return PropertyModel.fromJson(Map<String, dynamic>.from(item));
+                } catch (_) {
+                  return null;
+                }
+              })
+              .whereType<PropertyModel>()
               .toList();
         },
       );

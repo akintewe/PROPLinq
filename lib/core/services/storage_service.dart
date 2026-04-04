@@ -43,7 +43,8 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final userDataString = prefs.getString(_userKey);
     if (userDataString != null) {
-      return json.decode(userDataString) as Map<String, dynamic>;
+      final decoded = json.decode(userDataString);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
     }
     return null;
   }

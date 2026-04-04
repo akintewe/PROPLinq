@@ -16,19 +16,31 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    // Extract kyc_status from root level and merge with user data
-    final userData = Map<String, dynamic>.from(json['user'] ?? {});
+    final rawUser = json['user'];
+    final userData = rawUser is Map
+        ? Map<String, dynamic>.from(rawUser)
+        : <String, dynamic>{};
     if (json.containsKey('kyc_status')) {
       userData['kyc_status'] = json['kyc_status'];
     }
-    
+
+    final rawKyc = json['kyc_status'];
+    bool? kycStatus;
+    if (rawKyc is bool) {
+      kycStatus = rawKyc;
+    } else if (rawKyc == 1 || rawKyc == '1') {
+      kycStatus = true;
+    } else if (rawKyc == 0 || rawKyc == '0') {
+      kycStatus = false;
+    }
+
     return AuthResponse(
       user: UserModel.fromJson(userData),
-      token: json['token'] ?? '',
-      tokenType: json['token_type'],
-      kycStatus: json['kyc_status'],
-      expiresAt: json['expires_at'] != null 
-          ? DateTime.tryParse(json['expires_at']) 
+      token: json['token']?.toString() ?? '',
+      tokenType: json['token_type']?.toString(),
+      kycStatus: kycStatus,
+      expiresAt: json['expires_at'] != null
+          ? DateTime.tryParse(json['expires_at'].toString())
           : null,
     );
   }

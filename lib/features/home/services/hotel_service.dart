@@ -100,11 +100,19 @@ class HotelService {
         requiresAuth: true,
         fromJson: (json) {
           debugPrint('🏨 [HotelService] Raw rooms response: $json');
-          final roomsData = (json['data'] ?? json['rooms'] ?? json) as List<dynamic>?;
+          final raw = json['data'] ?? json['rooms'] ?? json;
+          final roomsData = raw is List ? raw : <dynamic>[];
           debugPrint('🏨 [HotelService] Rooms array: $roomsData');
-          if (roomsData == null) return <RoomModel>[];
           return roomsData
-              .map((room) => RoomModel.fromJson(room as Map<String, dynamic>))
+              .whereType<Map>()
+              .map((room) {
+                try {
+                  return RoomModel.fromJson(Map<String, dynamic>.from(room));
+                } catch (_) {
+                  return null;
+                }
+              })
+              .whereType<RoomModel>()
               .toList();
         },
       );
@@ -131,8 +139,9 @@ class HotelService {
         queryParams: {'start_date': startDate, 'end_date': endDate},
         requiresAuth: false,
         fromJson: (json) {
-          final list = (json['data'] ?? json) as List<dynamic>;
-          return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          final raw = json['data'] ?? json;
+          final list = raw is List ? raw : <dynamic>[];
+          return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
         },
       );
       debugPrint('🏨 [HotelService] Availability response: ${response.data?.length ?? 0} entries');
@@ -157,8 +166,9 @@ class HotelService {
         queryParams: {'start_date': startDate, 'end_date': endDate},
         requiresAuth: true,
         fromJson: (json) {
-          final list = (json['data'] ?? json) as List<dynamic>;
-          return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          final raw = json['data'] ?? json;
+          final list = raw is List ? raw : <dynamic>[];
+          return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
         },
       );
       return response;
