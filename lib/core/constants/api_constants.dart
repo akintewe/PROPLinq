@@ -79,6 +79,13 @@ class ApiConstants {
   static String agentBlockRoom(int roomId) => '/agent/calendar/room/$roomId/block';
   static String agentUnblockDates(String uuid) => '/agent/calendar/unblock/$uuid';
   
+  // Agent Check-in Endpoints
+  static const String agentCheckIn = '/agent/check-in';
+  static const String agentCheckInAvailable = '/agent/check-in/available';
+
+  // AI Chat Endpoint
+  static const String aiChat = '/chat/ai';
+
   // Agent Ratings Endpoints
   static const String agentPropertiesRatings = '/agent/properties/ratings';
   

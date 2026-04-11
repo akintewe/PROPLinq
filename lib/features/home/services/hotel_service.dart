@@ -218,6 +218,46 @@ class HotelService {
     }
   }
 
+  /// Verify a guest check-in code (agent only)
+  /// POST /api/v1/agent/check-in
+  Future<ApiResponse<Map<String, dynamic>>> verifyCheckIn(String code) async {
+    try {
+      debugPrint('🏨 [HotelService] Verifying check-in code: $code');
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiConstants.agentCheckIn,
+        body: {'code': code},
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+      debugPrint('🏨 [HotelService] Check-in verification: ${response.success}');
+      return response;
+    } catch (e) {
+      debugPrint('🏨 [HotelService] Error verifying check-in: $e');
+      rethrow;
+    }
+  }
+
+  /// Get available check-ins for today (agent only)
+  /// GET /api/v1/agent/check-in/available
+  Future<ApiResponse<List<Map<String, dynamic>>>> getAvailableCheckIns() async {
+    try {
+      debugPrint('🏨 [HotelService] Fetching available check-ins');
+      final response = await _apiService.get<List<Map<String, dynamic>>>(
+        ApiConstants.agentCheckInAvailable,
+        requiresAuth: true,
+        fromJson: (json) {
+          final raw = json['data'] ?? json;
+          final list = raw is List ? raw : <dynamic>[];
+          return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        },
+      );
+      return response;
+    } catch (e) {
+      debugPrint('🏨 [HotelService] Error fetching available check-ins: $e');
+      rethrow;
+    }
+  }
+
   /// Upload rooms CSV for a hotel
   Future<ApiResponse<Map<String, dynamic>>> uploadRoomsCsv({
     required int hotelId,

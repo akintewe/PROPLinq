@@ -104,11 +104,17 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
     final status = entry?['status'] as String?;
 
     if (status == 'blocked') {
-      // Offer to unblock
-      final uuid = entry?['uuid'] as String? ?? entry?['block_uuid'] as String?;
-      if (uuid != null) {
-        _showUnblockDialog(dateKey, uuid);
-      }
+      // Log the full entry so we can see what keys the backend returns
+      debugPrint('📅 [Calendar] Blocked entry for $dateKey: $entry');
+      final metadata = entry?['metadata'];
+      final metaMap = metadata is Map ? metadata : null;
+      final uuid = metaMap?['uuid']?.toString() ??
+          entry?['uuid']?.toString() ??
+          entry?['block_uuid']?.toString() ??
+          entry?['block_id']?.toString() ??
+          entry?['id']?.toString();
+      debugPrint('📅 [Calendar] Resolved uuid: $uuid');
+      _showUnblockDialog(dateKey, uuid);
       return;
     }
 
@@ -238,21 +244,24 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
     }
   }
 
-  void _showUnblockDialog(String dateKey, String uuid) {
+  void _showUnblockDialog(String dateKey, String? uuid) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Unblock Date'),
-        content: Text('Do you want to unblock $dateKey?'),
+        content: uuid == null
+            ? Text('Unable to unblock $dateKey — no block ID found. Please contact support.')
+            : Text('Do you want to unblock $dateKey?'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _unblockDates(uuid);
-            },
-            child: const Text('Unblock', style: TextStyle(color: Color(0xFF426DC2))),
-          ),
+          if (uuid != null)
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _unblockDates(uuid);
+              },
+              child: const Text('Unblock', style: TextStyle(color: Color(0xFF426DC2))),
+            ),
         ],
       ),
     );

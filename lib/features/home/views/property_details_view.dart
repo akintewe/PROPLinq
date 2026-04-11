@@ -1303,7 +1303,9 @@ If you don't have the app, the link will open in your browser where you can down
 
   /// Handle room booking
   void _bookRoom(RoomModel room) {
-    final property = widget.propertyData ?? _getDefaultProperty();
+    final property = Map<String, dynamic>.from(widget.propertyData ?? _getDefaultProperty());
+    // Pass the specific room id so the reservation view loads that room's availability
+    property['selected_room_id'] = room.id;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => HotelReservationView(

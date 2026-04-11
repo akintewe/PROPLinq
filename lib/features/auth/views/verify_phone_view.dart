@@ -34,6 +34,7 @@ class _VerifyPhoneViewState extends State<VerifyPhoneView> {
   void initState() {
     super.initState();
     _startResendCountdown();
+    _otpController.addListener(() => setState(() {}));
   }
 
   @override

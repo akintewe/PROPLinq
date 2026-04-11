@@ -175,7 +175,7 @@ class AuthService {
     return await _apiService.post<Map<String, dynamic>>(
       ApiConstants.verifyOtp,
       body: {
-        'code': otp, // API expects 'code' field
+        'otp': otp,
       },
       requiresAuth: true,
       fromJson: (json) => json,

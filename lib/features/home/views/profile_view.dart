@@ -20,6 +20,7 @@ import '../../auth/services/auth_service.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/kyc_status_response.dart';
 import '../services/property_service.dart';
+import '../services/hotel_service.dart';
 import '../models/property_model.dart';
 import '../widgets/booking_carousel_widget.dart';
 import 'bookings_list_view.dart';
@@ -36,6 +37,7 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStateMixin {
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
+  final HotelService _hotelService = HotelService();
   final ApiService _apiService = ApiService();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -1787,7 +1789,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         const SizedBox(height: 16),
         
         SizedBox(
-          height: 300,
+          height: 340,
           child: _isLoadingMyProperties
               ? const Center(
                   child: CircularProgressIndicator(),
@@ -2162,54 +2164,60 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      // Approved & live tag
-                      Container(
-                        width: 90,
-                        height: 20,
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFCCFBEA), // rgba(204, 251, 234, 1)
-                          borderRadius: BorderRadius.circular(70),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Approved & live',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF008D5A), // rgba(0, 141, 90, 1)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Approved & live tag
+                          Container(
+                            width: 90,
+                            height: 20,
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFCCFBEA),
+                              borderRadius: BorderRadius.circular(70),
                             ),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            child: const Center(
+                              child: Text(
+                                'Approved & live',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF008D5A),
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        property.rawJson?['average_rating']?.toString() ?? '0.0',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF666666),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.star,
-                        size: 12,
-                        color: Colors.amber,
-                      ),
-                      if (property.rawJson?['rating_count'] != null) ...[
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${property.rawJson!['rating_count']})',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFF666666),
+                          const SizedBox(height: 4),
+                          // Star rating below the tag
+                          Row(
+                            children: [
+                              Text(
+                                property.rawJson?['average_rating']?.toString() ?? '0.0',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF666666),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              const Icon(Icons.star, size: 12, color: Colors.amber),
+                              if (property.rawJson?['rating_count'] != null) ...[
+                                const SizedBox(width: 3),
+                                Text(
+                                  '(${property.rawJson!['rating_count']})',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Color(0xFF666666),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
+                        ],
                       ),
-                      ],
                       const Spacer(),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -2233,74 +2241,102 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                       ),
                     ],
                   ),
-                  const Spacer(),
-                  // Show both buttons side by side for hotels and shortlets
+                  const SizedBox(height: 8),
+                  // Show buttons for hotels and shortlets
                   if (property.type.toLowerCase() == 'hotel' || property.type.toLowerCase() == 'shortlet')
-                    Row(
+                    Column(
                       children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 32,
-                            child: OutlinedButton(
-                              onPressed: isPromoted ? null : () {
-                                _promoteProperty(property);
-                              },
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: isPromoted ? const Color(0xFF426DC2) : Colors.white,
-                                foregroundColor: isPromoted ? Colors.white : const Color(0xFF426DC2),
-                                side: BorderSide(
-                                  color: isPromoted ? const Color(0xFF426DC2) : const Color(0xFF426DC2),
-                                  width: 1,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              ),
-                              child: Text(
-                                isPromoted ? 'Already Promoted' : 'Promote property',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: isPromoted ? Colors.white : const Color(0xFF426DC2),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: SizedBox(
-                            height: 32,
-                            child: OutlinedButton(
-                              onPressed: () => _openCalendarForProperty(property),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF426DC2),
-                                side: const BorderSide(color: Color(0xFF426DC2), width: 1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.calendar_month, size: 13),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Calendar',
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 32,
+                                child: OutlinedButton(
+                                  onPressed: isPromoted ? null : () {
+                                    _promoteProperty(property);
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: isPromoted ? const Color(0xFF426DC2) : Colors.white,
+                                    foregroundColor: isPromoted ? Colors.white : const Color(0xFF426DC2),
+                                    side: const BorderSide(color: Color(0xFF426DC2), width: 1),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  ),
+                                  child: Text(
+                                    isPromoted ? 'Promoted' : 'Promote',
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500,
+                                      color: isPromoted ? Colors.white : const Color(0xFF426DC2),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                ],
+                                ),
                               ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: SizedBox(
+                                height: 32,
+                                child: OutlinedButton(
+                                  onPressed: () => _openCalendarForProperty(property),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: const Color(0xFF426DC2),
+                                    side: const BorderSide(color: Color(0xFF426DC2), width: 1),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.calendar_month, size: 13),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Calendar',
+                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 32,
+                          child: ElevatedButton(
+                            onPressed: () => _showCheckInVerificationSheet(property),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF426DC2),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.how_to_reg_outlined, size: 13),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Verify Check-in',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -3087,6 +3123,229 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
           ],
         ),
       ),
+    );
+  }
+
+  void _showCheckInVerificationSheet(PropertyModel property) {
+    final codeController = TextEditingController();
+    bool isVerifying = false;
+    String? resultMessage;
+    bool? resultSuccess;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Verify Guest Check-in',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      property.title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF868686),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Result banner
+                    if (resultMessage != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: resultSuccess == true
+                              ? const Color(0xFFE8F5E9)
+                              : const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              resultSuccess == true
+                                  ? Icons.check_circle_outline
+                                  : Icons.error_outline,
+                              color: resultSuccess == true
+                                  ? const Color(0xFF2E7D32)
+                                  : const Color(0xFFC62828),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                resultMessage!,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: resultSuccess == true
+                                      ? const Color(0xFF2E7D32)
+                                      : const Color(0xFFC62828),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Code input
+                    TextField(
+                      controller: codeController,
+                      textCapitalization: TextCapitalization.characters,
+                      maxLength: 6,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 6,
+                      ),
+                      textAlign: TextAlign.center,
+                      decoration: InputDecoration(
+                        hintText: '------',
+                        hintStyle: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 6,
+                          color: Colors.grey[300],
+                        ),
+                        counterText: '',
+                        filled: true,
+                        fillColor: const Color(0xFFF5F5F5),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF426DC2),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      onChanged: (_) {
+                        // Clear result on new input
+                        if (resultMessage != null) {
+                          setSheetState(() {
+                            resultMessage = null;
+                            resultSuccess = null;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        'Enter the 6-character code provided by the guest',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Verify button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: isVerifying
+                            ? null
+                            : () async {
+                                final code = codeController.text.trim();
+                                if (code.length < 6) {
+                                  setSheetState(() {
+                                    resultMessage = 'Please enter the full 6-character code.';
+                                    resultSuccess = false;
+                                  });
+                                  return;
+                                }
+                                setSheetState(() => isVerifying = true);
+                                try {
+                                  final response = await _hotelService.verifyCheckIn(code);
+                                  setSheetState(() {
+                                    isVerifying = false;
+                                    resultSuccess = response.success;
+                                    resultMessage = response.success
+                                        ? (response.message ?? 'Guest checked in successfully!')
+                                        : (response.message ?? 'Invalid or expired check-in code.');
+                                  });
+                                } catch (e) {
+                                  setSheetState(() {
+                                    isVerifying = false;
+                                    resultSuccess = false;
+                                    resultMessage = 'Something went wrong. Please try again.';
+                                  });
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF426DC2),
+                          disabledBackgroundColor:
+                              const Color(0xFF426DC2).withValues(alpha: 0.6),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: isVerifying
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Verify Check-in',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

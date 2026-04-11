@@ -37,9 +37,19 @@ class _HotelReservationViewState extends State<HotelReservationView> {
   }
 
   void _loadAvailabilityFromRooms() {
+    // Prefer the specific room the user tapped "Book Room" on
+    final selectedRoomId = widget.propertyData['selected_room_id'];
+    if (selectedRoomId != null) {
+      final id = int.tryParse(selectedRoomId.toString());
+      if (id != null) {
+        _loadAvailability(id);
+        return;
+      }
+    }
+
+    // Fallback: pick the cheapest room
     final rooms = widget.propertyData['rooms'];
     if (rooms == null || rooms is! List || rooms.isEmpty) return;
-    // Use the first room's id; if multiple rooms, pick the cheapest
     final sortedRooms = List<dynamic>.from(rooms);
     sortedRooms.sort((a, b) {
       final pa = double.tryParse(a['price']?.toString() ?? '0') ?? 0;
@@ -400,10 +410,32 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                     },
                   );
                   if (pickedDate != null) {
-                    setState(() {
-                      _checkOutDate = pickedDate;
-                      _nights = _checkOutDate.difference(_checkInDate).inDays;
-                    });
+                    // Check that no blocked/booked date falls within the range
+                    bool rangeHasUnavailable = false;
+                    for (int i = 1; i < pickedDate.difference(_checkInDate).inDays; i++) {
+                      final d = _checkInDate.add(Duration(days: i));
+                      final key = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+                      if (_blockedDates.contains(key) || _bookedDates.contains(key)) {
+                        rangeHasUnavailable = true;
+                        break;
+                      }
+                    }
+                    if (rangeHasUnavailable) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Your selected range includes unavailable dates. Please choose different dates.'),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    } else {
+                      setState(() {
+                        _checkOutDate = pickedDate;
+                        _nights = _checkOutDate.difference(_checkInDate).inDays;
+                      });
+                    }
                   }
                 },
               child: Container(
@@ -563,8 +595,38 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           
           // Calendar grid
           _buildCalendarGrid(),
+
+          const SizedBox(height: 16),
+
+          // Legend
+          Row(
+            children: [
+              _calendarLegendDot(const Color(0xFFEEEEEE), 'Blocked'),
+              const SizedBox(width: 16),
+              _calendarLegendDot(const Color(0xFFFFCDD2), 'Booked'),
+              const SizedBox(width: 16),
+              _calendarLegendDot(const Color(0xFF426DC2), 'Selected'),
+            ],
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _calendarLegendDot(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6C757D))),
+      ],
     );
   }
 
@@ -584,9 +646,11 @@ class _HotelReservationViewState extends State<HotelReservationView> {
     // Add days of the month
     for (int day = 1; day <= daysInMonth; day++) {
       final dateKey = '${_currentMonth.year}-${_currentMonth.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
-      final isBlocked = _blockedDates.contains(dateKey) || _bookedDates.contains(dateKey);
+      final isBlocked = _blockedDates.contains(dateKey);
+      final isBooked = _bookedDates.contains(dateKey);
+      final isUnavailable = isBlocked || isBooked;
       final isPast = DateTime(_currentMonth.year, _currentMonth.month, day).isBefore(DateTime.now().subtract(const Duration(days: 1)));
-      final isDisabled = isBlocked || isPast;
+      final isDisabled = isUnavailable || isPast;
 
       final isSelected = day == _selectedDay &&
                         _currentMonth.month == _checkInDate.month &&
@@ -609,11 +673,13 @@ class _HotelReservationViewState extends State<HotelReservationView> {
             decoration: BoxDecoration(
               color: isSelected
                   ? const Color(0xFF426DC2)
-                  : isBlocked
-                      ? const Color(0xFFEEEEEE)
-                      : isToday
-                          ? const Color(0xFFE3F2FD)
-                          : Colors.transparent,
+                  : isBooked
+                      ? const Color(0xFFFFCDD2)
+                      : isBlocked
+                          ? const Color(0xFFEEEEEE)
+                          : isToday
+                              ? const Color(0xFFE3F2FD)
+                              : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
@@ -629,7 +695,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                           : isToday
                               ? const Color(0xFF426DC2)
                               : Colors.black,
-                  decoration: isBlocked ? TextDecoration.lineThrough : null,
+                  decoration: isUnavailable ? TextDecoration.lineThrough : null,
                 ),
               ),
             ),
@@ -871,7 +937,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
               ),
             ),
             child: const Text(
-                    'Continue',
+                    'Continue Booking',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -954,6 +1020,23 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   bool _isLoading = false;
   final ApiService _apiService = ApiService();
 
+  double get _pricePerNight {
+    final raw = widget.propertyData['price']?.toString() ?? '0';
+    final clean = raw.replaceAll(RegExp(r'[^\d.]'), '');
+    return double.tryParse(clean) ?? 0;
+  }
+
+  double get _totalCost => _pricePerNight * widget.nights;
+  double get _depositAmount => (_totalCost * 0.10).ceilToDouble();
+  double get _remainingAmount => _totalCost - _depositAmount;
+
+  String _fmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+
+  String get _buttonLabel => _selectedPaymentMethod == 'pay_now'
+      ? 'Pay ${_fmt(_totalCost)}'
+      : 'Pay ${_fmt(_depositAmount)} Deposit';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1026,20 +1109,44 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                 child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                    // Total summary
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F4FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Total', style: TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
+                              Text(_fmt(_totalCost), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
+                            ],
+                          ),
+                          Text('${widget.nights} night${widget.nights == 1 ? '' : 's'} · ${widget.guests} guest${widget.guests == 1 ? '' : 's'}',
+                              style: const TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
+                        ],
+                      ),
+                    ),
+
                     // Payment options
                     _buildPaymentOption(
                       'pay_now',
                       'Pay Now (Recommended)',
-                      'Secure your booking by paying the full amount now.Your\nbooking is 100% guaranteed',
+                      'Pay ${_fmt(_totalCost)} now. Your booking is 100% guaranteed.',
                       true,
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     _buildPaymentOption(
                       'pay_arrival',
                       'Pay on Arrival',
-                      'Pay 10% deposit now to secure your booking. The\nremaining 90% will be paid directly at the hotel/shortlet',
+                      'Pay ${_fmt(_depositAmount)} (10%) now to secure your booking. Remaining ${_fmt(_remainingAmount)} paid on arrival.',
                       false,
                     ),
                     
@@ -1086,9 +1193,9 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text(
-                            'Pay now',
-                            style: TextStyle(
+                        : Text(
+                            _buttonLabel,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
@@ -1261,16 +1368,19 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
       final checkInDateStr = '${widget.checkInDate.year}-${widget.checkInDate.month.toString().padLeft(2, '0')}-${widget.checkInDate.day.toString().padLeft(2, '0')}';
       final checkOutDateStr = '${widget.checkOutDate.year}-${widget.checkOutDate.month.toString().padLeft(2, '0')}-${widget.checkOutDate.day.toString().padLeft(2, '0')}';
 
+      // Extract room_id (if a specific room was selected)
+      final selectedRoomId = widget.propertyData['selected_room_id'];
+      final roomIdInt = selectedRoomId != null ? int.tryParse(selectedRoomId.toString()) : null;
+
       // Prepare booking payload
-      final bookingPayload = {
-        'property_id': propertyId is int ? propertyId : int.tryParse(propertyId.toString()) ?? 0,
+      final bookingPayload = <String, dynamic>{
+        'property_id': int.tryParse(propertyId.toString()) ?? 0,
         'check_in_date': checkInDateStr,
         'check_out_date': checkOutDateStr,
         'guests': widget.guests,
         'adults': widget.adults,
-        'special_requests': _selectedPaymentMethod == 'pay_arrival' 
-            ? 'Pay on arrival - 10% deposit paid' 
-            : null,
+        'payment_type': _selectedPaymentMethod == 'pay_arrival' ? 'pay_on_arrival' : 'pay_now',
+        if (roomIdInt != null) 'room_id': roomIdInt,
       };
 
       print('📋 Creating booking with payload: $bookingPayload');
@@ -1333,6 +1443,12 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
             _isLoading = false;
           });
 
+          // Attach payment method so success screen can show deposit/remaining
+          enrichedBookingData['_payment_type'] = _selectedPaymentMethod;
+          enrichedBookingData['_total_cost'] = _totalCost;
+          enrichedBookingData['_deposit_amount'] = _depositAmount;
+          enrichedBookingData['_remaining_amount'] = _remainingAmount;
+
           // Show payment webview dialog with enriched booking data
           await _showPaymentWebView(authorizationUrl, enrichedBookingData);
         } else {
@@ -1349,13 +1465,25 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
         if (response.statusCode == 409) {
           _showUnavailableDatesDialog();
         } else {
-          final errorMessage = response.message ?? 'Failed to create booking';
-          print('❌ Booking failed: $errorMessage');
+          final rawMessage = response.message ?? 'Failed to create booking';
+          print('❌ Booking failed: $rawMessage');
+
+          // Translate backend payment gateway errors into user-friendly messages
+          final String userMessage;
+          if (rawMessage.toLowerCase().contains('flutterwave') ||
+              rawMessage.toLowerCase().contains('payment') ||
+              rawMessage.toLowerCase().contains('cannot post') ||
+              rawMessage.toLowerCase().contains('gateway')) {
+            userMessage = 'Payment gateway is currently unavailable. Please try again later or contact support.';
+          } else {
+            userMessage = rawMessage;
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(errorMessage),
+              content: Text(userMessage),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -1562,8 +1690,13 @@ class HotelBookingSuccessView extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               
-              const SizedBox(height: 32),
-              
+              const SizedBox(height: 24),
+
+              // Payment summary card
+              _buildPaymentSummary(),
+
+              const SizedBox(height: 16),
+
               // Warning banner
               Container(
                 padding: const EdgeInsets.all(16),
@@ -1686,6 +1819,67 @@ class HotelBookingSuccessView extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  String _fmtAmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+
+  Widget _buildPaymentSummary() {
+    final data = bookingData ?? {};
+    final paymentType = data['_payment_type'] as String?;
+    final totalCost = (data['_total_cost'] as num?)?.toDouble();
+    final depositAmount = (data['_deposit_amount'] as num?)?.toDouble();
+    final remainingAmount = (data['_remaining_amount'] as num?)?.toDouble();
+
+    if (totalCost == null) return const SizedBox.shrink();
+
+    final isPayOnArrival = paymentType == 'pay_arrival';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE9ECEF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Payment Summary',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),
+          ),
+          const SizedBox(height: 12),
+          _summaryRow('Total amount', _fmtAmt(totalCost), bold: false),
+          if (isPayOnArrival && depositAmount != null) ...[
+            const SizedBox(height: 8),
+            _summaryRow('Paid now (10% deposit)', _fmtAmt(depositAmount), color: const Color(0xFF2E7D32)),
+            const SizedBox(height: 8),
+            _summaryRow('Remaining on arrival', _fmtAmt(remainingAmount ?? 0), color: const Color(0xFFE65100)),
+          ] else ...[
+            const SizedBox(height: 8),
+            _summaryRow('Amount paid', _fmtAmt(totalCost), color: const Color(0xFF2E7D32), bold: true),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value, {Color? color, bool bold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+            color: color ?? Colors.black,
+          ),
+        ),
+      ],
     );
   }
 }

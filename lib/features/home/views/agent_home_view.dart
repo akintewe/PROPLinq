@@ -27,6 +27,7 @@ import '../services/favorite_service.dart';
 import '../services/chat_service.dart';
 import '../models/property_model.dart';
 import '../models/paginated_properties_response.dart';
+import '../../../core/widgets/ai_chat_fab.dart';
 
 // Image carousel widget for agent property cards
 class _AgentPropertyImageCarousel extends StatefulWidget {
@@ -986,6 +987,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           ],
         ),
       ),
+      floatingActionButton: const AiChatFab(),
       bottomNavigationBar: _buildCustomBottomNavBar(),
     );
   }
@@ -1497,7 +1499,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
+              Expanded(
+                child: Row(
                 children: [
                   // Profile Image
                   Container(
@@ -1561,52 +1564,61 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                   ),
                   const SizedBox(width: 12),
                   // Welcome text
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            () {
-                              final hour = DateTime.now().hour;
-                              final greeting = hour >= 5 && hour < 12
-                                  ? 'Good morning'
-                                  : hour >= 12 && hour < 17
-                                      ? 'Good afternoon'
-                                      : 'Good evening';
-                              if (_isLoadingProfile) return '$greeting, User ';
-                              final name = _currentUser != null && _currentUser!.fullName.isNotEmpty
-                                  ? _currentUser!.fullName.split(' ').first
-                                  : 'User';
-                              return '$greeting, $name ';
-                            }(),
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                () {
+                                  final hour = DateTime.now().hour;
+                                  final greeting = hour >= 5 && hour < 12
+                                      ? 'Good morning'
+                                      : hour >= 12 && hour < 17
+                                          ? 'Good afternoon'
+                                          : 'Good evening';
+                                  if (_isLoadingProfile) return '$greeting, User ';
+                                  final name = _currentUser != null && _currentUser!.fullName.isNotEmpty
+                                      ? _currentUser!.fullName.split(' ').first
+                                      : 'User';
+                                  return '$greeting, $name ';
+                                }(),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
                             ),
-                          ),
-                          const Text(
-                            '👋',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        _isLoadingProfile 
-                            ? 'Loading...'
-                            : _isShowingSearchResults && _selectedLocation.isNotEmpty
-                                ? _selectedLocation
-                            : _getUserTypeDisplayForAgent(),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF868686),
+                            const Text(
+                              '👋',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        Text(
+                          _isLoadingProfile
+                              ? 'Loading...'
+                              : _isShowingSearchResults && _selectedLocation.isNotEmpty
+                                  ? _selectedLocation
+                                  : _getUserTypeDisplayForAgent(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF868686),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
+              ),
               ),
               Container(
                 width: 40,
