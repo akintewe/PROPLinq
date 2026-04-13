@@ -8,7 +8,7 @@ class AppStrings {
   static const String appVersion = '1.0.0';
 
   // Common Actions
-  static const String save = 'Save';
+  static const String save = 'Wishlist';
   static const String cancel = 'Cancel';
   static const String delete = 'Delete';
   static const String edit = 'Edit';
@@ -104,14 +104,14 @@ class AppStrings {
   static const String findYourDreamProperty = 'Find Your Dream Property';
   static const String connectWithAgents = 'Connect with Top Agents';
   static const String exploreProperties = 'Explore Properties';
-  static const String savedProperties = 'Saved Properties';
+  static const String savedProperties = 'Wishlist';
   static const String recentSearches = 'Recent Searches';
   static const String popularAreas = 'Popular Areas';
   static const String featuredProperties = 'Featured Properties';
 
   // Empty States
-  static const String noPropertiesSaved = 'No properties saved yet';
-  static const String startExploring = 'Start exploring to save your favorite properties';
+  static const String noPropertiesSaved = 'No wishlist properties yet';
+  static const String startExploring = 'Start exploring to add properties to your wishlist';
   static const String noSearchHistory = 'No search history';
   static const String searchToSeeHistory = 'Start searching to see your search history';
 } 

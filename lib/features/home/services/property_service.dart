@@ -310,6 +310,85 @@ class PropertyService {
     }
   }
 
+  /// Fetch properties without auth token — for guest users
+  Future<PaginatedPropertiesResponse> fetchPropertiesPaginatedPublic({
+    int page = 1,
+    String? type,
+    String? location,
+    String? priceMin,
+    String? priceMax,
+    String? category,
+  }) async {
+    try {
+      final Map<String, String> queryParams = {'page': page.toString()};
+      if (type != null) queryParams['type'] = type;
+      if (location != null) queryParams['location'] = location;
+      if (priceMin != null) queryParams['price_min'] = priceMin;
+      if (priceMax != null) queryParams['price_max'] = priceMax;
+      if (category != null) queryParams['category'] = category;
+
+      final response = await _apiService.get<dynamic>(
+        ApiConstants.listPropertiesPublic,
+        queryParams: queryParams,
+        requiresAuth: false,
+        fromJson: (json) => json,
+      );
+
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        if (data is Map<String, dynamic> && data.containsKey('data')) {
+          final inner = data['data'];
+          final List<dynamic> items = inner is List ? inner : [];
+          return PaginatedPropertiesResponse(
+            properties: items,
+            currentPage: (data['current_page'] as int?) ?? page,
+            lastPage: (data['last_page'] as int?) ?? page,
+            total: (data['total'] as int?) ?? 0,
+            perPage: (data['per_page'] as int?) ?? 12,
+            hasMorePages: items.length >= 12,
+          );
+        }
+      }
+      return PaginatedPropertiesResponse(
+        properties: [], currentPage: page, lastPage: page, total: 0, perPage: 0, hasMorePages: false,
+      );
+    } catch (e) {
+      return PaginatedPropertiesResponse(
+        properties: [], currentPage: page, lastPage: page, total: 0, perPage: 0, hasMorePages: false,
+      );
+    }
+  }
+
+  /// Fetch promoted/featured properties without auth — for guest users
+  Future<List<PropertyModel>> fetchPromotedPropertiesPublic() async {
+    try {
+      final response = await _apiService.get<dynamic>(
+        ApiConstants.promotedPropertiesPublic,
+        requiresAuth: false,
+        fromJson: (json) => json,
+      );
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        List<dynamic> items = [];
+        if (data is List) {
+          items = data;
+        } else if (data is Map<String, dynamic>) {
+          if (data['data'] is List) items = data['data'] as List;
+        }
+        return items
+            .whereType<Map>()
+            .map((j) {
+              try { return PropertyModel.fromJson(Map<String, dynamic>.from(j)); } catch (_) { return null; }
+            })
+            .whereType<PropertyModel>()
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Fetch all properties with pagination support (DEPRECATED - use fetchPropertiesPaginated)
   @Deprecated('Use fetchPropertiesPaginated for better performance')
   Future<List<PropertyModel>> fetchProperties({

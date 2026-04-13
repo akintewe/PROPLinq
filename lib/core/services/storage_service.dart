@@ -14,6 +14,7 @@ class StorageService {
   static const String _biometricEnabledKey = 'biometric_enabled';
   static const String _rememberMeKey = 'remember_me';
   static const String _rememberMeTimestampKey = 'remember_me_timestamp';
+  static const String _hasSeenOnboardingKey = 'has_seen_onboarding';
 
   // Token management
   Future<void> saveToken(String token) async {
@@ -68,6 +69,17 @@ class StorageService {
   Future<void> removeUserType() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userTypeKey);
+  }
+
+  // Onboarding seen tracking
+  Future<bool> hasSeenOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_hasSeenOnboardingKey) ?? false;
+  }
+
+  Future<void> markOnboardingSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_hasSeenOnboardingKey, true);
   }
 
   // Login state management

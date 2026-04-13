@@ -8,6 +8,7 @@ import '../../auth/views/login_view.dart';
 import '../../auth/views/biometric_login_view.dart';
 import '../../home/views/tenant_home_view.dart';
 import '../../home/views/agent_home_view.dart';
+import '../../home/views/guest_home_view.dart';
 
 class SecondSplashView extends StatefulWidget {
   const SecondSplashView({super.key});
@@ -69,8 +70,14 @@ class _SecondSplashViewState extends State<SecondSplashView> {
           }
         }
       } else {
-        // User is not logged in, navigate to onboarding
-        _navigateToOnboarding();
+        // User is not logged in
+        // Show onboarding only on the very first launch; afterwards go straight to guest dashboard
+        final hasSeenOnboarding = await _storageService.hasSeenOnboarding();
+        if (hasSeenOnboarding) {
+          _navigateToGuestHome();
+        } else {
+          _navigateToOnboarding();
+        }
       }
     } catch (e) {
       // On error, navigate to onboarding
@@ -79,10 +86,25 @@ class _SecondSplashViewState extends State<SecondSplashView> {
   }
 
   void _navigateToOnboarding() {
+    // Mark so next cold launch goes straight to guest dashboard
+    _storageService.markOnboardingSeen();
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             const OnboardingView(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
+  void _navigateToGuestHome() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const GuestHomeView(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },

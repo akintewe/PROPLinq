@@ -12,6 +12,7 @@ import 'hotel_reservation_view.dart';
 import 'agent_calendar_view.dart';
 import 'in_app_chat_view.dart';
 import '../../auth/services/auth_service.dart';
+import '../../../core/services/api_service.dart';
 import '../services/recently_viewed_service.dart';
 import '../services/property_service.dart';
 import '../services/hotel_service.dart';
@@ -730,14 +731,87 @@ If you don't have the app, the link will open in your browser where you can down
 
 
   /// Mark property as rented (for agents only)
-  void _markAsRented() {
-    // TODO: Implement mark as rented functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Mark as rented functionality coming soon!'),
-        backgroundColor: Colors.blue,
+  Future<void> _markAsRented() async {
+    final propertyData = _currentPropertyData ?? widget.propertyData;
+    final idValue = propertyData?['id'];
+    if (idValue == null) return;
+    final propertyId = idValue is int ? idValue : int.tryParse(idValue.toString());
+    if (propertyId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark as Rented'),
+        content: const Text(
+          'This will mark the property as rented and remove it from active listings. Are you sure?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFF426DC2)),
+            child: const Text('Mark as Rented'),
+          ),
+        ],
       ),
     );
+
+    if (confirmed != true || !mounted) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF426DC2)),
+      ),
+    );
+
+    try {
+      final apiService = ApiService();
+      final response = await apiService.put<Map<String, dynamic>>(
+        ApiConstants.markPropertyRented(propertyId),
+        body: {'status': 'rented'},
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading
+
+      if (response.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Property marked as rented successfully.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        // Go back so the listing refreshes
+        Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message ?? 'Failed to update property status.'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   /// Show report listing dialog

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:proplinq/core/constants/app_typography.dart';
-import '../../home/views/home_view.dart';
+import '../../home/views/guest_home_view.dart';
 import '../../auth/views/login_view.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../core/widgets/gradient_button.dart';
 
 class OnboardingView extends StatefulWidget {
@@ -49,8 +50,10 @@ class _OnboardingViewState extends State<OnboardingView> {
   }
 
   void _navigateToHome() {
+    // Mark onboarding as seen then land on guest dashboard
+    StorageService().markOnboardingSeen();
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const LoginView()),
+      MaterialPageRoute(builder: (context) => const GuestHomeView()),
     );
   }
 
@@ -118,15 +121,22 @@ class _OnboardingViewState extends State<OnboardingView> {
                   
                   // Skip or Login text
                   GestureDetector(
-                    onTap: _currentPage == _pages.length - 1 ? null : _skip,
-                    child: _currentPage == _pages.length - 1 
+                    onTap: _currentPage == _pages.length - 1
+                        ? () {
+                            StorageService().markOnboardingSeen();
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (_) => const LoginView()),
+                            );
+                          }
+                        : _skip,
+                    child: _currentPage == _pages.length - 1
                         ? RichText(
                             text: TextSpan(
                               children: [
                                 TextSpan(
                                   text: 'Already have an account? ',
                                   style: TextStyle(
-                                    color:  Color.fromRGBO(134, 134, 134, 1),
+                                    color: Color.fromRGBO(134, 134, 134, 1),
                                     fontSize: 14,
                                     fontWeight: FontWeight.w400,
                                   ),

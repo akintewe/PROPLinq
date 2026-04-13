@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/services/bookings_cache_service.dart';
+import '../../../core/services/wishlist_notifier.dart';
 import '../services/favorite_service.dart';
 import '../services/recently_viewed_service.dart';
 import '../models/property_model.dart';
@@ -33,6 +34,17 @@ class _SavedViewState extends State<SavedView> {
     super.initState();
     _loadSavedProperties();
     _loadRecentlyViewed();
+    WishlistNotifier().addListener(_onWishlistChanged);
+  }
+
+  void _onWishlistChanged() {
+    if (mounted) _loadSavedPropertiesForRefresh();
+  }
+
+  @override
+  void dispose() {
+    WishlistNotifier().removeListener(_onWishlistChanged);
+    super.dispose();
   }
 
   @override
@@ -267,7 +279,7 @@ class _SavedViewState extends State<SavedView> {
             children: [
               // Header
               const Text(
-                'Saved',
+                'Wishlist',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
@@ -361,7 +373,7 @@ class _SavedViewState extends State<SavedView> {
                             ),
                             child: Center(
                               child: Text(
-                                'Saved Properties',
+                                'Wishlist',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -428,7 +440,7 @@ class _SavedViewState extends State<SavedView> {
             
           // Title
           const Text(
-            'No Saved Property',
+            'Your Wishlist is Empty',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -440,7 +452,7 @@ class _SavedViewState extends State<SavedView> {
           
             // Subtitle
             const Text(
-              'You haven\'t saved any properties yet.',
+              'You haven\'t added any properties to your wishlist yet.',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,

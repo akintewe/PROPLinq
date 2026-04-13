@@ -29,7 +29,7 @@ class CustomBottomNavBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(0, 'Home', 'assets/icons/home_selected.svg', 'assets/icons/home_unselected.svg'),
-          _buildNavItem(1, 'Saved', 'assets/icons/saved_selected.svg', 'assets/icons/saved_unselected.svg'),
+          _buildNavItem(1, 'Wishlist', 'assets/icons/saved_selected.svg', 'assets/icons/saved_unselected.svg'),
           _buildNavItem(2, 'Profile', 'assets/icons/profile_selected.svg', 'assets/icons/profile_unselected.svg'),
           _buildNavItem(3, 'Settings', 'assets/icons/settings_selected.svg', 'assets/icons/settings_unselected.svg'),
         ],
@@ -79,7 +79,7 @@ class CustomBottomNavBar extends StatelessWidget {
                     case 'Home':
                       iconData = Icons.home;
                       break;
-                    case 'Saved':
+                    case 'Wishlist':
                       iconData = Icons.favorite_border;
                       break;
                     case 'Profile':

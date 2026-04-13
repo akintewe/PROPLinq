@@ -241,6 +241,8 @@ class _BookingsListViewState extends State<BookingsListView> {
             duration: Duration(seconds: 3),
           ),
         );
+        // Clear stale list immediately so old cards can't be tapped while reloading
+        setState(() => _bookings = []);
         // Refresh bookings list
         _loadBookings();
         // Refresh cache

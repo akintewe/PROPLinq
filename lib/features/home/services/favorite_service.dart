@@ -1,5 +1,6 @@
 import 'package:proplinq/core/constants/api_constants.dart';
 import 'package:proplinq/core/services/api_service.dart';
+import 'package:proplinq/core/services/wishlist_notifier.dart';
 import 'package:proplinq/features/home/models/property_model.dart';
 
 class FavoriteService {
@@ -40,13 +41,11 @@ class FavoriteService {
   /// Add property to favorites
   Future<bool> addToFavorites(int propertyId) async {
     try {
-      
       final response = await _apiService.post(
         '${ApiConstants.addFavourite}/$propertyId',
         requiresAuth: true,
       );
-      
-      
+      if (response.success) WishlistNotifier().notify();
       return response.success;
     } catch (e) {
       return false;
@@ -56,13 +55,11 @@ class FavoriteService {
   /// Remove property from favorites
   Future<bool> removeFromFavorites(int propertyId) async {
     try {
-      
       final response = await _apiService.delete(
         '${ApiConstants.deleteFavourite}/$propertyId',
         requiresAuth: true,
       );
-      
-      
+      if (response.success) WishlistNotifier().notify();
       return response.success;
     } catch (e) {
       return false;

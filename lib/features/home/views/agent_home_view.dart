@@ -179,6 +179,7 @@ class AgentHomeView extends StatefulWidget {
 
 class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateMixin {
   int _currentIndex = 3; // Start with Profile tab for agents
+  final GlobalKey _savedViewKey = GlobalKey();
   late AnimationController _animationController;
   late ScrollController _featuredScrollController;
   late ScrollController _homeScrollController;
@@ -971,6 +972,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             ),
             // Saved Tab
             SavedView(
+              key: _savedViewKey,
               isAgent: true,
               onExploreHome: () {
                 setState(() {
@@ -2733,7 +2735,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _buildNavItem(0, 'Home', 'assets/icons/homeselected.svg', 'assets/icons/homeunselected.svg'),
-          _buildNavItem(1, 'Saved', 'assets/icons/heartselected.svg', 'assets/icons/heartunselected.svg'),
+          _buildNavItem(1, 'Wishlist', 'assets/icons/heartselected.svg', 'assets/icons/heartunselected.svg'),
           _buildNavItem(2, 'Messages', 'assets/icons/tabler_message (1).svg', 'assets/icons/tabler_message.svg'),
           _buildNavItem(3, 'Profile', 'assets/icons/userselected.svg', 'assets/icons/userunselected.svg'),
           _buildNavItem(4, 'Settings', 'assets/icons/settingselected.svg', 'assets/icons/settingunselected.svg'),
@@ -2804,7 +2806,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     case 'Home':
                       fallbackIcon = isSelected ? Icons.home : Icons.home_outlined;
                       break;
-                    case 'Saved':
+                    case 'Wishlist':
                       fallbackIcon = isSelected ? Icons.favorite : Icons.favorite_border;
                       break;
                     case 'Messages':

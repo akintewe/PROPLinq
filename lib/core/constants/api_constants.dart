@@ -33,10 +33,13 @@ class ApiConstants {
   static const String searchProperties = '/properties/search';
   static const String favoriteProperties = '/properties/favorites';
   static const String listProperties = '/properties';
+  static const String listPropertiesPublic = '/properties'; // no auth — guests
   static const String myProperties = '/agent/properties';
   static const String promotedProperties = '/properties/promoted';
+  static const String promotedPropertiesPublic = '/properties/promoted'; // no auth — guests
   static String rateProperty(int propertyId) => '/properties/$propertyId/rate';
   static String promoteProperty(int propertyId) => '/properties/$propertyId/promote';
+  static String markPropertyRented(int propertyId) => '/properties/$propertyId/status';
   
   // KYC Endpoints
   static const String kycSubmission = '/kyc/submit';
