@@ -53,6 +53,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
   List<Map<String, dynamic>> _agentRatings = [];
   bool _isLoadingRatings = true;
 
+  bool _contactExpanded = false;
+
   // KYC Approval Animation
   bool _showKycApprovedAnimation = false;
   AnimationController? _approvalAnimationController;
@@ -986,49 +988,52 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Contact details',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
+        GestureDetector(
+          onTap: () => setState(() => _contactExpanded = !_contactExpanded),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Contact details',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+              ),
+              AnimatedRotation(
+                turns: _contactExpanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 250),
+                child: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF426DC2), size: 28),
+              ),
+            ],
           ),
         ),
-        
-        const SizedBox(height: 24),
-        
-        // Full Name
-        _buildContactDetailItem(
-          icon: Icons.person,
-          iconColor: const Color(0xFF426DC2),
-          label: 'Full Name',
-          value: _isLoadingProfile 
-              ? 'Loading...' 
-              : _currentUser?.fullName ?? 'Not provided',
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Email
-        _buildContactDetailItem(
-          icon: Icons.email,
-          iconColor: const Color(0xFF426DC2),
-          label: 'Email',
-          value: _isLoadingProfile 
-              ? 'Loading...' 
-              : _currentUser?.email ?? 'Not provided',
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Phone Number
-        _buildContactDetailItem(
-          icon: Icons.phone,
-          iconColor: const Color(0xFF426DC2),
-          label: 'Phone number',
-          value: _isLoadingProfile 
-              ? 'Loading...' 
-              : _currentUser?.phoneNumber ?? 'Not provided',
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 250),
+          crossFadeState: _contactExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            children: [
+              const SizedBox(height: 24),
+              _buildContactDetailItem(
+                icon: Icons.person,
+                iconColor: const Color(0xFF426DC2),
+                label: 'Full Name',
+                value: _isLoadingProfile ? 'Loading...' : _currentUser?.fullName ?? 'Not provided',
+              ),
+              const SizedBox(height: 24),
+              _buildContactDetailItem(
+                icon: Icons.email,
+                iconColor: const Color(0xFF426DC2),
+                label: 'Email',
+                value: _isLoadingProfile ? 'Loading...' : _currentUser?.email ?? 'Not provided',
+              ),
+              const SizedBox(height: 24),
+              _buildContactDetailItem(
+                icon: Icons.phone,
+                iconColor: const Color(0xFF426DC2),
+                label: 'Phone number',
+                value: _isLoadingProfile ? 'Loading...' : _currentUser?.phoneNumber ?? 'Not provided',
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -1580,87 +1585,75 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Contact details',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
+        GestureDetector(
+          onTap: () => setState(() => _contactExpanded = !_contactExpanded),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Contact details',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+              ),
+              AnimatedRotation(
+                turns: _contactExpanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 250),
+                child: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF426DC2), size: 28),
+              ),
+            ],
           ),
         ),
-        
-        const SizedBox(height: 24),
-        
-        // Full Name
-        _buildContactDetailItem(
-          icon: Icons.person,
-          iconColor: const Color(0xFF426DC2),
-          label: 'Full Name',
-          value: _isLoadingProfile 
-              ? 'Loading...' 
-              : _currentUser?.fullName ?? 'Not provided',
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Agency Name (only for agents)
-        if (_currentUser?.agencyName != null || _isLoadingProfile) ...[
-          _buildContactDetailItem(
-            icon: Icons.business,
-            iconColor: const Color(0xFF426DC2),
-            label: 'Agency Name',
-            value: _isLoadingProfile 
-                ? 'Loading...' 
-                : _currentUser?.agencyName ?? 'Not provided',
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 250),
+          crossFadeState: _contactExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            children: [
+              const SizedBox(height: 24),
+              _buildContactDetailItem(
+                icon: Icons.person,
+                iconColor: const Color(0xFF426DC2),
+                label: 'Full Name',
+                value: _isLoadingProfile ? 'Loading...' : _currentUser?.fullName ?? 'Not provided',
+              ),
+              if (_currentUser?.agencyName != null || _isLoadingProfile) ...[
+                const SizedBox(height: 24),
+                _buildContactDetailItem(
+                  icon: Icons.business,
+                  iconColor: const Color(0xFF426DC2),
+                  label: 'Agency Name',
+                  value: _isLoadingProfile ? 'Loading...' : _currentUser?.agencyName ?? 'Not provided',
+                ),
+              ],
+              const SizedBox(height: 24),
+              _buildContactDetailItem(
+                icon: Icons.email,
+                iconColor: const Color(0xFF426DC2),
+                label: 'Email',
+                value: _isLoadingProfile ? 'Loading...' : _currentUser?.email ?? 'Not provided',
+              ),
+              const SizedBox(height: 24),
+              _buildContactDetailItem(
+                icon: Icons.phone,
+                iconColor: const Color(0xFF426DC2),
+                label: 'Phone number',
+                value: _isLoadingProfile ? 'Loading...' : _currentUser?.phoneNumber ?? 'Not provided',
+              ),
+              const SizedBox(height: 24),
+              _buildContactDetailItem(
+                icon: Icons.chat,
+                iconColor: const Color(0xFF426DC2),
+                label: 'Whatsapp number',
+                value: _isLoadingProfile ? 'Loading...' : _currentUser?.whatsappNumber ?? _currentUser?.phoneNumber ?? 'Not provided',
+              ),
+              const SizedBox(height: 24),
+              _buildContactDetailItem(
+                icon: Icons.location_on,
+                iconColor: const Color(0xFF426DC2),
+                label: 'Location',
+                value: _isLoadingProfile ? 'Loading...' : _currentUser?.location ?? 'Not provided',
+              ),
+            ],
           ),
-          
-          const SizedBox(height: 24),
-        ],
-        
-        // Email
-        _buildContactDetailItem(
-          icon: Icons.email,
-          iconColor: const Color(0xFF426DC2),
-          label: 'Email',
-          value: _isLoadingProfile 
-              ? 'Loading...' 
-              : _currentUser?.email ?? 'Not provided',
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Phone Number
-        _buildContactDetailItem(
-          icon: Icons.phone,
-          iconColor: const Color(0xFF426DC2),
-          label: 'Phone number',
-          value: _isLoadingProfile 
-              ? 'Loading...' 
-              : _currentUser?.phoneNumber ?? 'Not provided',
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // WhatsApp Number (only for agents)
-        _buildContactDetailItem(
-          icon: Icons.chat,
-          iconColor: const Color(0xFF426DC2),
-          label: 'Whatsapp number',
-          value: _isLoadingProfile 
-              ? 'Loading...' 
-              : _currentUser?.whatsappNumber ?? _currentUser?.phoneNumber ?? 'Not provided',
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Location
-        _buildContactDetailItem(
-          icon: Icons.location_on,
-          iconColor: const Color(0xFF426DC2),
-          label: 'Location',
-          value: _isLoadingProfile 
-              ? 'Loading...' 
-              : _currentUser?.location ?? 'Not provided',
         ),
       ],
     );

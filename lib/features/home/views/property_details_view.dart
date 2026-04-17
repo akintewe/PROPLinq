@@ -12,6 +12,9 @@ import 'hotel_reservation_view.dart';
 import 'agent_calendar_view.dart';
 import 'in_app_chat_view.dart';
 import '../../auth/services/auth_service.dart';
+import '../../auth/views/login_view.dart';
+import 'tenant_home_view.dart';
+import 'agent_home_view.dart';
 import '../../../core/services/api_service.dart';
 import '../services/recently_viewed_service.dart';
 import '../services/property_service.dart';
@@ -22,11 +25,13 @@ import '../../../core/utils/format_utils.dart';
 class PropertyDetailsView extends StatefulWidget {
   final Map<String, dynamic>? propertyData;
   final bool isHomeSeeker;
-  
+  final bool isGuest;
+
   const PropertyDetailsView({
-    super.key, 
+    super.key,
     this.propertyData,
-    this.isHomeSeeker = true, // Default to true for home seekers
+    this.isHomeSeeker = true,
+    this.isGuest = false,
   });
 
   @override
@@ -54,6 +59,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   // Hotel rooms state
   List<RoomModel> _hotelRooms = [];
   bool _isLoadingRooms = false;
+  RoomModel? _selectedRoom;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _roomsSectionKey = GlobalKey();
   
@@ -1166,11 +1172,23 @@ If you don't have the app, the link will open in your browser where you can down
 
   /// Build individual room card (compact grid card)
   Widget _buildRoomCard(RoomModel room) {
+    final isSelected = _selectedRoom?.id == room.id;
+    final isAvailable = room.count > 0;
+    return GestureDetector(
+      onTap: isAvailable && !_isOwner ? () => setState(() => _selectedRoom = isSelected ? null : room) : null,
+      child: _buildRoomCardContent(room, isSelected, isAvailable),
+    );
+  }
+
+  Widget _buildRoomCardContent(RoomModel room, bool isSelected, bool isAvailable) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFE0E0E0),
+          width: isSelected ? 2 : 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -1182,33 +1200,51 @@ If you don't have the app, the link will open in your browser where you can down
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Room image
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(12),
-              topRight: Radius.circular(12),
-            ),
-            child: room.imageUrl != null && room.imageUrl!.isNotEmpty
-                ? Image.network(
-                    room.imageUrl!,
-                    height: 110,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 110,
-                      color: const Color(0xFFF0F0F0),
-                      child: const Center(
-                        child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
+          // Room image with selection overlay
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+                child: room.imageUrl != null && room.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        room.imageUrl!,
+                        height: 110,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 110,
+                          color: const Color(0xFFF0F0F0),
+                          child: const Center(
+                            child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        height: 110,
+                        color: const Color(0xFFF0F0F0),
+                        child: const Center(
+                          child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
+                        ),
                       ),
+              ),
+              if (isSelected)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF426DC2),
+                      shape: BoxShape.circle,
                     ),
-                  )
-                : Container(
-                    height: 110,
-                    color: const Color(0xFFF0F0F0),
-                    child: const Center(
-                      child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
-                    ),
+                    child: const Icon(Icons.check, color: Colors.white, size: 16),
                   ),
+                ),
+            ],
           ),
 
           // Card body
@@ -1255,7 +1291,7 @@ If you don't have the app, the link will open in your browser where you can down
 
                 // Price
                 Text(
-                  '₦${room.price.toStringAsFixed(0)}',
+                  FormatUtils.formatPrice(room.price.toStringAsFixed(0)),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -1308,33 +1344,42 @@ If you don't have the app, the link will open in your browser where you can down
 
                 const SizedBox(height: 6),
 
-                // Book button (hidden for property owner)
-                if (!_isOwner)
-                SizedBox(
-                  width: double.infinity,
-                  height: 32,
-                  child: ElevatedButton(
-                    onPressed: room.count > 0 ? () => _bookRoom(room) : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF426DC2),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey[300],
-                      disabledForegroundColor: Colors.grey[600],
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                // Selection indicator (non-owner, available rooms only)
+                if (!_isOwner && isAvailable)
+                  Row(
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFCCCCCC),
+                            width: 2,
+                          ),
+                          color: isSelected ? const Color(0xFF426DC2) : Colors.transparent,
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check, color: Colors.white, size: 11)
+                            : null,
                       ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      room.count > 0 ? 'Book Room' : 'Fully Booked',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(width: 6),
+                      Text(
+                        isSelected ? 'Selected' : 'Tap to select',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isSelected ? const Color(0xFF426DC2) : const Color(0xFF868686),
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ),
+
+                if (!_isOwner && !isAvailable)
+                  const Text(
+                    'Fully Booked',
+                    style: TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.w500),
+                  ),
 
                 // Manage Calendar button (owner only)
                 if (_isOwner) ...[
@@ -1376,15 +1421,105 @@ If you don't have the app, the link will open in your browser where you can down
   }
 
   /// Handle room booking
-  void _bookRoom(RoomModel room) {
+  void _showGuestLoginPrompt() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(color: const Color(0xFFE0E0E0), borderRadius: BorderRadius.circular(2)),
+            ),
+            const Icon(Icons.lock_outline, size: 48, color: Color(0xFF426DC2)),
+            const SizedBox(height: 16),
+            const Text(
+              'Sign in to continue',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'You need to be logged in to book or contact agents.',
+              style: TextStyle(fontSize: 14, color: Color(0xFF868686)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF426DC2), Color(0xFF75CFEA)]),
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    final propertyData = widget.propertyData;
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => LoginView(
+                          onLoginSuccess: (loginCtx, userType) {
+                            final isAgent = userType != null && userType != 'home_seeker';
+                            Navigator.of(loginCtx).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => isAgent ? const AgentHomeView() : const TenantHomeView(),
+                              ),
+                            );
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (loginCtx.mounted) {
+                                Navigator.of(loginCtx).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => PropertyDetailsView(
+                                      propertyData: propertyData,
+                                      isHomeSeeker: true,
+                                    ),
+                                  ),
+                                );
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                  ),
+                  child: const Text('Log In / Sign Up',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Maybe Later', style: TextStyle(color: Color(0xFF868686), fontSize: 14)),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _proceedWithSelectedRoom() {
+    if (_selectedRoom == null) return;
     final property = Map<String, dynamic>.from(widget.propertyData ?? _getDefaultProperty());
-    // Pass the specific room id so the reservation view loads that room's availability
-    property['selected_room_id'] = room.id;
+    property['selected_room_id'] = _selectedRoom!.id;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => HotelReservationView(
-          propertyData: property,
-        ),
+        builder: (context) => HotelReservationView(propertyData: property),
       ),
     );
   }
@@ -3042,7 +3177,9 @@ If you don't have the app, the link will open in your browser where you can down
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        isHotel ? 'Rooms Ranging From' : _getPriceLabel(propertyType, isForSale),
+                        isHotel
+                            ? (_selectedRoom != null ? 'Selected Room' : 'Rooms Ranging From')
+                            : _getPriceLabel(propertyType, isForSale),
                         style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF868686),
@@ -3050,6 +3187,9 @@ If you don't have the app, the link will open in your browser where you can down
                       ),
                       Text(
                         () {
+                          if (isHotel && _selectedRoom != null) {
+                            return _formatPrice(_selectedRoom!.price.toStringAsFixed(0));
+                          }
                           if (isHotel && _hotelRooms.isNotEmpty) {
                             final minPrice = _hotelRooms.map((r) => r.price).reduce((a, b) => a < b ? a : b);
                             return _formatPrice(minPrice.toStringAsFixed(0));
@@ -3079,20 +3219,27 @@ If you don't have the app, the link will open in your browser where you can down
                     child: Container(
                       height: 50,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment(-1.0, 0.0),
-                          end: Alignment(1.0, 0.0),
-                          stops: [0.0113, 0.4555, 1.1245],
-                          colors: [
-                            Color(0xFF426DC2),
-                            Color(0xFF75CFEA),
-                            Color.fromRGBO(51, 204, 153, 0.8),
-                          ],
-                        ),
+                        gradient: (isHotel && _selectedRoom == null)
+                            ? null
+                            : const LinearGradient(
+                                begin: Alignment(-1.0, 0.0),
+                                end: Alignment(1.0, 0.0),
+                                stops: [0.0113, 0.4555, 1.1245],
+                                colors: [
+                                  Color(0xFF426DC2),
+                                  Color(0xFF75CFEA),
+                                  Color.fromRGBO(51, 204, 153, 0.8),
+                                ],
+                              ),
+                        color: (isHotel && _selectedRoom == null) ? const Color(0xFFE0E0E0) : null,
                         borderRadius: BorderRadius.circular(25),
                       ),
                       child: ElevatedButton(
                           onPressed: () {
+                          if (widget.isGuest) {
+                            _showGuestLoginPrompt();
+                            return;
+                          }
                           final property = widget.propertyData ?? _getDefaultProperty();
                           final propertyType = property['type'] as String? ?? 'Apartment';
                           final normalizedType = propertyType.toLowerCase();
@@ -3100,15 +3247,9 @@ If you don't have the app, the link will open in your browser where you can down
                           final isShortlet = normalizedType == 'shortlet';
 
                           if (isHotel) {
-                            // Scroll to rooms section
-                            final ctx = _roomsSectionKey.currentContext;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(
-                                ctx,
-                                duration: const Duration(milliseconds: 600),
-                                curve: Curves.easeInOut,
-                              );
-                            }
+                            if (_selectedRoom == null) return;
+                            _proceedWithSelectedRoom();
+                            return;
                           } else if (isShortlet) {
                             // Navigate to reservation screen for shortlets
                             Navigator.of(context).push(
@@ -3168,10 +3309,10 @@ If you don't have the app, the link will open in your browser where you can down
                         ),
                         child: Text(
                           _getBottomButtonText(propertyType, isForSale),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: (isHotel && _selectedRoom == null) ? const Color(0xFF999999) : Colors.white,
                           ),
                         ),
                       ),
@@ -3536,11 +3677,9 @@ If you don't have the app, the link will open in your browser where you can down
   String _getBottomButtonText(String propertyType, bool isForSale) {
     final type = propertyType.toLowerCase();
     if (type == 'hotel') {
-      return 'View Rooms';
+      return 'Continue';
     } else if (type == 'shortlet') {
       return 'Book Now';
-    } else if (isForSale) {
-      return 'Contact agent';
     } else {
       return 'Contact agent';
     }

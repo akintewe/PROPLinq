@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
+import 'dart:ui';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/user_preferences_service.dart';
 import '../../../core/widgets/location_selection_dialog.dart';
-import '../../../core/widgets/ai_chat_fab.dart';
 import '../../auth/views/login_view.dart';
+import 'tenant_home_view.dart';
+import 'agent_home_view.dart';
 import '../services/property_service.dart';
 import '../models/property_model.dart';
 import 'property_details_view.dart';
@@ -278,8 +280,8 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     );
   }
 
-  void _navigateToPropertyDetails(PropertyModel property) {
-    final propertyData = <String, dynamic>{
+  Map<String, dynamic> _buildPropertyData(PropertyModel property) {
+    final data = <String, dynamic>{
       'id': property.id,
       'badges': [property.user?.verificationStatus ?? 'Unverified'],
       'title': property.title,
@@ -307,16 +309,26 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     };
     if (property.rawJson != null) {
       final raw = property.rawJson!;
-      if (raw['ratings'] != null) propertyData['ratings'] = raw['ratings'];
-      if (raw['average_rating'] != null) propertyData['average_rating'] = raw['average_rating'];
-      if (raw['rating_count'] != null) propertyData['rating_count'] = raw['rating_count'];
+      if (raw['ratings'] != null) data['ratings'] = raw['ratings'];
+      if (raw['average_rating'] != null) data['average_rating'] = raw['average_rating'];
+      if (raw['rating_count'] != null) data['rating_count'] = raw['rating_count'];
     }
+    return data;
+  }
+
+  void _navigateToPropertyDetails(PropertyModel property) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: propertyData, isHomeSeeker: true)),
+      MaterialPageRoute(
+        builder: (_) => PropertyDetailsView(
+          propertyData: _buildPropertyData(property),
+          isHomeSeeker: true,
+          isGuest: true,
+        ),
+      ),
     );
   }
 
-  void _promptLogin() {
+  void _promptLogin({PropertyModel? property}) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -361,8 +373,14 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginView()),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => LoginView(
+                          onLoginSuccess: property != null
+                              ? (loginCtx, userType) => _afterLoginNavigateToProperty(loginCtx, userType, property)
+                              : null,
+                        ),
+                      ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -385,6 +403,49 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+
+  void _afterLoginNavigateToProperty(BuildContext loginCtx, String? userType, PropertyModel property) {
+    final isAgent = userType != null && userType != 'home_seeker';
+    Navigator.of(loginCtx).pushReplacement(
+      MaterialPageRoute(builder: (_) => isAgent ? const AgentHomeView() : const TenantHomeView()),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (loginCtx.mounted) {
+        Navigator.of(loginCtx).push(
+          MaterialPageRoute(
+            builder: (_) => PropertyDetailsView(propertyData: _buildPropertyData(property), isHomeSeeker: true),
+          ),
+        );
+      }
+    });
+  }
+
+  bool _isShortletProperty(PropertyModel property) {
+    final t = property.type.toLowerCase();
+    final c = property.category.toLowerCase();
+    return t.contains('shortlet') || c.contains('shortlet');
+  }
+
+  Widget _buildBlurredAddress(String address) {
+    return ClipRect(
+      child: Stack(
+        children: [
+          Text(
+            address,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF868686)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -434,7 +495,6 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
           ],
         ),
       ),
-      floatingActionButton: const AiChatFab(),
       bottomNavigationBar: _buildGuestBottomNavBar(),
     );
   }
@@ -530,7 +590,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
               ),
               // Login button instead of notification
               GestureDetector(
-                onTap: () => Navigator.of(context).pushReplacement(
+                onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const LoginView()),
                 ),
                 child: Container(
@@ -752,7 +812,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '₦${FormatUtils.formatPrice(property.price)}',
+                      FormatUtils.formatPrice(property.price),
                       style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                   ],
@@ -935,12 +995,14 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                       const Icon(Icons.location_on, size: 14, color: Color(0xFF868686)),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          property.location,
-                          style: const TextStyle(fontSize: 13, color: Color(0xFF868686)),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: _isShortletProperty(property)
+                            ? _buildBlurredAddress(property.location)
+                            : Text(
+                                property.location,
+                                style: const TextStyle(fontSize: 13, color: Color(0xFF868686)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                       ),
                     ],
                   ),
@@ -949,7 +1011,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '₦${FormatUtils.formatPrice(property.price)}',
+                        FormatUtils.formatPrice(property.price),
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF426DC2)),
                       ),
                       if (property.bedrooms != null && property.bedrooms! > 0)
@@ -1025,7 +1087,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                     ),
                   ]),
                   const SizedBox(height: 8),
-                  Text('₦${FormatUtils.formatPrice(property.price)}',
+                  Text(FormatUtils.formatPrice(property.price),
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
                 ],
               ),
@@ -1183,7 +1245,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                     borderRadius: BorderRadius.circular(26),
                   ),
                   child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pushReplacement(
+                    onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const LoginView()),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -1283,7 +1345,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pushReplacement(
+                      onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const LoginView()),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -1377,9 +1439,18 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     final isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () {
-        if (index == 1) {
-          // Wishlist — locked for guests
-          setState(() => _currentIndex = index);
+        if (index == 0 && _currentIndex == 0) {
+          Future.wait([
+            _fetchProperties(isRefresh: true),
+            _fetchPromotedProperties(),
+          ]);
+          if (_homeScrollController.hasClients) {
+            _homeScrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
         } else {
           setState(() => _currentIndex = index);
         }

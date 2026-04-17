@@ -14,7 +14,11 @@ import '../../home/views/tenant_home_view.dart';
 import '../../home/views/agent_home_view.dart';
 
 class LoginView extends StatefulWidget {
-  const LoginView({super.key});
+  /// Called with the login BuildContext after successful login, before navigation.
+  /// Use this to push extra routes on top of the home screen.
+  final void Function(BuildContext loginContext, String? userType)? onLoginSuccess;
+
+  const LoginView({super.key, this.onLoginSuccess});
 
   @override
   State<LoginView> createState() => _LoginViewState();
@@ -186,20 +190,17 @@ class _LoginViewState extends State<LoginView> {
   }
 
   void _navigateToHome([String? userType]) {
-    
-    // Navigate based on user type from API response
+    if (widget.onLoginSuccess != null) {
+      widget.onLoginSuccess!(context, userType);
+      return;
+    }
     if (userType != null && userType != 'home_seeker') {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const AgentHomeView(),
-        ),
+        MaterialPageRoute(builder: (context) => const AgentHomeView()),
       );
     } else {
-      // Default to tenant home for 'home_seeker' or any other type
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const TenantHomeView(),
-        ),
+        MaterialPageRoute(builder: (context) => const TenantHomeView()),
       );
     }
   }
