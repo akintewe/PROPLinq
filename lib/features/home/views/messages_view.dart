@@ -7,10 +7,12 @@ import 'in_app_chat_view.dart';
 
 class MessagesView extends StatefulWidget {
   final bool isAgent;
-  
+  final VoidCallback? onConversationRead;
+
   const MessagesView({
     super.key,
     required this.isAgent,
+    this.onConversationRead,
   });
 
   @override
@@ -475,11 +477,14 @@ class _MessagesViewState extends State<MessagesView> {
       MaterialPageRoute(
         builder: (context) => InAppChatView(
           agentData: agentData,
-          propertyTitle: 'Property $propertyId', // Placeholder title
+          propertyTitle: 'Property $propertyId',
           propertyId: propertyId,
         ),
       ),
-    );
+    ).then((_) {
+      widget.onConversationRead?.call();
+      _loadConversations(); // Refresh conversation list to update read status
+    });
   }
 
   Future<void> _markConversationAsRead(Map<String, dynamic> conversation) async {

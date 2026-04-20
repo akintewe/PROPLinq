@@ -116,7 +116,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
         }
       }
 
-      if (isRefresh && allProperties.isNotEmpty) allProperties.shuffle();
+      if (allProperties.isNotEmpty) allProperties.shuffle();
 
       final featured = allProperties.where((p) => p.isFeatured).toList();
 
@@ -221,6 +221,8 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.85,
@@ -257,19 +259,18 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
             ),
             Expanded(
               child: _filteredProperties.isEmpty
-                  ? const Center(child: Text('No properties match your filters'))
+                  ? _buildEmptyFilterResults()
                   : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                       itemCount: _filteredProperties.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
-                        final p = _filteredProperties[index];
                         return GestureDetector(
                           onTap: () {
                             Navigator.of(context).pop();
-                            _navigateToPropertyDetails(p);
+                            _navigateToPropertyDetails(_filteredProperties[index]);
                           },
-                          child: _buildCompactPropertyCard(p),
+                          child: _buildPropertyCard(index, _filteredProperties),
                         );
                       },
                     ),
@@ -409,18 +410,39 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
 
   void _afterLoginNavigateToProperty(BuildContext loginCtx, String? userType, PropertyModel property) {
     final isAgent = userType != null && userType != 'home_seeker';
-    Navigator.of(loginCtx).pushReplacement(
+    final navigator = Navigator.of(loginCtx);
+    final propertyData = _buildPropertyData(property);
+    navigator.pushReplacement(
       MaterialPageRoute(builder: (_) => isAgent ? const AgentHomeView() : const TenantHomeView()),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (loginCtx.mounted) {
-        Navigator.of(loginCtx).push(
-          MaterialPageRoute(
-            builder: (_) => PropertyDetailsView(propertyData: _buildPropertyData(property), isHomeSeeker: true),
-          ),
-        );
-      }
+      navigator.push(
+        MaterialPageRoute(
+          builder: (_) => PropertyDetailsView(propertyData: propertyData, isHomeSeeker: true),
+        ),
+      );
     });
+  }
+
+  Widget _buildForRentSaleTag(PropertyModel property) {
+    final categoryLower = property.category.toLowerCase();
+    final typeLower = property.type.toLowerCase();
+    final showTag = (categoryLower == 'for_rent' || categoryLower == 'for_sale') &&
+        typeLower != 'hotel' && typeLower != 'shortlet';
+    if (!showTag) return const SizedBox.shrink();
+    final label = categoryLower == 'for_rent' ? 'For Rent' : 'For Sale';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE0E0E0)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF868686)),
+      ),
+    );
   }
 
   bool _isShortletProperty(PropertyModel property) {
@@ -641,7 +663,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                         ),
                         const Expanded(
                           child: Text(
-                            'Search properties or hotels',
+                            'Search properties, Shortlets & hotels',
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: Color(0xFFB0B5BB)),
                           ),
                         ),
@@ -877,6 +899,8 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                   colors: [Color(0xFF426DC2), Color(0xFF63ADDC), Color(0xFF75CFEA)],
                   stops: [0.0, 1.0, 1.0],
                 )
@@ -884,13 +908,53 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
           color: isSelected ? null : const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(24),
         ),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF666666),
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (title == 'Real Estate')
+              SvgPicture.asset(
+                'assets/icons/emojione-monotone_houses.svg',
+                width: 16,
+                height: 16,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.business,
+                  size: 16,
+                  color: isSelected ? Colors.white : const Color(0xFF666666),
+                ),
+              ),
+            if (title == 'Hotels')
+              SvgPicture.asset(
+                'assets/icons/emojione_houses.svg',
+                width: 16,
+                height: 16,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.hotel,
+                  size: 16,
+                  color: isSelected ? Colors.white : const Color(0xFF666666),
+                ),
+              ),
+            if (title == 'Shortlets')
+              SvgPicture.asset(
+                'assets/icons/emojione_houses.svg',
+                width: 16,
+                height: 16,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.apartment,
+                  size: 16,
+                  color: isSelected ? Colors.white : const Color(0xFF666666),
+                ),
+              ),
+            if (title == 'Real Estate' || title == 'Hotels' || title == 'Shortlets')
+              const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : const Color(0xFF666666),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -978,6 +1042,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
@@ -985,6 +1050,18 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECF0F9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          FormatUtils.toTitleCase(property.type),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF426DC2)),
                         ),
                       ),
                     ],
@@ -1006,7 +1083,10 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+                  // For Rent / For Sale tag (real estate only)
+                  _buildForRentSaleTag(property),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1041,6 +1121,28 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyFilterResults() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off_rounded, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          const Text(
+            'No properties found',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D)),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Try adjusting your filters to see more results',
+            style: TextStyle(fontSize: 14, color: Color(0xFF868686)),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -1137,33 +1239,15 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: ['All', 'Real Estate', 'Hotels', 'Shortlets'].map((cat) {
-                      final sel = _selectedCategory == cat;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedCategory = cat),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: sel
-                                  ? const LinearGradient(colors: [Color(0xFF426DC2), Color(0xFF75CFEA)])
-                                  : null,
-                              color: sel ? null : const Color(0xFFF5F5F5),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: Text(
-                              cat,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: sel ? Colors.white : const Color(0xFF666666),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    children: [
+                      _buildCategoryButton('All'),
+                      const SizedBox(width: 12),
+                      _buildCategoryButton('Real Estate'),
+                      const SizedBox(width: 12),
+                      _buildCategoryButton('Hotels'),
+                      const SizedBox(width: 12),
+                      _buildCategoryButton('Shortlets'),
+                    ],
                   ),
                 ),
               ],

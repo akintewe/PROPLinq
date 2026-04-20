@@ -176,6 +176,9 @@ class _InAppChatViewState extends State<InAppChatView> {
       if (_messages.length > previousCount) {
         _scrollToBottom();
       }
+
+      // Mark messages as read now that they are loaded
+      await _markMessagesAsRead();
     } catch (e) {
       setState(() {
         _messages.clear();

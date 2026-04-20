@@ -283,11 +283,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       BookingsCacheService().fetchAndCacheBookings();
       
       // Periodically refresh unread message count
-      // Only update if user is NOT viewing messages tab
       _unreadCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        if (mounted && _currentIndex != 2) {
-          _fetchUnreadMessageCount();
-        }
+        if (mounted) _fetchUnreadMessageCount();
       });
     });
   }
@@ -470,10 +467,8 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         });
       }
 
-      // Shuffle properties on refresh for variety (within same preference segment)
-      if (isRefresh && allProperties.isNotEmpty) {
+      if (allProperties.isNotEmpty) {
         allProperties.shuffle();
-        debugPrint('🔀 [TenantHomeView] Shuffled properties for fresh discovery');
       }
 
       setState(() {
@@ -1192,7 +1187,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
               },
             ),
             // Messages Tab
-            const MessagesView(isAgent: false),
+            MessagesView(isAgent: false, onConversationRead: _fetchUnreadMessageCount),
             // Profile Tab
             const ProfileView(isAgent: false),
             // Settings Tab

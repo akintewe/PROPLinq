@@ -761,6 +761,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         if (widget.isAgent) ...[
           _buildCurrentListingSection(),
           const SizedBox(height: 32),
+          _buildVerifyCheckinSection(),
+          const SizedBox(height: 32),
           _buildCalendarSection(),
           const SizedBox(height: 32),
           _buildSubscriptionSection(),
@@ -2303,36 +2305,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 32,
-                          child: ElevatedButton(
-                            onPressed: () => _showCheckInVerificationSheet(property),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF426DC2),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.how_to_reg_outlined, size: 13),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Verify Check-in',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ],
                     )
                   else
@@ -2373,6 +2345,71 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         ],
         ),
       ),
+    );
+  }
+
+  Widget _buildVerifyCheckinSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Verify Check-in',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Confirm a guest\'s check-in by entering their booking code',
+          style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F8FF),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF426DC2).withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.how_to_reg_outlined, size: 40, color: Color(0xFF426DC2)),
+              const SizedBox(height: 12),
+              const Text(
+                'Ready to verify a guest?',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Tap below to enter the guest\'s check-in code',
+                style: TextStyle(fontSize: 13, color: Color(0xFF868686)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => _showCheckInVerificationSheet(null),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF426DC2),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    elevation: 0,
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.how_to_reg_outlined, size: 18),
+                      SizedBox(width: 8),
+                      Text('Verify Check-in', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -3119,7 +3156,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     );
   }
 
-  void _showCheckInVerificationSheet(PropertyModel property) {
+  void _showCheckInVerificationSheet(PropertyModel? property) {
     final codeController = TextEditingController();
     bool isVerifying = false;
     String? resultMessage;
@@ -3167,13 +3204,14 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      property.title,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF868686),
+                    if (property != null)
+                      Text(
+                        property.title,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF868686),
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 24),
 
                     // Result banner

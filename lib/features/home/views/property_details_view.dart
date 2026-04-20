@@ -1469,22 +1469,21 @@ If you don't have the app, the link will open in your browser where you can down
                         builder: (_) => LoginView(
                           onLoginSuccess: (loginCtx, userType) {
                             final isAgent = userType != null && userType != 'home_seeker';
-                            Navigator.of(loginCtx).pushReplacement(
+                            final navigator = Navigator.of(loginCtx);
+                            navigator.pushReplacement(
                               MaterialPageRoute(
                                 builder: (_) => isAgent ? const AgentHomeView() : const TenantHomeView(),
                               ),
                             );
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (loginCtx.mounted) {
-                                Navigator.of(loginCtx).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => PropertyDetailsView(
-                                      propertyData: propertyData,
-                                      isHomeSeeker: true,
-                                    ),
+                              navigator.push(
+                                MaterialPageRoute(
+                                  builder: (_) => PropertyDetailsView(
+                                    propertyData: propertyData,
+                                    isHomeSeeker: true,
                                   ),
-                                );
-                              }
+                                ),
+                              );
                             });
                           },
                         ),
