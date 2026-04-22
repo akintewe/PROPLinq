@@ -48,6 +48,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
   bool _isLoadingKycStatus = true;
   List<PropertyModel> _myProperties = [];
   bool _isLoadingMyProperties = true;
+  bool _showAllListings = false;
 
   // Ratings and Reviews
   List<Map<String, dynamic>> _agentRatings = [];
@@ -356,6 +357,12 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
       print('  - Returning formatted display: "$display"');
       return display;
     }
+  }
+
+  bool _isSubscriptionEligible() {
+    final agentType = _currentUser?.agentType?.toLowerCase().replaceAll(' ', '_') ?? '';
+    // Hotel and shortlet hosts don't get subscription
+    return agentType != 'hotel' && agentType != 'shortlet';
   }
 
   /// Refresh all data (profile, KYC status, and properties)
@@ -764,9 +771,12 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
           _buildVerifyCheckinSection(),
           const SizedBox(height: 32),
           _buildCalendarSection(),
+          // Subscription: only for realtors and individual agents, not shortlet/hotel hosts
+          if (_isSubscriptionEligible()) ...[
+            const SizedBox(height: 32),
+            _buildSubscriptionSection(),
+          ],
           const SizedBox(height: 32),
-          _buildSubscriptionSection(),
-              const SizedBox(height: 32),
           _buildReviewSection(),
         ],
         
@@ -1782,24 +1792,53 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         ),
         
         const SizedBox(height: 16),
-        
-        SizedBox(
-          height: 340,
-          child: _isLoadingMyProperties
-              ? const Center(
-                  child: CircularProgressIndicator(),
-                )
-              : _myProperties.isEmpty
-                  ? _buildEmptyPropertiesState()
-                  : ListView.separated(
-            scrollDirection: Axis.horizontal,
-                      itemCount: _myProperties.length, // Show all properties with horizontal scrolling
-            separatorBuilder: (context, index) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              return _buildPropertyCard(index);
-            },
-          ),
-        ),
+
+        if (_isLoadingMyProperties)
+          const Center(child: CircularProgressIndicator())
+        else if (_myProperties.isEmpty)
+          _buildEmptyPropertiesState()
+        else ...[
+          _buildPropertyCard(0),
+          if (_myProperties.length > 1) ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => setState(() => _showAllListings = !_showAllListings),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F8FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF426DC2).withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _showAllListings
+                          ? 'Show Less'
+                          : 'View More (${_myProperties.length - 1} ${_myProperties.length - 1 == 1 ? "listing" : "listings"})',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF426DC2)),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      _showAllListings ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: const Color(0xFF426DC2),
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_showAllListings) ...[
+              const SizedBox(height: 12),
+              ...List.generate(_myProperties.length - 1, (i) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildPropertyCard(i + 1),
+              )),
+            ],
+          ],
+        ],
       ],
     );
   }
@@ -1949,13 +1988,13 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         );
       },
       child: Container(
-      width: 240,
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

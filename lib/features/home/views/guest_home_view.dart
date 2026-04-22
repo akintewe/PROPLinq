@@ -103,8 +103,9 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
       List<PropertyModel> allProperties = [];
       int currentPage = 1;
       bool hasMorePages = true;
+      const int maxPages = 50; // safety cap
 
-      while (hasMorePages) {
+      while (hasMorePages && currentPage <= maxPages) {
         final response = await _propertyService.fetchPropertiesPaginatedPublic(page: currentPage);
         final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
         if (properties.isEmpty) break;
@@ -424,24 +425,58 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     });
   }
 
-  Widget _buildForRentSaleTag(PropertyModel property) {
+  Widget _buildGuestVerificationBadge(PropertyModel property) {
     final categoryLower = property.category.toLowerCase();
     final typeLower = property.type.toLowerCase();
-    final showTag = (categoryLower == 'for_rent' || categoryLower == 'for_sale') &&
+    final showForRentSale = (categoryLower == 'for_rent' || categoryLower == 'for_sale') &&
         typeLower != 'hotel' && typeLower != 'shortlet';
-    if (!showTag) return const SizedBox.shrink();
-    final label = categoryLower == 'for_rent' ? 'For Rent' : 'For Sale';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF868686)),
-      ),
+    final forRentSaleText = categoryLower == 'for_rent' ? 'For Rent' : 'For Sale';
+
+    final status = property.user?.verificationStatus;
+    final IconData icon;
+    final Color iconColor;
+    final String text;
+    switch (status) {
+      case 'Verified':
+        icon = Icons.verified; iconColor = Colors.green; text = 'Verified';
+        break;
+      case 'Pending':
+        icon = Icons.pending; iconColor = Colors.orange; text = 'Pending';
+        break;
+      case 'Rejected':
+        icon = Icons.cancel; iconColor = Colors.red; text = 'Rejected';
+        break;
+      default:
+        icon = Icons.pending; iconColor = Colors.orange; text = 'Unverified';
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: iconColor),
+              const SizedBox(width: 4),
+              Text(text, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w400, color: Colors.black)),
+            ],
+          ),
+        ),
+        if (showForRentSale) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            child: Text(
+              forRentSaleText,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF868686)),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -976,64 +1011,56 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image with badges
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Container(
-                    height: 200,
-                    width: double.infinity,
-                    child: Image.network(
-                      property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(color: const Color(0xFFE0E0E0)),
-                    ),
+            // Image with overlay badges (same layout as authenticated dashboard)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
+                    fit: BoxFit.cover,
+                    onError: (_, __) {},
                   ),
                 ),
-                // Verification badge
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          property.user?.verificationStatus == 'Verified' ? Icons.verified : Icons.pending,
-                          size: 14,
-                          color: property.user?.verificationStatus == 'Verified' ? Colors.green : Colors.orange,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          property.user?.verificationStatus ?? 'Unverified',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w400, color: Colors.black),
-                        ),
-                      ],
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black.withValues(alpha: 0.3)],
                     ),
                   ),
-                ),
-                // Save button — tapping prompts login
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: GestureDetector(
-                    onTap: _promptLogin,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
+                  child: Stack(
+                    children: [
+                      // Verification badge + For Rent/Sale tag on image (top-left)
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: _buildGuestVerificationBadge(property),
                       ),
-                      child: const Icon(Icons.favorite_border, size: 18, color: Color(0xFF426DC2)),
-                    ),
+                      // Save button (top-right)
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: GestureDetector(
+                          onTap: _promptLogin,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.favorite_border, size: 18, color: Color(0xFF868686)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
             // Details
             Padding(
@@ -1047,12 +1074,9 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                       Expanded(
                         child: Text(
                           property.title,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -1066,7 +1090,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       const Icon(Icons.location_on, size: 14, color: Color(0xFF868686)),
@@ -1083,10 +1107,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  // For Rent / For Sale tag (real estate only)
-                  _buildForRentSaleTag(property),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

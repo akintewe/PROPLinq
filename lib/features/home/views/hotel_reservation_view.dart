@@ -5,11 +5,16 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'dart:convert';
 import '../services/hotel_service.dart';
+import 'guest_home_view.dart';
+import 'tenant_home_view.dart';
+import 'agent_home_view.dart';
+import '../../auth/views/login_view.dart';
 
 class HotelReservationView extends StatefulWidget {
   final Map<String, dynamic> propertyData;
-  
-  const HotelReservationView({super.key, required this.propertyData});
+  final bool isGuest;
+
+  const HotelReservationView({super.key, required this.propertyData, this.isGuest = false});
 
   @override
   State<HotelReservationView> createState() => _HotelReservationViewState();
@@ -23,6 +28,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
   DateTime _checkOutDate = DateTime.now();
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
   int? _selectedDay;
+  bool _selectingCheckout = false; // false = picking check-in, true = picking check-out
 
   final HotelService _hotelService = HotelService();
   Set<String> _blockedDates = {};
@@ -592,20 +598,44 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           ),
           
           const SizedBox(height: 16),
-          
+
+          // Tap-hint
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F5FF),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 14, color: Color(0xFF426DC2)),
+                const SizedBox(width: 6),
+                Text(
+                  _selectingCheckout
+                      ? 'Now tap a date to set check-out'
+                      : 'Tap a date to set check-in',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF426DC2)),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
           // Calendar grid
           _buildCalendarGrid(),
 
           const SizedBox(height: 16),
 
           // Legend
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
             children: [
               _calendarLegendDot(const Color(0xFFEEEEEE), 'Blocked'),
-              const SizedBox(width: 16),
               _calendarLegendDot(const Color(0xFFFFCDD2), 'Booked'),
-              const SizedBox(width: 16),
-              _calendarLegendDot(const Color(0xFF426DC2), 'Selected'),
+              _calendarLegendDot(const Color(0xFF426DC2), 'Check-in/out'),
+              _calendarLegendDot(const Color(0xFFD6E4F7), 'Range'),
             ],
           ),
         ],
@@ -645,41 +675,76 @@ class _HotelReservationViewState extends State<HotelReservationView> {
     
     // Add days of the month
     for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(_currentMonth.year, _currentMonth.month, day);
       final dateKey = '${_currentMonth.year}-${_currentMonth.month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
       final isBlocked = _blockedDates.contains(dateKey);
       final isBooked = _bookedDates.contains(dateKey);
       final isUnavailable = isBlocked || isBooked;
-      final isPast = DateTime(_currentMonth.year, _currentMonth.month, day).isBefore(DateTime.now().subtract(const Duration(days: 1)));
+      final isPast = date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
       final isDisabled = isUnavailable || isPast;
 
-      final isSelected = day == _selectedDay &&
-                        _currentMonth.month == _checkInDate.month &&
-                        _currentMonth.year == _checkInDate.year;
-      final isToday = day == DateTime.now().day &&
-                     _currentMonth.month == DateTime.now().month &&
-                     _currentMonth.year == DateTime.now().year;
+      final isCheckIn = date.year == _checkInDate.year &&
+                        date.month == _checkInDate.month &&
+                        date.day == _checkInDate.day;
+      final isCheckOut = date.year == _checkOutDate.year &&
+                         date.month == _checkOutDate.month &&
+                         date.day == _checkOutDate.day;
+      final isInRange = date.isAfter(_checkInDate) && date.isBefore(_checkOutDate);
+      final isToday = date.year == DateTime.now().year &&
+                      date.month == DateTime.now().month &&
+                      date.day == DateTime.now().day;
+
+      Color bgColor;
+      Color textColor;
+      if (isCheckIn || isCheckOut) {
+        bgColor = const Color(0xFF426DC2);
+        textColor = Colors.white;
+      } else if (isInRange) {
+        bgColor = const Color(0xFFD6E4F7);
+        textColor = const Color(0xFF426DC2);
+      } else if (isBooked) {
+        bgColor = const Color(0xFFFFCDD2);
+        textColor = Colors.grey.shade400;
+      } else if (isBlocked) {
+        bgColor = const Color(0xFFEEEEEE);
+        textColor = Colors.grey.shade400;
+      } else if (isToday) {
+        bgColor = const Color(0xFFE3F2FD);
+        textColor = const Color(0xFF426DC2);
+      } else {
+        bgColor = Colors.transparent;
+        textColor = isDisabled ? Colors.grey.shade400 : Colors.black;
+      }
 
       dayWidgets.add(
         GestureDetector(
           onTap: isDisabled ? null : () {
             setState(() {
-              _selectedDay = day;
-              _checkInDate = DateTime(_currentMonth.year, _currentMonth.month, day);
-              _updateCheckOutDate();
+              if (!_selectingCheckout) {
+                // First tap: set check-in
+                _checkInDate = date;
+                _checkOutDate = date.add(Duration(days: _nights));
+                _selectedDay = day;
+                _selectingCheckout = true;
+              } else {
+                // Second tap: set check-out (must be after check-in)
+                if (date.isAfter(_checkInDate)) {
+                  _checkOutDate = date;
+                  _nights = _checkOutDate.difference(_checkInDate).inDays;
+                } else {
+                  // Tapped before check-in: restart
+                  _checkInDate = date;
+                  _checkOutDate = date.add(Duration(days: _nights));
+                  _selectedDay = day;
+                }
+                _selectingCheckout = false;
+              }
             });
           },
           child: Container(
             height: 40,
             decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFF426DC2)
-                  : isBooked
-                      ? const Color(0xFFFFCDD2)
-                      : isBlocked
-                          ? const Color(0xFFEEEEEE)
-                          : isToday
-                              ? const Color(0xFFE3F2FD)
-                              : Colors.transparent,
+              color: bgColor,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
@@ -688,13 +753,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: isSelected
-                      ? Colors.white
-                      : isDisabled
-                          ? Colors.grey.shade400
-                          : isToday
-                              ? const Color(0xFF426DC2)
-                              : Colors.black,
+                  color: textColor,
                   decoration: isUnavailable ? TextDecoration.lineThrough : null,
                 ),
               ),
@@ -926,7 +985,11 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           ),
           child: ElevatedButton(
             onPressed: () {
-              _showPaymentScreen();
+              if (widget.isGuest) {
+                _showGuestLoginPrompt();
+              } else {
+                _showPaymentScreen();
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
@@ -946,6 +1009,83 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                   ),
                 ),
               ),
+      ),
+    );
+  }
+
+  void _showGuestLoginPrompt() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(color: const Color(0xFFE0E0E0), borderRadius: BorderRadius.circular(2)),
+            ),
+            const Icon(Icons.lock_outline, size: 48, color: Color(0xFF426DC2)),
+            const SizedBox(height: 16),
+            const Text('Sign in to continue', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            const Text(
+              'Create an account or log in to complete your booking.',
+              style: TextStyle(fontSize: 14, color: Color(0xFF868686)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF426DC2), Color(0xFF75CFEA)]),
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    final navigator = Navigator.of(context);
+                    navigator.push(MaterialPageRoute(
+                      builder: (_) => LoginView(
+                        onLoginSuccess: (loginCtx, userType) {
+                          final isAgent = userType != null && userType != 'home_seeker';
+                          final nav = Navigator.of(loginCtx);
+                          nav.pushReplacement(MaterialPageRoute(
+                            builder: (_) => isAgent ? const AgentHomeView() : const TenantHomeView(),
+                          ));
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            nav.push(MaterialPageRoute(
+                              builder: (_) => HotelReservationView(propertyData: widget.propertyData),
+                            ));
+                          });
+                        },
+                      ),
+                    ));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                  ),
+                  child: const Text('Log In / Sign Up', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Continue Browsing', style: TextStyle(color: Color(0xFF868686), fontSize: 14)),
+            ),
+          ],
+        ),
       ),
     );
   }

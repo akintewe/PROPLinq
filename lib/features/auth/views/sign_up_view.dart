@@ -11,6 +11,7 @@ import 'verify_phone_view.dart';
 import 'option_selection_view.dart';
 import '../../home/views/tenant_home_view.dart';
 import '../../home/views/agent_home_view.dart';
+import '../../home/views/guest_home_view.dart';
 
 class SignUpView extends StatefulWidget {
   const SignUpView({super.key});
@@ -331,7 +332,19 @@ class _SignUpViewState extends State<SignUpView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const GuestHomeView()),
+          );
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -901,6 +914,7 @@ class _SignUpViewState extends State<SignUpView> {
           ),
         ),
       ),
+    ),
     );
   }
 } 

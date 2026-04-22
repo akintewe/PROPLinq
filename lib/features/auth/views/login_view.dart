@@ -12,6 +12,7 @@ import 'sign_up_view.dart';
 import 'biometric_login_view.dart';
 import '../../home/views/tenant_home_view.dart';
 import '../../home/views/agent_home_view.dart';
+import '../../home/views/guest_home_view.dart';
 
 class LoginView extends StatefulWidget {
   /// Called with the login BuildContext after successful login, before navigation.
@@ -279,7 +280,19 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const GuestHomeView()),
+          );
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
@@ -664,6 +677,7 @@ class _LoginViewState extends State<LoginView> {
           ),
         ),
       ),
+    ),
     );
   }
 } 

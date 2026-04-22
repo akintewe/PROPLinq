@@ -929,21 +929,23 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     return filtered;
   }
 
-  String _getUserTypeDisplayForAgent() {
-    if (_currentUser == null) return 'Agent';
-    
-    // Prefer agentType if available
-    if (_currentUser!.agentType != null && _currentUser!.agentType!.trim().isNotEmpty) {
-      return _currentUser!.agentType!.replaceAll('_', ' ');
-    }
-    
-    // Fallback to userType
-    final userType = _currentUser!.userType.trim();
-    if (userType.isEmpty || userType == 'agent') {
-      return 'Agent';
-    }
-    
-    return userType.replaceAll('_', ' ');
+  String _getAgentMotivation() {
+    const quotes = [
+      'Rise and shine. Deals await. 🌅',
+      'Keep grinding. Success is close. 💪',
+      'Every listing is an opportunity.',
+      'Make today count. 🔥',
+      'Your next deal is one call away.',
+      'Stay consistent. Stay winning.',
+      'Big moves happen every day. 🚀',
+      'Hustle smart. Close strong.',
+      'Champions show up daily. 🏆',
+      'Build the future, one deal at a time.',
+      'Your effort today shapes tomorrow.',
+      'Keep pushing. The best is ahead.',
+    ];
+    final index = DateTime.now().day % quotes.length;
+    return quotes[index];
   }
 
   @override
@@ -1602,7 +1604,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                               ? 'Loading...'
                               : _isShowingSearchResults && _selectedLocation.isNotEmpty
                                   ? _selectedLocation
-                                  : _getUserTypeDisplayForAgent(),
+                                  : _getAgentMotivation(),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,

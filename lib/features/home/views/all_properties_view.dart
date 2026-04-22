@@ -616,7 +616,7 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    property.price,
+                    FormatUtils.formatPrice(property.price),
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -746,7 +746,7 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      property.price,
+                      FormatUtils.formatPrice(property.price),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

@@ -1518,7 +1518,7 @@ If you don't have the app, the link will open in your browser where you can down
     property['selected_room_id'] = _selectedRoom!.id;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => HotelReservationView(propertyData: property),
+        builder: (context) => HotelReservationView(propertyData: property, isGuest: widget.isGuest),
       ),
     );
   }
@@ -3235,10 +3235,6 @@ If you don't have the app, the link will open in your browser where you can down
                       ),
                       child: ElevatedButton(
                           onPressed: () {
-                          if (widget.isGuest) {
-                            _showGuestLoginPrompt();
-                            return;
-                          }
                           final property = widget.propertyData ?? _getDefaultProperty();
                           final propertyType = property['type'] as String? ?? 'Apartment';
                           final normalizedType = propertyType.toLowerCase();
@@ -3250,14 +3246,18 @@ If you don't have the app, the link will open in your browser where you can down
                             _proceedWithSelectedRoom();
                             return;
                           } else if (isShortlet) {
-                            // Navigate to reservation screen for shortlets
+                            // Navigate to reservation screen for shortlets — guests allowed, login prompt on Pay
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) => HotelReservationView(
                                   propertyData: property,
+                                  isGuest: widget.isGuest,
                                 ),
                               ),
                             );
+                          } else if (widget.isGuest) {
+                            _showGuestLoginPrompt();
+                            return;
                           } else {
                             // Bottom contact button: open chat for other property types
                             final user = property['user'] as Map<String, dynamic>?;

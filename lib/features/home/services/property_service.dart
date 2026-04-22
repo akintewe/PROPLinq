@@ -310,7 +310,7 @@ class PropertyService {
     }
   }
 
-  /// Fetch properties without auth token — for guest users
+  /// Fetch properties without auth token — for guest users (same logic as authenticated version)
   Future<PaginatedPropertiesResponse> fetchPropertiesPaginatedPublic({
     int page = 1,
     String? type,
@@ -336,19 +336,36 @@ class PropertyService {
 
       if (response.success && response.data != null) {
         final data = response.data!;
-        if (data is Map<String, dynamic> && data.containsKey('data')) {
-          final inner = data['data'];
-          final List<dynamic> items = inner is List ? inner : [];
-          return PaginatedPropertiesResponse(
-            properties: items,
-            currentPage: (data['current_page'] as int?) ?? page,
-            lastPage: (data['last_page'] as int?) ?? page,
-            total: (data['total'] as int?) ?? 0,
-            perPage: (data['per_page'] as int?) ?? 12,
-            hasMorePages: items.length >= 12,
-          );
+
+        if (data is Map<String, dynamic>) {
+          // Standard paginated response: { data: [...], current_page, last_page, ... }
+          if (data.containsKey('data') && data['data'] is List) {
+            final paginatedResponse = PaginatedPropertiesResponse.fromJson(data);
+            return paginatedResponse;
+          }
+
+          // Nested: { data: { data: [...], current_page, ... } }
+          if (data.containsKey('data') && data['data'] is Map<String, dynamic>) {
+            final inner = data['data'] as Map<String, dynamic>;
+            if (inner.containsKey('data') && inner['data'] is List) {
+              return PaginatedPropertiesResponse.fromJson(inner);
+            }
+          }
         }
+
+        // Fallback: plain list
+        final rawData = data is List ? data : (data is Map && data.containsKey('data') ? data['data'] : null);
+        final propertiesData = rawData is List ? rawData : <dynamic>[];
+        return PaginatedPropertiesResponse(
+          properties: propertiesData,
+          currentPage: 1,
+          lastPage: 1,
+          total: propertiesData.length,
+          perPage: propertiesData.length,
+          hasMorePages: false,
+        );
       }
+
       return PaginatedPropertiesResponse(
         properties: [], currentPage: page, lastPage: page, total: 0, perPage: 0, hasMorePages: false,
       );
