@@ -36,6 +36,7 @@ class _AgentPropertyImageCarousel extends StatefulWidget {
   final Widget Function(PropertyModel) buildVerificationBadge;
 
   const _AgentPropertyImageCarousel({
+    super.key,
     required this.property,
     required this.onFavoriteToggle,
     required this.buildVerificationBadge,
@@ -250,6 +251,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       await _fetchPromotedProperties();
       await _fetchUnreadMessageCount();
       await _showKycDialogIfNeeded();
+      await _showCautionFeeNoticeIfNeeded();
       _startFeaturedAutoScroll();
       
       // Pre-load bookings cache for phone number blur feature
@@ -264,31 +266,33 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   Future<void> _fetchUserProfile() async {
     try {
-      
       final response = await _authService.getProfile();
-      
-      
+
       if (response.success && response.data != null) {
-        setState(() {
-          _currentUser = response.data;
-          _isLoadingProfile = false;
-        });
-        
-        if (_currentUser!.agencyName != null) {
-        }
-        if (_currentUser!.agentType != null) {
+        if (mounted) {
+          setState(() {
+            _currentUser = response.data;
+            _isLoadingProfile = false;
+          });
         }
       } else {
-        setState(() {
-          _isLoadingProfile = false;
-        });
-        if (response.errors != null && response.errors!.isNotEmpty) {
+        // API failed — load from local storage as fallback
+        final cachedUser = await _authService.getCurrentUser();
+        if (mounted) {
+          setState(() {
+            _currentUser = cachedUser;
+            _isLoadingProfile = false;
+          });
         }
       }
     } catch (e) {
-      setState(() {
-        _isLoadingProfile = false;
-      });
+      final cachedUser = await _authService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _currentUser = cachedUser;
+          _isLoadingProfile = false;
+        });
+      }
     }
   }
 
@@ -518,6 +522,88 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         _isLoadingPromotedProperties = false;
       });
     }
+  }
+
+  Future<void> _showCautionFeeNoticeIfNeeded() async {
+    if (_currentUser == null) return;
+
+    final agentType = _currentUser!.agentType?.toLowerCase().replaceAll(' ', '_') ?? '';
+    if (agentType != 'shortlet') return;
+
+    final alreadySeen = await _prefsService.hasDismissedCautionFeeNotice();
+    if (alreadySeen) return;
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFE6A817), size: 24),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Important Notice: Caution Fee Policy',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'If you charge a caution fee, it must be clearly stated in your listing with the exact amount. Hidden or undisclosed fees are not allowed and may lead to listing removal.',
+          style: TextStyle(
+            fontSize: 15,
+            color: Color(0xFF444444),
+            height: 1.6,
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF426DC2), Color(0xFF63ADDC)],
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  onPressed: () async {
+                    await _prefsService.dismissCautionFeeNotice();
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                  },
+                  child: const Text(
+                    'I understand',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showKycDialogIfNeeded() async {
@@ -1335,6 +1421,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   Widget _buildAgentImageCarousel(PropertyModel property) {
     return _AgentPropertyImageCarousel(
+      key: ValueKey('carousel_${property.id}'),
       property: property,
       onFavoriteToggle: _toggleFavorite,
       buildVerificationBadge: _buildVerificationBadge,
@@ -1900,7 +1987,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                 return filteredProperties.isEmpty
                     ? _buildNoPropertiesFound()
                     : ListView.separated(
-                        key: ValueKey('properties_${filteredProperties.length}_${_isShowingSearchResults}'),
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: filteredProperties.length,

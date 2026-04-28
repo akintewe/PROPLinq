@@ -126,42 +126,34 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
 
   Future<void> _fetchUserProfile() async {
     try {
-      
       final response = await _authService.getProfile();
-      
-      print('🔵 [ProfileView] Profile response:');
-      print('  - Success: ${response.success}');
-      print('  - User: ${response.data?.toJson()}');
-      print('  - UserType: ${response.data?.userType}');
-      
+
       if (response.success && response.data != null) {
-        setState(() {
-          _currentUser = response.data;
-          _isLoadingProfile = false;
-        });
-        
-        print('🔵 [ProfileView] Current user set:');
-        print('  - userType: ${_currentUser?.userType}');
-        print('  - agentType: ${_currentUser?.agentType}');
-        print('  - Display: ${_getUserTypeDisplay()}');
-        
-        if (_currentUser!.agencyName != null) {
-        }
-        if (_currentUser!.agentType != null) {
-        }
-        if (_currentUser!.whatsappNumber != null) {
+        if (mounted) {
+          setState(() {
+            _currentUser = response.data;
+            _isLoadingProfile = false;
+          });
         }
       } else {
-        setState(() {
-          _isLoadingProfile = false;
-        });
-        if (response.errors != null && response.errors!.isNotEmpty) {
+        // API failed — load from local storage as fallback
+        final cachedUser = await _authService.getCurrentUser();
+        if (mounted) {
+          setState(() {
+            _currentUser = cachedUser;
+            _isLoadingProfile = false;
+          });
         }
       }
     } catch (e) {
-      setState(() {
-        _isLoadingProfile = false;
-      });
+      // On error, still try local storage
+      final cachedUser = await _authService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _currentUser = cachedUser;
+          _isLoadingProfile = false;
+        });
+      }
     }
   }
 
@@ -1846,6 +1838,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
   Widget _buildEmptyPropertiesState() {
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 32),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(12),
@@ -1855,6 +1848,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(
@@ -1988,21 +1982,20 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         );
       },
       child: Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Property Image
           Container(
             height: 140,
@@ -2118,9 +2111,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
           ),
           
           // Property Details
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
+          Padding(
+            padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2380,8 +2372,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                 ],
               ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );

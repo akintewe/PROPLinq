@@ -37,6 +37,7 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
   void initState() {
     super.initState();
     _focusNode.addListener(() {
+      if (!mounted) return;
       if (!_focusNode.hasFocus) {
         setState(() {
           _showPredictions = false;
@@ -58,6 +59,7 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
     }
 
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       if (value.length > 2) {
         _searchPlaces(value);
       } else {
@@ -72,6 +74,7 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
   Future<void> _searchPlaces(String query) async {
     if (query.isEmpty) return;
 
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -84,9 +87,11 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
 
       final response = await http.get(Uri.parse(url));
 
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['status'] == 'OK') {
           final predictions = List<Map<String, dynamic>>.from(data['predictions']);
           setState(() {
@@ -107,6 +112,7 @@ class _LocationAutocompleteFieldState extends State<LocationAutocompleteField> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });

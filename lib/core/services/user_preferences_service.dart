@@ -9,6 +9,7 @@ class UserPreferencesService {
   static const String _selectedLocationKey = 'selected_discovery_location';
   static const String _selectedLocationCoordinatesKey = 'selected_location_coordinates';
   static const String _userCountryKey = 'user_country';
+  static const String _cautionFeeNoticeDismissedKey = 'caution_fee_notice_dismissed';
 
   /// Save the user's selected discovery location (for non-Nigeria users)
   Future<void> saveSelectedLocation(String location, {Map<String, double>? coordinates}) async {
@@ -64,6 +65,18 @@ class UserPreferencesService {
   Future<String?> getUserCountry() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userCountryKey);
+  }
+
+  /// Check if the caution fee notice has been dismissed
+  Future<bool> hasDismissedCautionFeeNotice() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_cautionFeeNoticeDismissedKey) ?? false;
+  }
+
+  /// Mark the caution fee notice as dismissed
+  Future<void> dismissCautionFeeNotice() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_cautionFeeNoticeDismissedKey, true);
   }
 
   /// Clear all user preferences

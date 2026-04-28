@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:proplinq/core/services/api_service.dart';
 import 'package:proplinq/core/constants/api_constants.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:proplinq/core/widgets/payment_webview_dialog.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'dart:convert';
 import '../services/hotel_service.dart';
@@ -1158,6 +1158,8 @@ class HotelPaymentView extends StatefulWidget {
 class _HotelPaymentViewState extends State<HotelPaymentView> {
   String _selectedPaymentMethod = 'pay_now';
   bool _isLoading = false;
+  bool _isLoadingBreakdown = true;
+  Map<String, dynamic>? _priceBreakdown;
   final ApiService _apiService = ApiService();
 
   double get _pricePerNight {
@@ -1166,7 +1168,12 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
     return double.tryParse(clean) ?? 0;
   }
 
-  double get _totalCost => _pricePerNight * widget.nights;
+  double get _totalCost {
+    final apiTotal = _priceBreakdown?['total'];
+    if (apiTotal != null) return (apiTotal as num).toDouble();
+    return _pricePerNight * widget.nights;
+  }
+
   double get _depositAmount => (_totalCost * 0.10).ceilToDouble();
   double get _remainingAmount => _totalCost - _depositAmount;
 
@@ -1176,6 +1183,48 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   String get _buttonLabel => _selectedPaymentMethod == 'pay_now'
       ? 'Pay ${_fmt(_totalCost)}'
       : 'Pay ${_fmt(_depositAmount)} Deposit';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPriceBreakdown();
+  }
+
+  Future<void> _fetchPriceBreakdown() async {
+    try {
+      final propertyId = widget.propertyData['id']?.toString() ?? '';
+      if (propertyId.isEmpty) {
+        setState(() => _isLoadingBreakdown = false);
+        return;
+      }
+      final checkIn = '${widget.checkInDate.year}-${widget.checkInDate.month.toString().padLeft(2, '0')}-${widget.checkInDate.day.toString().padLeft(2, '0')}';
+      final checkOut = '${widget.checkOutDate.year}-${widget.checkOutDate.month.toString().padLeft(2, '0')}-${widget.checkOutDate.day.toString().padLeft(2, '0')}';
+      final paymentType = _selectedPaymentMethod == 'pay_arrival' ? 'pay_on_arrival' : 'full';
+
+      final response = await _apiService.get<Map<String, dynamic>>(
+        '${ApiConstants.bookings}/price-breakdown',
+        requiresAuth: true,
+        queryParams: {
+          'property_id': propertyId,
+          'check_in_date': checkIn,
+          'check_out_date': checkOut,
+          'payment_type': paymentType,
+        },
+        fromJson: (json) => json,
+      );
+
+      if (mounted && response.success && response.data != null) {
+        setState(() {
+          _priceBreakdown = response.data;
+          _isLoadingBreakdown = false;
+        });
+      } else {
+        if (mounted) setState(() => _isLoadingBreakdown = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingBreakdown = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1206,9 +1255,9 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 16),
-                  
+
                   const Expanded(
                     child: Text(
                       'Payment',
@@ -1220,7 +1269,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  
+
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
@@ -1241,7 +1290,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                 ],
               ),
             ),
-            
+
             // Content
             Expanded(
               child: Padding(
@@ -1249,29 +1298,24 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                 child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    // Total summary
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F4FF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Total', style: TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
-                              Text(_fmt(_totalCost), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
-                            ],
-                          ),
-                          Text('${widget.nights} night${widget.nights == 1 ? '' : 's'} · ${widget.guests} guest${widget.guests == 1 ? '' : 's'}',
-                              style: const TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
-                        ],
-                      ),
-                    ),
+                    // Price breakdown / total summary
+                    _isLoadingBreakdown
+                        ? Container(
+                            padding: const EdgeInsets.all(16),
+                            margin: const EdgeInsets.only(bottom: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0F4FF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2))),
+                              ),
+                            ),
+                          )
+                        : _buildPriceSummaryCard(),
 
                     // Payment options
                     _buildPaymentOption(
@@ -1289,7 +1333,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                       'Pay ${_fmt(_depositAmount)} (10%) now to secure your booking. Remaining ${_fmt(_remainingAmount)} paid on arrival.',
                       false,
                     ),
-                    
+
                     const Spacer(),
                   ],
                 ),
@@ -1351,6 +1395,82 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
     );
   }
                         
+  Widget _buildPriceSummaryCard() {
+    final breakdown = _priceBreakdown;
+
+    // API-provided breakdown fields (all optional — fall back to client calc)
+    final basePrice = breakdown != null ? (breakdown['base_price'] as num?)?.toDouble() : null;
+    final serviceFee = breakdown != null ? (breakdown['service_fee'] as num?)?.toDouble() : null;
+    final cautionFee = breakdown != null ? (breakdown['caution_fee'] as num?)?.toDouble() : null;
+    final tax = breakdown != null ? (breakdown['tax'] as num?)?.toDouble() : null;
+    final discount = breakdown != null ? (breakdown['discount'] as num?)?.toDouble() : null;
+
+    final hasBreakdown = breakdown != null &&
+        (basePrice != null || serviceFee != null || cautionFee != null || tax != null);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F4FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasBreakdown) ...[
+            if (basePrice != null)
+              _breakdownRow('${_fmt(_pricePerNight)} × ${widget.nights} night${widget.nights == 1 ? '' : 's'}', _fmt(basePrice)),
+            if (serviceFee != null && serviceFee > 0) ...[
+              const SizedBox(height: 6),
+              _breakdownRow('Service fee', _fmt(serviceFee)),
+            ],
+            if (cautionFee != null && cautionFee > 0) ...[
+              const SizedBox(height: 6),
+              _breakdownRow('Caution fee', _fmt(cautionFee)),
+            ],
+            if (tax != null && tax > 0) ...[
+              const SizedBox(height: 6),
+              _breakdownRow('Tax', _fmt(tax)),
+            ],
+            if (discount != null && discount > 0) ...[
+              const SizedBox(height: 6),
+              _breakdownRow('Discount', '-${_fmt(discount)}', valueColor: const Color(0xFF2E7D32)),
+            ],
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Divider(color: Color(0xFFD0D8F0), height: 1),
+            ),
+          ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Total', style: TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
+                  Text(_fmt(_totalCost), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
+                ],
+              ),
+              Text('${widget.nights} night${widget.nights == 1 ? '' : 's'} · ${widget.guests} guest${widget.guests == 1 ? '' : 's'}',
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _breakdownRow(String label, String value, {Color? valueColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
+        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: valueColor ?? Colors.black)),
+      ],
+    );
+  }
+
   Widget _buildPaymentOption(String value, String title, String subtitle, bool isRecommended) {
     final isSelected = _selectedPaymentMethod == value;
                         
@@ -1667,32 +1787,22 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   Future<void> _showPaymentWebView(String paymentUrl, Map<String, dynamic> bookingData) async {
     if (!mounted) return;
 
-    await showDialog(
+    final paid = await showPaymentWebView(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => PaymentWebViewDialog(
-        paymentUrl: paymentUrl,
-        onPaymentComplete: () {
-          // Close the dialog
-          Navigator.of(context).pop();
-          // Navigate to success view with booking data
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => HotelBookingSuccessView(
-                  bookingData: bookingData,
-                  propertyData: widget.propertyData,
-                ),
-              ),
-            );
-          }
-        },
-        onPaymentCancelled: () {
-          // Close the dialog only, stay on payment screen
-          Navigator.of(context).pop();
-        },
-      ),
+      paymentUrl: paymentUrl,
+      title: 'Complete Payment',
     );
+
+    if (paid && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => HotelBookingSuccessView(
+            bookingData: bookingData,
+            propertyData: widget.propertyData,
+          ),
+        ),
+      );
+    }
   }
 }
 
@@ -2023,199 +2133,6 @@ class HotelBookingSuccessView extends StatelessWidget {
     );
   }
 }
-
-/// Payment WebView Dialog for handling Flutterwave payment
-class PaymentWebViewDialog extends StatefulWidget {
-  final String paymentUrl;
-  final VoidCallback onPaymentComplete;
-  final VoidCallback onPaymentCancelled;
-
-  const PaymentWebViewDialog({
-    super.key,
-    required this.paymentUrl,
-    required this.onPaymentComplete,
-    required this.onPaymentCancelled,
-  });
-
-  @override
-  State<PaymentWebViewDialog> createState() => _PaymentWebViewDialogState();
-}
-
-class _PaymentWebViewDialogState extends State<PaymentWebViewDialog> {
-  late final WebViewController _controller;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (String url) {
-            print('🔗 Payment WebView: Page started loading: $url');
-            setState(() {
-              _isLoading = true;
-            });
-          },
-          onPageFinished: (String url) {
-            print('✅ Payment WebView: Page finished loading: $url');
-            setState(() {
-              _isLoading = false;
-            });
-            
-            // Check if payment is successful based on URL patterns
-            _checkPaymentStatus(url);
-          },
-          onWebResourceError: (WebResourceError error) {
-            print('❌ Payment WebView: Error loading page: ${error.description}');
-            setState(() {
-              _isLoading = false;
-            });
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.paymentUrl));
-  }
-
-  void _checkPaymentStatus(String url) {
-    print('🔍 Checking payment status from URL: $url');
-    
-    // Check for Flutterwave success indicators
-    // Common patterns: success, callback, status=successful, tx_ref, etc.
-    final lowerUrl = url.toLowerCase();
-    
-    if (lowerUrl.contains('callback') || 
-        lowerUrl.contains('success') || 
-        lowerUrl.contains('status=successful') ||
-        lowerUrl.contains('transaction_id') ||
-        lowerUrl.contains('tx_ref')) {
-      
-      // Check if it's actually a success (not just callback page)
-      if (lowerUrl.contains('success') || 
-          lowerUrl.contains('status=successful') ||
-          lowerUrl.contains('transaction_id=')) {
-        print('✅ Payment successful detected!');
-        
-        // Wait a moment to ensure page is fully loaded
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) {
-            widget.onPaymentComplete();
-          }
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.zero,
-      child: Container(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.zero,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header with close button
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey.shade200,
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Complete Payment',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.black),
-                      onPressed: () {
-                        // Show confirmation before closing
-                        showDialog(
-                          context: context,
-                          builder: (dialogContext) => AlertDialog(
-                            title: const Text('Cancel Payment?'),
-                            content: const Text(
-                              'Are you sure you want to cancel this payment?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(dialogContext).pop(),
-                                child: const Text('No'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(dialogContext).pop();
-                                  widget.onPaymentCancelled();
-                                },
-                                child: const Text('Yes, Cancel'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              
-              // WebView
-              Expanded(
-                child: Stack(
-                  children: [
-                    WebViewWidget(controller: _controller),
-                    if (_isLoading)
-                      Container(
-                        color: Colors.white,
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF426DC2),
-                                ),
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'Loading payment page...',
-                                style: TextStyle(
-                                  color: Color(0xFF6C757D),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-} 
 
 /// Booking Details View - Shows detailed information about a booking
 class BookingDetailsView extends StatelessWidget {

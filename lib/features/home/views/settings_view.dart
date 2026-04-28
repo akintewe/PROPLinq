@@ -9,6 +9,7 @@ import 'notification_settings_view.dart';
 import 'privacy_policy_view.dart';
 import 'terms_and_conditions_view.dart';
 import 'wallet_view.dart';
+import 'help_support_view.dart';
 
 class SettingsView extends StatefulWidget {
   final bool isAgent;
@@ -91,7 +92,12 @@ class _SettingsViewState extends State<SettingsView> {
                         iconPath: 'assets/icons/message-question.svg',
                         iconColor: const Color(0xFF426DC2),
                         title: 'Help & support',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const HelpSupportView()),
+                          );
+                        },
                       ),
                       
                       const SizedBox(height: 20),
@@ -308,13 +314,7 @@ class _SettingsViewState extends State<SettingsView> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Account deletion is being processed. Our team will contact you shortly.'),
-                    backgroundColor: Color(0xFF426DC2),
-                    duration: Duration(seconds: 4),
-                  ),
-                );
+                _handleDeleteAccount();
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
             ),
@@ -322,6 +322,52 @@ class _SettingsViewState extends State<SettingsView> {
         );
       },
     );
+  }
+
+  Future<void> _handleDeleteAccount() async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF426DC2)),
+      ),
+    );
+
+    try {
+      final response = await _authService.deleteAccount();
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading
+
+      if (response.success) {
+        await _authService.clearUserData();
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const GuestHomeView()),
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message ?? 'Failed to delete account. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showLogoutDialog(BuildContext context) {

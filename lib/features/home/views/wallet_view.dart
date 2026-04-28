@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import '../../../core/services/api_service.dart';
+import 'package:http/http.dart' as http;
 import '../../../core/constants/api_constants.dart';
+import '../../../core/services/api_service.dart';
+
+import '../../../core/services/storage_service.dart';
+import '../../../core/widgets/payment_webview_dialog.dart';
 
 class WalletView extends StatefulWidget {
   const WalletView({super.key});
@@ -29,39 +33,69 @@ class _WalletViewState extends State<WalletView> {
   }
 
   Future<void> _fetchBalance() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingBalance = true;
       _balanceError = null;
     });
 
-    final response = await _apiService.get<dynamic>(
-      '/agent/wallet/balance',
-      requiresAuth: true,
-      fromJson: (json) => json,
-    );
+    try {
+      final token = await StorageService().getToken();
+      final url = Uri.parse('${ApiConstants.apiBaseUrl}/agent/wallet/balance');
+      final httpResponse = await http.get(url, headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      });
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (response.success && response.data != null) {
-      final data = response.data;
-      double? bal;
-      String? cur;
+      debugPrint('💰 [Wallet] Balance status: ${httpResponse.statusCode}');
+      debugPrint('💰 [Wallet] Balance body: ${httpResponse.body.substring(0, httpResponse.body.length.clamp(0, 500))}');
 
-      if (data is Map<String, dynamic>) {
-        bal = _parseDouble(data['balance'] ?? data['amount'] ?? data['wallet_balance']);
-        cur = data['currency']?.toString();
+      if (httpResponse.statusCode >= 200 && httpResponse.statusCode < 300) {
+        final jsonBody = json.decode(httpResponse.body);
+        double? bal;
+        String? cur;
+
+        // Try data.balance, data.amount, top-level balance, wallet.balance
+        Map<String, dynamic>? data;
+        if (jsonBody['data'] is Map<String, dynamic>) {
+          data = jsonBody['data'] as Map<String, dynamic>;
+        } else if (jsonBody is Map<String, dynamic>) {
+          data = jsonBody;
+        }
+
+        if (data != null) {
+          bal = _parseDouble(
+            data['balance'] ??
+            data['amount'] ??
+            data['wallet_balance'] ??
+            (data['wallet'] is Map ? (data['wallet'] as Map)['balance'] : null),
+          );
+          cur = data['currency']?.toString() ??
+              (data['wallet'] is Map ? (data['wallet'] as Map)['currency']?.toString() : null);
+        }
+
+        setState(() {
+          _balance = bal;
+          _currency = cur ?? 'NGN';
+          _isLoadingBalance = false;
+        });
+      } else {
+        final jsonBody = json.decode(httpResponse.body);
+        setState(() {
+          _balanceError = jsonBody['message']?.toString() ?? 'Failed to load balance';
+          _isLoadingBalance = false;
+        });
       }
-
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _balance = bal;
-        _currency = cur ?? 'NGN';
+        _balanceError = 'Failed to load balance';
         _isLoadingBalance = false;
       });
-    } else {
-      setState(() {
-        _balanceError = response.message ?? 'Failed to load balance';
-        _isLoadingBalance = false;
-      });
+      debugPrint('💰 [Wallet] Balance error: $e');
     }
   }
 
@@ -230,6 +264,8 @@ class _WalletViewState extends State<WalletView> {
     );
   }
 
+
+
   Future<void> _fundWallet(double amount) async {
     showDialog(
       context: context,
@@ -239,58 +275,292 @@ class _WalletViewState extends State<WalletView> {
       ),
     );
 
-    final response = await _apiService.post<dynamic>(
-      '/agent/wallet/fund',
-      body: {'amount': amount},
-      requiresAuth: true,
-      fromJson: (json) => json,
-    );
+    try {
+      final token = await StorageService().getToken();
+      final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.walletFund}');
+      final httpResponse = await http.post(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'amount': amount}),
+      );
 
-    if (!mounted) return;
-    Navigator.of(context).pop(); // close loading
+      if (!mounted) return;
+      Navigator.of(context).pop();
 
-    if (response.success && response.data != null) {
-      final data = response.data;
-      String? paymentUrl;
+      debugPrint('💰 [Wallet] Fund status: ${httpResponse.statusCode}');
+      debugPrint('💰 [Wallet] Fund body: ${httpResponse.body.substring(0, httpResponse.body.length.clamp(0, 600))}');
 
-      if (data is Map<String, dynamic>) {
-        paymentUrl = data['authorization_url']?.toString() ??
+      final jsonBody = json.decode(httpResponse.body);
+
+      if (httpResponse.statusCode >= 200 && httpResponse.statusCode < 300) {
+        // Extract payment URL from response
+        final data = jsonBody['data'] is Map ? jsonBody['data'] as Map<String, dynamic> : jsonBody as Map<String, dynamic>;
+        final paymentUrl = data['authorization_url']?.toString() ??
             data['link']?.toString() ??
             data['payment_url']?.toString() ??
             data['checkout_url']?.toString();
-      }
 
-      if (paymentUrl != null) {
-        await _showPaymentWebView(paymentUrl, amount);
+        if (paymentUrl != null) {
+          final paid = await showPaymentWebView(
+            context: context,
+            paymentUrl: paymentUrl,
+            title: 'Fund Wallet',
+          );
+          if (mounted) {
+            _fetchBalance();
+            _fetchTransactions();
+            if (paid) _showSuccessSnack('Wallet funded with ${_formatAmount(amount)}!');
+          }
+        } else {
+          _showSuccessSnack('Wallet funded successfully!');
+          _fetchBalance();
+          _fetchTransactions();
+        }
       } else {
-        _showSuccessSnack('Wallet funded successfully!');
-        _fetchBalance();
-        _fetchTransactions();
+        if (!mounted) return;
+        // Extract validation errors if present
+        String errorMsg = jsonBody['message']?.toString() ?? 'Failed to initiate payment';
+        if (jsonBody['errors'] is Map) {
+          final errs = <String>[];
+          (jsonBody['errors'] as Map).forEach((_, v) {
+            if (v is List) errs.addAll(v.map((e) => e.toString()));
+          });
+          if (errs.isNotEmpty) errorMsg = errs.join(', ');
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+        );
       }
-    } else {
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response.message ?? 'Failed to initiate payment'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
       );
     }
   }
 
-  Future<void> _showPaymentWebView(String paymentUrl, double amount) async {
-    await showDialog(
+  // ── Payout / Bank details ────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> _fetchBanks() async {
+    final token = await StorageService().getToken();
+    final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.payoutBanks}?country=NG');
+    final res = await http.get(url, headers: {
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    });
+    debugPrint('🏦 [Banks] Status: ${res.statusCode}');
+    debugPrint('🏦 [Banks] Body: ${res.body.substring(0, res.body.length.clamp(0, 400))}');
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final body = json.decode(res.body);
+      List<dynamic> list = [];
+      if (body['data'] is Map && body['data']['banks'] is List) {
+        list = body['data']['banks'] as List;
+      } else if (body['data'] is List) {
+        list = body['data'] as List;
+      } else if (body is List) {
+        list = body as List;
+      }
+      return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    return [];
+  }
+
+  void _showPayoutSheet() async {
+    // Show loading while fetching banks
+    showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _WalletPaymentDialog(
-        paymentUrl: paymentUrl,
-        onSuccess: () {
-          Navigator.of(ctx).pop();
-          _showSuccessSnack('Wallet funded with ${_formatAmount(amount)}!');
-          _fetchBalance();
-          _fetchTransactions();
-        },
-        onCancelled: () => Navigator.of(ctx).pop(),
-      ),
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF426DC2))),
+    );
+
+    final banks = await _fetchBanks();
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+
+    if (banks.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not load bank list. Please try again.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final accountCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    Map<String, dynamic>? selectedBank;
+    bool isSaving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24, right: 24, top: 24,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Payout Account', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+                    const SizedBox(height: 6),
+                    const Text('Add your bank details to receive payouts.', style: TextStyle(fontSize: 14, color: Color(0xFF868686))),
+                    const SizedBox(height: 24),
+
+                    // Bank dropdown
+                    DropdownButtonFormField<Map<String, dynamic>>(
+                      value: selectedBank,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Select Bank',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF426DC2), width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      ),
+                      items: banks.map((bank) {
+                        final name = bank['name']?.toString() ?? bank['bank_name']?.toString() ?? '';
+                        return DropdownMenuItem<Map<String, dynamic>>(
+                          value: bank,
+                          child: Text(name, overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setSheetState(() => selectedBank = val),
+                      validator: (_) => selectedBank == null ? 'Please select a bank' : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Account number
+                    TextFormField(
+                      controller: accountCtrl,
+                      keyboardType: TextInputType.number,
+                      maxLength: 10,
+                      decoration: InputDecoration(
+                        labelText: 'Account Number',
+                        hintText: '10-digit account number',
+                        counterText: '',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF426DC2), width: 2),
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Account number is required';
+                        if (v.trim().length != 10) return 'Account number must be 10 digits';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFF426DC2), Color(0xFF63ADDC)]),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          ),
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  if (!formKey.currentState!.validate()) return;
+                                  setSheetState(() => isSaving = true);
+
+                                  final bank = selectedBank!;
+                                  final bankName = bank['name']?.toString() ?? bank['bank_name']?.toString() ?? '';
+                                  final bankCode = bank['code']?.toString() ?? bank['bank_code']?.toString() ?? '';
+                                  final accountNumber = accountCtrl.text.trim();
+
+                                  try {
+                                    debugPrint('🏦 [Payout] Sending: bank_name=$bankName, bank_code=$bankCode, account_number=$accountNumber');
+                                    final token = await StorageService().getToken();
+                                    final url = Uri.parse('${ApiConstants.apiBaseUrl}/payouts/verify');
+                                    final res = await http.post(url,
+                                      headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                        if (token != null) 'Authorization': 'Bearer $token',
+                                      },
+                                      body: json.encode({
+                                        'bank_name': bankName,
+                                        'bank_code': bankCode,
+                                        'account_number': accountNumber,
+                                      }),
+                                    );
+
+                                    debugPrint('🏦 [Payout] Status: ${res.statusCode}');
+                                    debugPrint('🏦 [Payout] Body: ${res.body}');
+
+                                    if (!ctx.mounted) return;
+                                    setSheetState(() => isSaving = false);
+
+                                    if (res.statusCode >= 200 && res.statusCode < 300) {
+                                      Navigator.of(ctx).pop();
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Payout account saved successfully!'), backgroundColor: Colors.green),
+                                        );
+                                      }
+                                    } else {
+                                      final body = json.decode(res.body);
+                                      String errMsg = body['message']?.toString() ?? 'Failed to save account';
+                                      if (errMsg.toLowerCase().contains('unable to verify')) {
+                                        errMsg = 'Account not found. Please check your account number and bank, then try again.';
+                                      }
+                                      if (body['errors'] is Map) {
+                                        final errs = <String>[];
+                                        (body['errors'] as Map).forEach((_, v) {
+                                          if (v is List) errs.addAll(v.map((e) => e.toString()));
+                                        });
+                                        if (errs.isNotEmpty) errMsg = errs.join(', ');
+                                      }
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(content: Text(errMsg), backgroundColor: Colors.red),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (!ctx.mounted) return;
+                                    setSheetState(() => isSaving = false);
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                    );
+                                  }
+                                },
+                          child: isSaving
+                              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Text('Save Payout Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -343,6 +613,8 @@ class _WalletViewState extends State<WalletView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildBalanceCard(),
+              const SizedBox(height: 20),
+              _buildPayoutAccountCard(),
               const SizedBox(height: 32),
               _buildTransactionsSection(),
             ],
@@ -440,6 +712,49 @@ class _WalletViewState extends State<WalletView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPayoutAccountCard() {
+    return GestureDetector(
+      onTap: _showPayoutSheet,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEFF0F2), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFECF0F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.account_balance_outlined, color: Color(0xFF426DC2), size: 22),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Payout Account', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
+                  SizedBox(height: 3),
+                  Text('Add your bank details to receive payouts', style: TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Color(0xFF868686), size: 20),
+          ],
+        ),
       ),
     );
   }
@@ -625,128 +940,5 @@ class _WalletViewState extends State<WalletView> {
     } catch (_) {
       return raw;
     }
-  }
-}
-
-class _WalletPaymentDialog extends StatefulWidget {
-  final String paymentUrl;
-  final VoidCallback onSuccess;
-  final VoidCallback onCancelled;
-
-  const _WalletPaymentDialog({
-    required this.paymentUrl,
-    required this.onSuccess,
-    required this.onCancelled,
-  });
-
-  @override
-  State<_WalletPaymentDialog> createState() => _WalletPaymentDialogState();
-}
-
-class _WalletPaymentDialogState extends State<_WalletPaymentDialog> {
-  late final WebViewController _controller;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) => setState(() => _isLoading = true),
-          onPageFinished: (url) {
-            setState(() => _isLoading = false);
-            _checkPaymentStatus(url);
-          },
-          onWebResourceError: (_) => setState(() => _isLoading = false),
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.paymentUrl));
-  }
-
-  void _checkPaymentStatus(String url) {
-    final lower = url.toLowerCase();
-    if (lower.contains('success') ||
-        lower.contains('status=successful') ||
-        lower.contains('transaction_id=')) {
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) widget.onSuccess();
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.zero,
-      child: Container(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        color: Colors.white,
-        child: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                ),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Fund Wallet',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Cancel Payment?'),
-                            content: const Text('Are you sure you want to cancel this payment?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(ctx).pop(),
-                                child: const Text('No'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(ctx).pop();
-                                  widget.onCancelled();
-                                },
-                                child: const Text('Yes, Cancel'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Stack(
-                  children: [
-                    WebViewWidget(controller: _controller),
-                    if (_isLoading)
-                      Container(
-                        color: Colors.white,
-                        child: const Center(
-                          child: CircularProgressIndicator(color: Color(0xFF426DC2)),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

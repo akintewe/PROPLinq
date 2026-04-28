@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/widgets/payment_webview_dialog.dart';
 
 class SubscriptionView extends StatefulWidget {
   const SubscriptionView({super.key});
@@ -957,25 +957,15 @@ class _SubscriptionViewState extends State<SubscriptionView> {
   Future<void> _showPaymentWebView(String paymentUrl) async {
     if (!mounted) return;
 
-    await showDialog(
+    final paid = await showPaymentWebView(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => PaymentWebViewDialog(
-        paymentUrl: paymentUrl,
-        onPaymentComplete: () {
-          // Close the dialog
-          Navigator.of(context).pop();
-          // Show success message and navigate back
-          if (mounted) {
-            _showSuccessMessage(_getPlanName());
-          }
-        },
-        onPaymentCancelled: () {
-          // Close the dialog only, stay on subscription screen
-          Navigator.of(context).pop();
-        },
-      ),
+      paymentUrl: paymentUrl,
+      title: 'Complete Payment',
     );
+
+    if (paid && mounted) {
+      _showSuccessMessage(_getPlanName());
+    }
   }
 
   void _showSuccessMessage(String planName) {
@@ -992,195 +982,3 @@ class _SubscriptionViewState extends State<SubscriptionView> {
   }
 }
 
-// Payment WebView Dialog (same as booking screen)
-class PaymentWebViewDialog extends StatefulWidget {
-  final String paymentUrl;
-  final VoidCallback onPaymentComplete;
-  final VoidCallback onPaymentCancelled;
-
-  const PaymentWebViewDialog({
-    super.key,
-    required this.paymentUrl,
-    required this.onPaymentComplete,
-    required this.onPaymentCancelled,
-  });
-
-  @override
-  State<PaymentWebViewDialog> createState() => _PaymentWebViewDialogState();
-}
-
-class _PaymentWebViewDialogState extends State<PaymentWebViewDialog> {
-  late final WebViewController _controller;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (String url) {
-            print('🔗 [Subscription Payment] WebView: Page started loading: $url');
-            setState(() {
-              _isLoading = true;
-            });
-          },
-          onPageFinished: (String url) {
-            print('✅ [Subscription Payment] WebView: Page finished loading: $url');
-            setState(() {
-              _isLoading = false;
-            });
-            
-            // Check if payment is successful based on URL patterns
-            _checkPaymentStatus(url);
-          },
-          onWebResourceError: (WebResourceError error) {
-            print('❌ [Subscription Payment] WebView: Error loading page: ${error.description}');
-            setState(() {
-              _isLoading = false;
-            });
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.paymentUrl));
-  }
-
-  void _checkPaymentStatus(String url) {
-    print('🔍 [Subscription Payment] Checking payment status from URL: $url');
-    
-    // Check for Flutterwave success indicators
-    final lowerUrl = url.toLowerCase();
-    
-    if (lowerUrl.contains('callback') || 
-        lowerUrl.contains('success') || 
-        lowerUrl.contains('status=successful') ||
-        lowerUrl.contains('transaction_id') ||
-        lowerUrl.contains('tx_ref')) {
-      
-      // Check if it's actually a success (not just callback page)
-      if (lowerUrl.contains('success') || 
-          lowerUrl.contains('status=successful') ||
-          lowerUrl.contains('transaction_id=')) {
-        print('✅ [Subscription Payment] Payment successful detected!');
-        
-        // Wait a moment to ensure page is fully loaded
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) {
-            widget.onPaymentComplete();
-          }
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.zero,
-      child: Container(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.zero,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header with close button
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey.shade200,
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Complete Payment',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.black),
-                      onPressed: () {
-                        // Show confirmation before closing
-                        showDialog(
-                          context: context,
-                          builder: (dialogContext) => AlertDialog(
-                            title: const Text('Cancel Payment?'),
-                            content: const Text(
-                              'Are you sure you want to cancel this payment?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(dialogContext).pop(),
-                                child: const Text('No'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(dialogContext).pop();
-                                  widget.onPaymentCancelled();
-                                },
-                                child: const Text('Yes, Cancel'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              
-              // WebView
-              Expanded(
-                child: Stack(
-                  children: [
-                    WebViewWidget(controller: _controller),
-                    if (_isLoading)
-                      Container(
-                        color: Colors.white,
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF426DC2),
-                                ),
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'Loading payment...',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF666666),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

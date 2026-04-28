@@ -102,6 +102,22 @@ class AuthService {
     return response;
   }
 
+  // Delete account
+  Future<ApiResponse<Map<String, dynamic>>> deleteAccount() async {
+    final response = await _apiService.delete<Map<String, dynamic>>(
+      ApiConstants.deleteAccount,
+      requiresAuth: true,
+      fromJson: (json) => json,
+    );
+
+    if (response.success) {
+      await _storageService.clearAll();
+      BookingsCacheService().clearCache();
+    }
+
+    return response;
+  }
+
   // Forgot password
   Future<ApiResponse<Map<String, dynamic>>> forgotPassword({
     required String email,

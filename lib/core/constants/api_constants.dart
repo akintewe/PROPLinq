@@ -24,6 +24,7 @@ class ApiConstants {
   static const String changePassword = '/change-password';
   static const String uploadProfileImage = '/user/profile-image';
   static const String updatePlayerId = '/update-player-id';
+  static const String deleteAccount = '/user';
   
   // Property Endpoints
   static const String properties = '/properties';
@@ -39,7 +40,7 @@ class ApiConstants {
   static const String promotedPropertiesPublic = '/properties/promoted'; // no auth — guests
   static String rateProperty(int propertyId) => '/properties/$propertyId/rate';
   static String promoteProperty(int propertyId) => '/properties/$propertyId/promote';
-  static String markPropertyRented(int propertyId) => '/properties/$propertyId/status';
+  static String markPropertyStatus(int propertyId) => '/agent/properties/$propertyId/mark-status';
   
   // KYC Endpoints
   static const String kycSubmission = '/kyc/submit';
@@ -95,6 +96,30 @@ class ApiConstants {
   // Subscription Endpoints
   static const String subscriptionPlans = '/agent/subscription-plans';
   static const String paySubscription = '/agent/wallet/pay-subscription';
+
+  // Payment Endpoints
+  static const String initializePayment = '/payments/initialize';
+  static const String verifyPayment = '/payments/verify';
+  static const String listTransactions = '/payments/transactions';
+
+  // Wallet Endpoints
+  static const String walletFund = '/agent/wallet/fund';
+  static const String walletBalance = '/agent/wallet/balance';
+  static const String walletTransactions = '/agent/wallet/transactions';
+  static const String walletPaymentCallback = '/agent/wallet/payment-callback';
+
+  // Payout Endpoints
+  static const String payoutBanks = '/payouts/banks';
+
+  // Support Endpoints
+  static const String supportTickets = '/support/tickets';
+  static const String supportChats = '/support/chats';
+  static String supportTicket(int id) => '/support/tickets/$id';
+  static String supportTicketRespond(int id) => '/support/tickets/$id/respond';
+  static String supportTicketClose(int id) => '/support/tickets/$id/close';
+  static String supportChatDetails(int id) => '/support/chats/$id';
+  static String supportChatRespond(int id) => '/support/chats/$id/respond';
+  static String supportChatClose(int id) => '/support/chats/$id/close';
   
   // AppsFlyer OneLink Configuration
   // Template ID from AppsFlyer Dashboard: fOvE

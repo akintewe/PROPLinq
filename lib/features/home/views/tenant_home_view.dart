@@ -35,6 +35,7 @@ class _PropertyImageCarousel extends StatefulWidget {
   final String? type;
 
   const _PropertyImageCarousel({
+    super.key,
     required this.imageUrls,
     required this.badges,
     this.category,
@@ -300,27 +301,33 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Future<void> _fetchUserProfile() async {
     try {
-      
       final response = await _authService.getProfile();
-      
-      
+
       if (response.success && response.data != null) {
-        setState(() {
-          _currentUser = response.data;
-          _isLoadingProfile = false;
-        });
-        
+        if (mounted) {
+          setState(() {
+            _currentUser = response.data;
+            _isLoadingProfile = false;
+          });
+        }
       } else {
-        setState(() {
-          _isLoadingProfile = false;
-        });
-        if (response.errors != null && response.errors!.isNotEmpty) {
+        // API failed — load from local storage as fallback
+        final cachedUser = await _authService.getCurrentUser();
+        if (mounted) {
+          setState(() {
+            _currentUser = cachedUser;
+            _isLoadingProfile = false;
+          });
         }
       }
     } catch (e) {
-      setState(() {
-        _isLoadingProfile = false;
-      });
+      final cachedUser = await _authService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _currentUser = cachedUser;
+          _isLoadingProfile = false;
+        });
+      }
     }
   }
 
@@ -1110,47 +1117,143 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 180,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image with overlay badges
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Container(
+              height: 200,
               width: double.infinity,
               decoration: BoxDecoration(
                 image: DecorationImage(
                   image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
                   fit: BoxFit.cover,
+                  onError: (_, __) {},
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.3)],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: _buildVerificationBadge(property),
+                    ),
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: GestureDetector(
+                        onTap: () => _toggleFavorite(property),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            property.isFavorite ? Icons.favorite : Icons.favorite_border,
+                            size: 18,
+                            color: property.isFavorite ? Colors.red : const Color(0xFF868686),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(property.title,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const Icon(Icons.location_on, size: 14, color: Color(0xFF666666)),
+          ),
+          // Details
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        property.title,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECF0F9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        FormatUtils.toTitleCase(property.type),
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF426DC2)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 14, color: Color(0xFF868686)),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(property.location,
-                          style: const TextStyle(fontSize: 13, color: Color(0xFF666666)),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: _shouldBlurAddress(property)
+                          ? _buildBlurredText(property.location)
+                          : Text(
+                              property.location,
+                              style: const TextStyle(fontSize: 13, color: Color(0xFF868686)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                     ),
-                  ]),
-                  const SizedBox(height: 8),
-                  Text('₦${property.price}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      FormatUtils.formatPrice(property.price),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF426DC2)),
+                    ),
+                    if (property.bedrooms != null && property.bedrooms! > 0)
+                      Row(
+                        children: [
+                          const Icon(Icons.bed_outlined, size: 16, color: Color(0xFF868686)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${property.bedrooms} bed',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF868686)),
+                          ),
+                          if (property.bathrooms != null && property.bathrooms! > 0) ...[
+                            const SizedBox(width: 12),
+                            const Icon(Icons.bathtub_outlined, size: 16, color: Color(0xFF868686)),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${property.bathrooms} bath',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF868686)),
+                            ),
+                          ],
+                        ],
+                      ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1372,7 +1475,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                 : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    key: ValueKey('tenant_search_results_${filteredResults.length}_${_selectedCategory}'),
             padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: filteredResults.length,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
@@ -2818,6 +2920,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
     
     return _PropertyImageCarousel(
+      key: ValueKey('carousel_${property['id']}'),
       imageUrls: imageUrls,
       badges: property['badges'] as List<dynamic>? ?? [],
       category: property['category'] as String?,

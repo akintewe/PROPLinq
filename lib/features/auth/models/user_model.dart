@@ -40,6 +40,11 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    // Unwrap nested 'user' key if backend wraps the object
+    if (json.containsKey('user') && json['user'] is Map<String, dynamic>) {
+      json = json['user'] as Map<String, dynamic>;
+    }
+
     // Resolve user type from whichever field the backend sends
     final userType = (json['role'] ?? json['user_type'] ?? json['userType'])?.toString() ?? '';
 
@@ -113,6 +118,7 @@ class UserModel {
       'whatsapp_number': whatsappNumber,
       'email_verified': emailVerified,
       'profile_picture': profilePicture,
+      'profile_image_url': profilePicture,
       'email_verified_at': emailVerifiedAt?.toIso8601String(),
       'phone_verified_at': phoneVerifiedAt?.toIso8601String(),
       'kyc_status': kycStatus,

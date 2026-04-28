@@ -744,28 +744,39 @@ If you don't have the app, the link will open in your browser where you can down
     final propertyId = idValue is int ? idValue : int.tryParse(idValue.toString());
     if (propertyId == null) return;
 
-    final confirmed = await showDialog<bool>(
+    // Ask user to choose: Rented or Sold
+    final selectedStatus = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Mark as Rented'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Update Property Status',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
         content: const Text(
-          'This will mark the property as rented and remove it from active listings. Are you sure?',
+          'How would you like to mark this property?',
+          style: TextStyle(fontSize: 15, color: Color(0xFF666666)),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF868686))),
           ),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () => Navigator.of(ctx).pop('rented'),
             style: TextButton.styleFrom(foregroundColor: const Color(0xFF426DC2)),
             child: const Text('Mark as Rented'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('sold'),
+            style: TextButton.styleFrom(foregroundColor: Colors.green),
+            child: const Text('Mark as Sold'),
           ),
         ],
       ),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (selectedStatus == null || !mounted) return;
 
     // Show loading
     showDialog(
@@ -778,9 +789,9 @@ If you don't have the app, the link will open in your browser where you can down
 
     try {
       final apiService = ApiService();
-      final response = await apiService.put<Map<String, dynamic>>(
-        ApiConstants.markPropertyRented(propertyId),
-        body: {'status': 'rented'},
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiConstants.markPropertyStatus(propertyId),
+        body: {'status': selectedStatus},
         requiresAuth: true,
         fromJson: (json) => json,
       );
@@ -789,14 +800,14 @@ If you don't have the app, the link will open in your browser where you can down
       Navigator.of(context).pop(); // close loading
 
       if (response.success) {
+        final label = selectedStatus == 'sold' ? 'sold' : 'rented';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Property marked as rented successfully.'),
+          SnackBar(
+            content: Text('Property marked as $label successfully.'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
-        // Go back so the listing refreshes
         Navigator.of(context).pop();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
