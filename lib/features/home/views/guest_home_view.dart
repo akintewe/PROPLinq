@@ -1045,7 +1045,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                         top: 16,
                         right: 16,
                         child: GestureDetector(
-                          onTap: _promptLogin,
+                          onTap: () => _promptLogin(property: property),
                           child: Container(
                             width: 36,
                             height: 36,

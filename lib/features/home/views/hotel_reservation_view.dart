@@ -83,10 +83,18 @@ class _HotelReservationViewState extends State<HotelReservationView> {
         final booked = <String>{};
         for (final entry in response.data!) {
           final date = entry['date'] as String?;
-          final status = entry['status'] as String?;
           if (date == null) continue;
-          if (status == 'blocked') blocked.add(date);
-          if (status == 'booked') booked.add(date);
+          final isBlocked = entry['is_blocked'] == true;
+          final status = entry['status'] as String?;
+          final metadata = entry['metadata'];
+          final availableCount = metadata is Map
+              ? (metadata['available_count'] as num?)?.toInt() ?? 1
+              : 1;
+          if (isBlocked || status == 'blocked' || availableCount <= 0) {
+            blocked.add(date);
+          } else if (status == 'booked') {
+            booked.add(date);
+          }
         }
         setState(() {
           _blockedDates = blocked;
@@ -1201,6 +1209,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
       final checkOut = '${widget.checkOutDate.year}-${widget.checkOutDate.month.toString().padLeft(2, '0')}-${widget.checkOutDate.day.toString().padLeft(2, '0')}';
       final paymentType = _selectedPaymentMethod == 'pay_arrival' ? 'pay_on_arrival' : 'full';
 
+      final selectedRoomId = widget.propertyData['selected_room_id']?.toString();
       final response = await _apiService.get<Map<String, dynamic>>(
         '${ApiConstants.bookings}/price-breakdown',
         requiresAuth: true,
@@ -1209,6 +1218,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
           'check_in_date': checkIn,
           'check_out_date': checkOut,
           'payment_type': paymentType,
+          if (selectedRoomId != null && selectedRoomId.isNotEmpty) 'room_id': selectedRoomId,
         },
         fromJson: (json) => json,
       );
@@ -1639,7 +1649,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
         'check_out_date': checkOutDateStr,
         'guests': widget.guests,
         'adults': widget.adults,
-        'payment_type': _selectedPaymentMethod == 'pay_arrival' ? 'pay_on_arrival' : 'pay_now',
+        'payment_type': _selectedPaymentMethod == 'pay_arrival' ? 'pay_on_arrival' : 'full',
         if (roomIdInt != null) 'room_id': roomIdInt,
       };
 
@@ -2376,7 +2386,7 @@ class BookingDetailsView extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildDetailRow('Location', location),
                     const SizedBox(height: 16),
-                    _buildDetailRow('Booking code', bookingCode),
+                    _buildDetailRow('Check-in code', bookingCode),
                     const SizedBox(height: 16),
                     _buildDetailRow('Booking time', _formatTime(createdAt)),
                     const Padding(

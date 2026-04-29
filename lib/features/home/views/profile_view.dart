@@ -2193,29 +2193,43 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Approved & live tag
-                          Container(
-                            width: 90,
-                            height: 20,
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFCCFBEA),
-                              borderRadius: BorderRadius.circular(70),
-                            ),
-                            child: const Center(
+                          // Listing status tag
+                          Builder(builder: (_) {
+                            final rawStatus = property.rawJson?['status']?.toString().toLowerCase() ?? '';
+                            String label;
+                            Color bgColor;
+                            Color textColor;
+                            if (rawStatus == 'available' || rawStatus == 'approved' || rawStatus == 'active' || rawStatus == 'live') {
+                              label = 'Approved & Live';
+                              bgColor = const Color(0xFFCCFBEA);
+                              textColor = const Color(0xFF008D5A);
+                            } else if (rawStatus == 'rejected' || rawStatus == 'declined') {
+                              label = 'Rejected';
+                              bgColor = const Color(0xFFFFE5E5);
+                              textColor = Colors.red;
+                            } else {
+                              label = 'Pending';
+                              bgColor = const Color(0xFFFFF3CD);
+                              textColor = const Color(0xFFF59E0B);
+                            }
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: bgColor,
+                                borderRadius: BorderRadius.circular(70),
+                              ),
                               child: Text(
-                                'Approved & live',
+                                label,
                                 style: TextStyle(
                                   fontSize: 9,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF008D5A),
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor,
                                 ),
-                                textAlign: TextAlign.center,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ),
+                            );
+                          }),
                           const SizedBox(height: 4),
                           // Star rating below the tag
                           Row(

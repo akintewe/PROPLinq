@@ -348,7 +348,7 @@ class _WalletViewState extends State<WalletView> {
 
   Future<List<Map<String, dynamic>>> _fetchBanks() async {
     final token = await StorageService().getToken();
-    final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.payoutBanks}?country=NG');
+    final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.payoutBanks}');
     final res = await http.get(url, headers: {
       'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
@@ -394,6 +394,84 @@ class _WalletViewState extends State<WalletView> {
     final formKey = GlobalKey<FormState>();
     Map<String, dynamic>? selectedBank;
     bool isSaving = false;
+    bool bankError = false;
+
+    Future<void> pickBank(StateSetter setSheetState) async {
+      final searchCtrl = TextEditingController();
+
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (pickerCtx) {
+          List<Map<String, dynamic>> filtered = List.from(banks);
+          return StatefulBuilder(
+            builder: (pickerCtx, setPickerState) {
+              return SizedBox(
+                height: MediaQuery.of(pickerCtx).size.height * 0.75,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE0E0E0), borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(height: 16),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24),
+                      child: Text('Select Bank', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: TextField(
+                        controller: searchCtrl,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: 'Search bank name...',
+                          prefixIcon: const Icon(Icons.search, color: Color(0xFF868686)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF426DC2), width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onChanged: (q) {
+                          setPickerState(() {
+                            filtered = banks.where((b) {
+                              final name = (b['name'] ?? b['bank_name'] ?? '').toString().toLowerCase();
+                              return name.contains(q.toLowerCase());
+                            }).toList();
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (_, i) {
+                          final name = filtered[i]['name']?.toString() ?? filtered[i]['bank_name']?.toString() ?? '';
+                          return ListTile(
+                            title: Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                            onTap: () {
+                              setSheetState(() {
+                                selectedBank = filtered[i];
+                                bankError = false;
+                              });
+                              Navigator.of(pickerCtx).pop();
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
 
     showModalBottomSheet(
       context: context,
@@ -419,29 +497,38 @@ class _WalletViewState extends State<WalletView> {
                     const Text('Add your bank details to receive payouts.', style: TextStyle(fontSize: 14, color: Color(0xFF868686))),
                     const SizedBox(height: 24),
 
-                    // Bank dropdown
-                    DropdownButtonFormField<Map<String, dynamic>>(
-                      value: selectedBank,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        labelText: 'Select Bank',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        focusedBorder: OutlineInputBorder(
+                    // Bank selector (tappable field)
+                    GestureDetector(
+                      onTap: () => pickBank(setSheetState),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: bankError ? Colors.red : const Color(0xFFBDBDBD)),
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF426DC2), width: 2),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                selectedBank != null
+                                    ? (selectedBank!['name'] ?? selectedBank!['bank_name'] ?? '').toString()
+                                    : 'Select Bank',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: selectedBank != null ? Colors.black : const Color(0xFF9E9E9E),
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.keyboard_arrow_down, color: Color(0xFF868686)),
+                          ],
+                        ),
                       ),
-                      items: banks.map((bank) {
-                        final name = bank['name']?.toString() ?? bank['bank_name']?.toString() ?? '';
-                        return DropdownMenuItem<Map<String, dynamic>>(
-                          value: bank,
-                          child: Text(name, overflow: TextOverflow.ellipsis),
-                        );
-                      }).toList(),
-                      onChanged: (val) => setSheetState(() => selectedBank = val),
-                      validator: (_) => selectedBank == null ? 'Please select a bank' : null,
                     ),
+                    if (bankError)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6, left: 14),
+                        child: Text('Please select a bank', style: TextStyle(fontSize: 12, color: Colors.red)),
+                      ),
                     const SizedBox(height: 16),
 
                     // Account number
@@ -485,6 +572,10 @@ class _WalletViewState extends State<WalletView> {
                           onPressed: isSaving
                               ? null
                               : () async {
+                                  if (selectedBank == null) {
+                                    setSheetState(() => bankError = true);
+                                    return;
+                                  }
                                   if (!formKey.currentState!.validate()) return;
                                   setSheetState(() => isSaving = true);
 
@@ -517,11 +608,68 @@ class _WalletViewState extends State<WalletView> {
                                     setSheetState(() => isSaving = false);
 
                                     if (res.statusCode >= 200 && res.statusCode < 300) {
-                                      Navigator.of(ctx).pop();
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Payout account saved successfully!'), backgroundColor: Colors.green),
-                                        );
+                                      final resBody = json.decode(res.body);
+                                      final data = resBody['data'] is Map ? resBody['data'] as Map<String, dynamic> : <String, dynamic>{};
+                                      final accountName = data['account_name']?.toString() ?? '';
+
+                                      // Show confirmation dialog with account name
+                                      if (!ctx.mounted) return;
+                                      final confirmed = await showDialog<bool>(
+                                        context: ctx,
+                                        builder: (dialogCtx) => AlertDialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                          title: const Text('Confirm Account', style: TextStyle(fontWeight: FontWeight.w700)),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text('Is this the correct account?', style: TextStyle(fontSize: 14, color: Color(0xFF868686))),
+                                              const SizedBox(height: 16),
+                                              Container(
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.all(16),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFECF0F9),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(accountName.isNotEmpty ? accountName : 'Account Holder', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
+                                                    const SizedBox(height: 4),
+                                                    Text(accountNumber, style: const TextStyle(fontSize: 13, color: Color(0xFF868686))),
+                                                    const SizedBox(height: 2),
+                                                    Text(bankName, style: const TextStyle(fontSize: 13, color: Color(0xFF868686))),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.of(dialogCtx).pop(false),
+                                              child: const Text('Change', style: TextStyle(color: Color(0xFF868686))),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF426DC2),
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              ),
+                                              onPressed: () => Navigator.of(dialogCtx).pop(true),
+                                              child: const Text('Confirm'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirmed == true) {
+                                        if (ctx.mounted) Navigator.of(ctx).pop();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Payout account saved successfully!'), backgroundColor: Colors.green),
+                                          );
+                                        }
                                       }
                                     } else {
                                       final body = json.decode(res.body);

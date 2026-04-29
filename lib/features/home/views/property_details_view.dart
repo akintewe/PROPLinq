@@ -1170,7 +1170,7 @@ If you don't have the app, the link will open in your browser where you can down
               crossAxisCount: 2,
               crossAxisSpacing: 10,
               mainAxisSpacing: 12,
-              mainAxisExtent: 300,
+              mainAxisExtent: 335,
             ),
             itemCount: _hotelRooms.length,
             itemBuilder: (context, index) {
@@ -1222,11 +1222,11 @@ If you don't have the app, the link will open in your browser where you can down
                 child: room.imageUrl != null && room.imageUrl!.isNotEmpty
                     ? Image.network(
                         room.imageUrl!,
-                        height: 110,
+                        height: 175,
                         width: double.infinity,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
-                          height: 110,
+                          height: 175,
                           color: const Color(0xFFF0F0F0),
                           child: const Center(
                             child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
@@ -1234,7 +1234,7 @@ If you don't have the app, the link will open in your browser where you can down
                         ),
                       )
                     : Container(
-                        height: 110,
+                        height: 175,
                         color: const Color(0xFFF0F0F0),
                         child: const Center(
                           child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
@@ -1260,7 +1260,7 @@ If you don't have the app, the link will open in your browser where you can down
 
           // Card body
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2333,6 +2333,9 @@ If you don't have the app, the link will open in your browser where you can down
     final normalizedType = propertyType.toLowerCase();
     final isHotel = normalizedType == 'hotel';
     final isShortlet = normalizedType == 'shortlet';
+    final category = (property['category'] as String? ?? '').toLowerCase();
+    final isRealEstate = category == 'for_rent' || category == 'for_sale';
+    final shouldBlurForGuest = widget.isGuest && isRealEstate;
     
     // Debug: Print property data to see what's available
     
@@ -2695,8 +2698,8 @@ If you don't have the app, the link will open in your browser where you can down
                             
                             const SizedBox(height: 20),
                             
-                            // Info banner for blurred contacts (shortlets only)
-                            if (isShortlet && !_hasBookedProperty) ...[
+                            // Info banner for blurred contacts
+                            if ((isShortlet && !_hasBookedProperty) || shouldBlurForGuest) ...[
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
@@ -2717,7 +2720,9 @@ If you don't have the app, the link will open in your browser where you can down
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
-                                        'Book this shortlet to view agent contact details',
+                                        shouldBlurForGuest
+                                            ? 'Sign up to view agent contact details'
+                                            : 'Book this shortlet to view agent contact details',
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: const Color(0xFF663C00),
@@ -2735,21 +2740,21 @@ If you don't have the app, the link will open in your browser where you can down
                             Column(
                               children: [
                                 _buildContactRow(
-                                  'assets/icons/fluent_call-24-filled.svg', 
+                                  'assets/icons/fluent_call-24-filled.svg',
                                   _getAgentPhone(property),
-                                  shouldBlur: isShortlet && !_hasBookedProperty,
+                                  shouldBlur: (isShortlet && !_hasBookedProperty) || shouldBlurForGuest,
                                 ),
                                 const SizedBox(height: 16),
                                 _buildContactRow(
                                   'assets/icons/majesticons_mail.svg',
                                   _getAgentEmail(property),
-                                  shouldBlur: isShortlet && !_hasBookedProperty,
+                                  shouldBlur: (isShortlet && !_hasBookedProperty) || shouldBlurForGuest,
                                 ),
                                 const SizedBox(height: 16),
                                 _buildContactRow(
-                                  'assets/icons/logos_whatsapp-icon.svg', 
+                                  'assets/icons/logos_whatsapp-icon.svg',
                                   _getAgentWhatsApp(property),
-                                  shouldBlur: isShortlet && !_hasBookedProperty,
+                                  shouldBlur: (isShortlet && !_hasBookedProperty) || shouldBlurForGuest,
                                 ),
                               ],
                             ),
