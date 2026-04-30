@@ -352,7 +352,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
           Polyline(
             polylineId: const PolylineId('straight_line'),
             points: straightLine,
-            color: const Color(0xFF426DC2).withOpacity(0.6),
+            color: const Color(0xFF426DC2).withValues(alpha: 0.6),
             width: 4,
             patterns: [PatternItem.dash(20), PatternItem.gap(10)],
           ),
@@ -468,7 +468,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
           // Loading overlay when getting location
           if (_currentPosition == null && _isLoadingLocation)
             Container(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -493,7 +493,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
           // Error overlay when location fails
           if (_currentPosition == null && !_isLoadingLocation && _errorMessage != null)
             Container(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -576,7 +576,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -643,7 +643,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -677,7 +677,7 @@ class _MapDirectionsViewState extends State<MapDirectionsView> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),

@@ -282,7 +282,7 @@ class _AiChatSheetState extends State<_AiChatSheet> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFF426DC2).withOpacity(0.1),
+                color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.auto_awesome, color: Color(0xFF426DC2), size: 32),
@@ -324,7 +324,7 @@ class _AiChatSheetState extends State<_AiChatSheet> {
         decoration: BoxDecoration(
           color: const Color(0xFFF0F4FF),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF426DC2).withOpacity(0.3)),
+          border: Border.all(color: const Color(0xFF426DC2).withValues(alpha: 0.3)),
         ),
         child: Text(
           text,
@@ -430,7 +430,7 @@ class _AiChatSheetState extends State<_AiChatSheet> {
                           border: Border.all(
                             color: optionsUsed
                                 ? const Color(0xFFE0E0E0)
-                                : const Color(0xFF426DC2).withOpacity(0.4),
+                                : const Color(0xFF426DC2).withValues(alpha: 0.4),
                           ),
                         ),
                         child: Text(
@@ -536,7 +536,7 @@ class _TypingDotsState extends State<_TypingDots> with SingleTickerProviderState
               width: 7,
               height: 7,
               decoration: BoxDecoration(
-                color: const Color(0xFF426DC2).withOpacity(opacity),
+                color: const Color(0xFF426DC2).withValues(alpha: opacity),
                 shape: BoxShape.circle,
               ),
             );

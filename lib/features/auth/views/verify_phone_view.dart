@@ -331,7 +331,7 @@ class _VerifyPhoneViewState extends State<VerifyPhoneView> {
                   color: const Color(0xFFF0F7FF),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFF426DC2).withOpacity(0.2),
+                    color: const Color(0xFF426DC2).withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(

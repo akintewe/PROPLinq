@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
@@ -596,7 +597,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: const Color(0xFF426DC2).withOpacity(0.1),
+              color: const Color(0xFF426DC2).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Icon(
@@ -813,7 +814,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                         ? Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                             ),
                               child: Center(
                                 child: _isUploadingImage
@@ -829,12 +830,21 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                           )
                           : _currentUser?.profilePicture != null && _currentUser!.profilePicture!.isNotEmpty
                               ? ClipOval(
-                                  child: Image.network(
-                                    _currentUser!.profilePicture!,
+                                  child: CachedNetworkImage(
+                                    imageUrl: _currentUser!.profilePicture!,
                                     width: 120,
                                     height: 120,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
+                                    placeholder: (_, __) => Container(
+                                      width: 120,
+                                      height: 120,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFECF0F9),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF426DC2))),
+                                    ),
+                                    errorWidget: (context, url, error) {
                                       return Container(
                                         width: 120,
                                         height: 120,
@@ -888,7 +898,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -2052,7 +2062,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
@@ -3061,7 +3071,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF426DC2).withOpacity(0.1),
+                  color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -3107,8 +3117,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: (property.rawJson?['is_promoted'] as bool? ?? false)
-                      ? const Color(0xFF426DC2).withOpacity(0.1)
-                      : const Color(0xFFFFA726).withOpacity(0.1),
+                      ? const Color(0xFF426DC2).withValues(alpha: 0.1)
+                      : const Color(0xFFFFA726).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -3152,7 +3162,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(

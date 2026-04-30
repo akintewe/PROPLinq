@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
@@ -159,7 +160,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF426DC2).withOpacity(0.1),
+                        color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -195,7 +196,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF426DC2).withOpacity(0.1),
+                        color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -231,7 +232,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF426DC2).withOpacity(0.1),
+                        color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -355,7 +356,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -427,7 +428,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
           color: const Color(0xFFE8F4FD),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -438,45 +439,38 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
             // Static map image
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.network(
+              child: CachedNetworkImage(imageUrl: 
                 staticMapUrl,
                 width: double.infinity,
                 height: widget.height,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
+                errorWidget: (context, url, error) {
                   return _buildFallbackUI();
                 },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) {
-                    return child;
-                  }
-                  return Container(
-                    height: widget.height,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: const Color(0xFFE8F4FD),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(
+                placeholder: (context, url) => Container(
+                  height: widget.height,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: const Color(0xFFE8F4FD),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFF426DC2)),
+                        SizedBox(height: 16),
+                        Text(
+                          'Loading Map...',
+                          style: TextStyle(
+                            fontSize: 14,
                             color: Color(0xFF426DC2),
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Loading Map...',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF426DC2),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
             
@@ -490,7 +484,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withOpacity(0.3),
+                      Colors.black.withValues(alpha: 0.3),
                     ],
                     stops: const [0.7, 1.0],
                   ),
@@ -506,11 +500,11 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: Colors.white.withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -548,11 +542,11 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: Colors.white.withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -587,7 +581,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: Colors.black.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Row(
@@ -626,7 +620,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
         color: const Color(0xFFE8F4FD),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -658,7 +652,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF426DC2).withOpacity(0.1),
+                    color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -689,7 +683,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF426DC2).withOpacity(0.1),
+                    color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -712,7 +706,7 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(

@@ -184,7 +184,7 @@ class _SettingsViewState extends State<SettingsView> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF426DC2).withOpacity(0.3),
+              color: const Color(0xFF426DC2).withValues(alpha: 0.3),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -196,7 +196,7 @@ class _SettingsViewState extends State<SettingsView> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Center(

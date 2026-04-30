@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -511,7 +512,7 @@ class _InAppChatViewState extends State<InAppChatView> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: const Color(0xFF426DC2).withOpacity(0.1),
+              color: const Color(0xFF426DC2).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Icon(
@@ -842,10 +843,10 @@ class _InAppChatViewState extends State<InAppChatView> {
                 child: imageUrl != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
+                        child: CachedNetworkImage(imageUrl: 
                           imageUrl,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
+                          errorWidget: (context, url, error) {
                             return const Icon(
                               Icons.home,
                               color: Colors.white,
@@ -915,7 +916,7 @@ class _InAppChatViewState extends State<InAppChatView> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF426DC2).withOpacity(0.1),
+                    color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -1055,7 +1056,7 @@ class _InAppChatViewState extends State<InAppChatView> {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF426DC2).withOpacity(0.1),
+                      color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -1072,7 +1073,7 @@ class _InAppChatViewState extends State<InAppChatView> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: const Color(0xFF426DC2).withOpacity(0.1),
+                color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -1086,7 +1087,7 @@ class _InAppChatViewState extends State<InAppChatView> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: const Color(0xFF426DC2).withOpacity(0.1),
+                color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -1136,7 +1137,7 @@ class _InAppChatViewState extends State<InAppChatView> {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -1168,7 +1169,7 @@ class _InAppChatViewState extends State<InAppChatView> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF25D366).withOpacity(0.3),
+            color: const Color(0xFF25D366).withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1356,7 +1357,7 @@ class _InAppChatViewState extends State<InAppChatView> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, -2),
                 ),
@@ -1455,12 +1456,12 @@ class _InAppChatViewState extends State<InAppChatView> {
           shape: BoxShape.circle,
         ),
         child: ClipOval(
-          child: Image.network(
+          child: CachedNetworkImage(imageUrl: 
             profileImageUrl,
             width: size,
             height: size,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
+            errorWidget: (context, url, error) {
               // Fallback to initials if image fails to load
               return _buildInitialsAvatar(size, userName);
             },
@@ -1543,17 +1544,17 @@ class _InAppChatViewState extends State<InAppChatView> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: _isUrl(message.filePath)
-                          ? Image.network(
+                          ? CachedNetworkImage(imageUrl: 
                               message.filePath!,
                               width: 200,
                               height: 200,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
+                              errorWidget: (context, url, error) {
                                 return Container(
                                   width: 200,
                                   height: 200,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.withOpacity(0.3),
+                                    color: Colors.grey.withValues(alpha: 0.3),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
@@ -1574,7 +1575,7 @@ class _InAppChatViewState extends State<InAppChatView> {
                                   width: 200,
                                   height: 200,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.withOpacity(0.3),
+                                    color: Colors.grey.withValues(alpha: 0.3),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
@@ -1595,7 +1596,7 @@ class _InAppChatViewState extends State<InAppChatView> {
                       width: 200,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.8),
+                        color: Colors.black.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Column(
@@ -1629,8 +1630,8 @@ class _InAppChatViewState extends State<InAppChatView> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: message.isFromUser 
-                            ? Colors.white.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.2),
+                            ? Colors.white.withValues(alpha: 0.2)
+                            : Colors.grey.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -1747,7 +1748,7 @@ class _InAppChatViewState extends State<InAppChatView> {
     });
     
     // Check agent's online status every 10 seconds
-    Timer.periodic(const Duration(seconds: 10), (_) async {
+    _chatRefreshTimer ??= Timer.periodic(const Duration(seconds: 10), (_) async {
       if (!mounted) return;
       await _checkAgentOnlineStatus();
     });

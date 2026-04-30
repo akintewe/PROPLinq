@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -371,12 +372,18 @@ class _BookingsListViewState extends State<BookingsListView> {
             // Thumbnail
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
                 width: 90,
                 height: 90,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                placeholder: (_, __) => Container(
+                  width: 90,
+                  height: 90,
+                  color: const Color(0xFFEFF0F2),
+                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF426DC2))),
+                ),
+                errorWidget: (_, __, ___) => Container(
                   width: 90,
                   height: 90,
                   color: const Color(0xFFEFF0F2),

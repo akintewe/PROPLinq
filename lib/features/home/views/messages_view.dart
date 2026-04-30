@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,7 +55,7 @@ class _MessagesViewState extends State<MessagesView> {
     });
     
     // Update current user's online status every 30 seconds
-    Timer.periodic(const Duration(seconds: 30), (_) {
+    _onlineStatusRefreshTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
       if (!mounted) return;
       _updateOnlineStatus();
     });
@@ -380,12 +381,12 @@ class _MessagesViewState extends State<MessagesView> {
     if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
       // Show actual profile image
       return ClipOval(
-        child: Image.network(
+        child: CachedNetworkImage(imageUrl: 
           profileImageUrl,
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
+          errorWidget: (context, url, error) {
             // Fallback to initials if image fails to load
             return _buildInitialsAvatar(userName);
           },

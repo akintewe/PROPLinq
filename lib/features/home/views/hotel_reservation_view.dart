@@ -1870,7 +1870,7 @@ class HotelBookingSuccessView extends StatelessWidget {
                     child: Icon(
                       Icons.add,
                       size: 16,
-                        color: const Color(0xFF426DC2).withOpacity(0.3),
+                        color: const Color(0xFF426DC2).withValues(alpha: 0.3),
                     ),
                   ),
                   Positioned(
@@ -1880,7 +1880,7 @@ class HotelBookingSuccessView extends StatelessWidget {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF75CFEA).withOpacity(0.5),
+                        color: const Color(0xFF75CFEA).withValues(alpha: 0.5),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -1892,7 +1892,7 @@ class HotelBookingSuccessView extends StatelessWidget {
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF426DC2).withOpacity(0.4),
+                        color: const Color(0xFF426DC2).withValues(alpha: 0.4),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -1903,7 +1903,7 @@ class HotelBookingSuccessView extends StatelessWidget {
                     child: Icon(
                       Icons.add,
                       size: 12,
-                      color: const Color(0xFF75CFEA).withOpacity(0.6),
+                      color: const Color(0xFF75CFEA).withValues(alpha: 0.6),
                     ),
                   ),
                   

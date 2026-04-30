@@ -242,7 +242,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.grey.withOpacity(0.3),
+                          color: Colors.grey.withValues(alpha: 0.3),
                           width: 1.5,
                         ),
                       ),
@@ -261,7 +261,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.grey.withOpacity(0.3),
+                          color: Colors.grey.withValues(alpha: 0.3),
                           width: 1.5,
                         ),
                       ),
@@ -665,7 +665,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -784,7 +784,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF426DC2).withOpacity(0.1),
+                    color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -2015,7 +2015,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF426DC2).withOpacity(0.1),
+                  color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -2047,7 +2047,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF426DC2).withOpacity(0.1),
+                  color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(

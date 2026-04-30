@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -1220,12 +1221,12 @@ If you don't have the app, the link will open in your browser where you can down
                   topRight: Radius.circular(12),
                 ),
                 child: room.imageUrl != null && room.imageUrl!.isNotEmpty
-                    ? Image.network(
+                    ? CachedNetworkImage(imageUrl: 
                         room.imageUrl!,
                         height: 175,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
+                        errorWidget: (context, url, error) => Container(
                           height: 175,
                           color: const Color(0xFFF0F0F0),
                           child: const Center(
@@ -1630,7 +1631,7 @@ If you don't have the app, the link will open in your browser where you can down
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.amber.withOpacity(0.3),
+                    color: Colors.amber.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -1723,7 +1724,7 @@ If you don't have the app, the link will open in your browser where you can down
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2004,7 +2005,7 @@ If you don't have the app, the link will open in your browser where you can down
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2029,12 +2030,12 @@ If you don't have the app, the link will open in your browser where you can down
                 ),
                 child: ClipOval(
                   child: userImage != null && userImage.isNotEmpty
-                      ? Image.network(
+                      ? CachedNetworkImage(imageUrl: 
                           userImage,
                           width: 48,
                           height: 48,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
+                          errorWidget: (context, url, error) {
                             return Container(
                               color: const Color(0xFFECF0F9),
                               child: const Icon(
@@ -2400,7 +2401,7 @@ If you don't have the app, the link will open in your browser where you can down
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -2420,7 +2421,7 @@ If you don't have the app, the link will open in your browser where you can down
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -2435,7 +2436,7 @@ If you don't have the app, the link will open in your browser where you can down
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -2467,9 +2468,9 @@ If you don't have the app, the link will open in your browser where you can down
                                 shape: BoxShape.circle,
                                 color: _currentImageIndex == index
                                     ? Colors.white
-                                    : Colors.white.withOpacity(0.4),
+                                    : Colors.white.withValues(alpha: 0.4),
                                 border: Border.all(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                   width: 0.5,
                                 ),
                               ),
@@ -2866,7 +2867,7 @@ If you don't have the app, the link will open in your browser where you can down
                                         end: Alignment.bottomCenter,
                                         colors: [
                                           Colors.transparent,
-                                          Colors.black.withOpacity(0.3),
+                                          Colors.black.withValues(alpha: 0.3),
                                         ],
                                       ),
                                     ),
@@ -2878,11 +2879,11 @@ If you don't have the app, the link will open in your browser where you can down
                                       width: 70,
                                       height: 70,
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.95),
+                                        color: Colors.white.withValues(alpha: 0.95),
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.2),
+                                            color: Colors.black.withValues(alpha: 0.2),
                                             blurRadius: 10,
                                             offset: const Offset(0, 4),
                                           ),
@@ -2906,7 +2907,7 @@ If you don't have the app, the link will open in your browser where you can down
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF426DC2).withOpacity(0.9),
+                                        color: const Color(0xFF426DC2).withValues(alpha: 0.9),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: const Row(
@@ -2941,7 +2942,7 @@ If you don't have the app, the link will open in your browser where you can down
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.7),
+                                        color: Colors.black.withValues(alpha: 0.7),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Text(
@@ -3009,7 +3010,7 @@ If you don't have the app, the link will open in your browser where you can down
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.7),
+                                        color: Colors.black.withValues(alpha: 0.7),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -3138,7 +3139,7 @@ If you don't have the app, the link will open in your browser where you can down
                                     width: 24,
                                     height: 24,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF426DC2).withOpacity(0.1),
+                                      color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: SvgPicture.asset('assets/icons/message-question (1).svg')
@@ -3410,7 +3411,7 @@ If you don't have the app, the link will open in your browser where you can down
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
               child: Container(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
               ),
             ),
           ),
@@ -3436,79 +3437,21 @@ If you don't have the app, the link will open in your browser where you can down
             color: Colors.grey[200],
           ),
           // Image
-          Image.network(
+          CachedNetworkImage(imageUrl: 
             imageUrl,
             width: double.infinity,
             height: height,
             fit: fit,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) {
-              // Image fully loaded
-              return child;
-            }
-            
-            // Calculate loading percentage
-            final progress = loadingProgress.expectedTotalBytes != null
-                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                : 0.0;
-            
-            final percentage = (progress * 100).toInt();
-            
-            // Show loading indicator with percentage
-            return Container(
-              color: Colors.grey[200],
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Circular progress indicator
-                    SizedBox(
-                      width: 60,
-                      height: 60,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Background circle
-                          SizedBox(
-                            width: 60,
-                            height: 60,
-                            child: CircularProgressIndicator(
-                              value: progress,
-                              strokeWidth: 4,
-                              backgroundColor: Colors.grey[300],
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                const Color(0xFF426DC2),
-                              ),
-                            ),
-                          ),
-                          // Percentage text
-                          Text(
-                            '$percentage%',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF426DC2),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Loading text
-                    const Text(
-                      'Loading image...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF666666),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+          placeholder: (context, url) => Container(
+            color: Colors.grey[200],
+            child: const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
               ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
+            ),
+          ),
+          errorWidget: (context, url, error) {
             // Show error state
             return Container(
               color: Colors.grey[200],
@@ -3825,22 +3768,13 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
                   minScale: 0.5,
                   maxScale: 4.0,
                   child: Center(
-                    child: Image.network(
+                    child: CachedNetworkImage(imageUrl: 
                       widget.images[index],
                       fit: BoxFit.contain,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                      errorWidget: (context, url, error) {
                         return const Center(
                           child: Icon(
                             Icons.error_outline,
@@ -3865,7 +3799,7 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -3887,7 +3821,7 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -3920,7 +3854,7 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
                         shape: BoxShape.circle,
                         color: _currentIndex == index
                             ? Colors.white
-                            : Colors.white.withOpacity(0.4),
+                            : Colors.white.withValues(alpha: 0.4),
                       ),
                     ),
                   ),

@@ -64,7 +64,7 @@ class _CompleteKycViewState extends State<CompleteKycView> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.grey.withOpacity(0.3),
+                          color: Colors.grey.withValues(alpha: 0.3),
                           width: 1.5,
                         ),
                       ),
@@ -83,7 +83,7 @@ class _CompleteKycViewState extends State<CompleteKycView> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.grey.withOpacity(0.3),
+                          color: Colors.grey.withValues(alpha: 0.3),
                           width: 1.5,
                         ),
                       ),

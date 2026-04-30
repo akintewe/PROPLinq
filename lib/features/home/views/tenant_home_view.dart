@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
@@ -226,7 +227,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   bool _hasShownInitialFilterSheet = false;
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
-  String _selectedCategory = 'All';
+  String _selectedCategory = 'Shortlets';
   Map<String, dynamic> _activeFilters = {};
   bool _hasActiveFilters = false;
   List<PropertyModel> _filteredProperties = [];
@@ -248,6 +249,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   bool _isLoadingPromotedProperties = true;
   int _unreadMessageCount = 0;
   Timer? _unreadCountTimer;
+  Timer? _featuredScrollTimer;
 
   // Location-based discovery state
   bool _useProximityDiscovery = false;
@@ -293,6 +295,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   @override
   void dispose() {
     _unreadCountTimer?.cancel();
+    _featuredScrollTimer?.cancel();
     _animationController.dispose();
     _featuredScrollController.dispose();
     _homeScrollController.dispose();
@@ -797,7 +800,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     const double scrollDistance = cardWidth + separatorWidth;
     
     // Auto-scroll every 3-4 seconds
-    Timer.periodic(const Duration(seconds: 4), (timer) {
+    _featuredScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (!mounted || _promotedProperties.isEmpty) {
         timer.cancel();
         return;
@@ -1716,12 +1719,12 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     ),
                     child: _currentUser?.profilePicture != null && _currentUser!.profilePicture!.isNotEmpty
                         ? ClipOval(
-                            child: Image.network(
+                            child: CachedNetworkImage(imageUrl: 
                               _currentUser!.profilePicture!,
                               width: 48,
                               height: 48,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
+                              errorWidget: (context, url, error) {
                                 return Container(
                                   decoration: const BoxDecoration(
                                     color: Color(0xFF426DC2),
@@ -2151,7 +2154,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
               child: Container(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
               ),
             ),
           ),
@@ -3114,7 +3117,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -3220,7 +3223,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -3448,8 +3451,9 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             _currentIndex = index;
           });
           
-          // Fetch to get accurate count from endpoint (only if not on messages tab)
-          if (index != 2) {
+          // Fetch unread count only when NOT coming from or going to messages tab
+          // (avoids immediately restoring badge after user visits messages)
+          if (index != 2 && _currentIndex != 2) {
             _fetchUnreadMessageCount();
           }
         }

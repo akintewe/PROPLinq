@@ -476,7 +476,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
           ),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: const Color(0xFF426DC2).withOpacity(0.1),
+              color: const Color(0xFF426DC2).withValues(alpha: 0.1),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

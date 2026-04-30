@@ -57,4 +57,5 @@
 -keepattributes Signature
 -keepattributes Exceptions
 
-
+# SLF4J
+-dontwarn org.slf4j.impl.StaticLoggerBinder

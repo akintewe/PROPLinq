@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
@@ -38,7 +39,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
   bool _isLoadingPromotedProperties = true;
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
-  String _selectedCategory = 'All';
+  String _selectedCategory = 'Shortlets';
   List<PropertyModel> _filteredProperties = [];
 
   @override
@@ -739,16 +740,86 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     );
   }
 
-  /// Guest banner — static image placeholder (replace with actual image asset when provided)
   Widget _buildGuestBanner() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Image.asset(
-          'assets/images/guest_banner.png',
-          width: double.infinity,
-          fit: BoxFit.fitWidth,
+        child: Container(
+          height: 116,
+          color: const Color(0xFFECF0F9),
+          child: Row(
+            children: [
+              // Left: text + button
+              Expanded(
+                child: ClipRect(
+                  child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 8, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'List your properties on Proplinq',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A2B4A),
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Start getting bookings and clients',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0xFF4A5F7A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: _promptLogin,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF426DC2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'Start Listing',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ),
+              ),
+              // Right: illustration image cropped to right side
+              ClipRect(
+                child: SizedBox(
+                  width: 140,
+                  height: 116,
+                  child: Image.asset(
+                    'assets/images/banner_bg.png',
+                    fit: BoxFit.cover,
+                    alignment: Alignment.centerRight,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -840,10 +911,10 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.network(
+              CachedNetworkImage(imageUrl: 
                 property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center',
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: const Color(0xFFE0E0E0)),
+                errorWidget: (_, __, ___) => Container(color: const Color(0xFFE0E0E0)),
               ),
               Container(
                 decoration: BoxDecoration(

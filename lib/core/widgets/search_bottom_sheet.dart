@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/location_service.dart';
@@ -364,10 +365,10 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: property.imageUrl != null
-                    ? Image.network(
+                    ? CachedNetworkImage(imageUrl: 
                         property.imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
+                        errorWidget: (context, url, error) {
                           return const Icon(
                             Icons.home,
                             color: Color(0xFF426DC2),
@@ -426,7 +427,7 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF426DC2).withOpacity(0.1),
+                          color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -522,7 +523,7 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: location['iconColor'].withOpacity(0.1),
+                color: location['iconColor'].withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(

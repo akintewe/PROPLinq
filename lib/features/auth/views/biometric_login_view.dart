@@ -144,7 +144,7 @@ class _BiometricLoginViewState extends State<BiometricLoginView> {
                 height: 120,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  color: AppColors.primary600.withOpacity(0.1),
+                  color: AppColors.primary600.withValues(alpha: 0.1),
                 ),
                 child: Image.asset(
                   'assets/icons/Layer_x0020_1.png',
@@ -182,7 +182,7 @@ class _BiometricLoginViewState extends State<BiometricLoginView> {
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.primary600.withOpacity(0.1),
+                  color: AppColors.primary600.withValues(alpha: 0.1),
                 ),
                 child: Icon(
                   _availableBiometrics.contains(BiometricType.fingerprint)

@@ -122,7 +122,7 @@ class HomeView extends BaseView<HomeViewModel> {
         borderRadius: BorderRadius.circular(AppDimensions.radiusL),
         boxShadow: [
           BoxShadow(
-            color: AppColors.grey900.withOpacity(0.1),
+            color: AppColors.grey900.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -157,7 +157,7 @@ class HomeView extends BaseView<HomeViewModel> {
                   right: AppDimensions.paddingS,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.white.withOpacity(0.9),
+                      color: AppColors.white.withValues(alpha: 0.9),
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(

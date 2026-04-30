@@ -126,7 +126,7 @@ class _AppInputFieldState extends State<AppInputField> {
         boxShadow: [
           if (_focusNode.hasFocus)
             BoxShadow(
-              color: AppColors.primary600.withOpacity(0.1),
+              color: AppColors.primary600.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

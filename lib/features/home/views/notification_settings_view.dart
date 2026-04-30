@@ -294,7 +294,7 @@ class _NotificationSettingsViewState extends State<NotificationSettingsView> {
                         backgroundColor: const Color(0xFF426DC2),
                         foregroundColor: Colors.white,
                         disabledBackgroundColor:
-                            const Color(0xFF426DC2).withOpacity(0.6),
+                            const Color(0xFF426DC2).withValues(alpha: 0.6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),

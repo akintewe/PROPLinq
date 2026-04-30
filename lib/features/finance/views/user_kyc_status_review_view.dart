@@ -30,7 +30,7 @@ class UserKycStatusReviewView extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.grey.withOpacity(0.3),
+                        color: Colors.grey.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -58,7 +58,7 @@ class UserKycStatusReviewView extends StatelessWidget {
                       width: 200,
                       height: 200,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF426DC2).withOpacity(0.1),
+                        color: const Color(0xFF426DC2).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Stack(

@@ -188,7 +188,7 @@ class _OnboardingViewState extends State<OnboardingView> {
               borderRadius: BorderRadius.circular(37),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -304,7 +304,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -367,7 +367,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                       width: 47,
                       height: 47,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                         shape: BoxShape.circle,
                       ),
                       child: SvgPicture.asset(
