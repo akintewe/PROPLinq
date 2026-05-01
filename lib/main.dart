@@ -5,6 +5,7 @@ import 'core/constants/app_strings.dart';
 import 'core/services/onesignal_service.dart';
 import 'core/services/deep_linking_service.dart';
 import 'core/services/deep_link_router.dart';
+import 'core/animations/app_transitions.dart';
 import 'features/splash/views/second_splash_view.dart';
 
 void main() async {
@@ -87,10 +88,18 @@ class _PropLinqAppState extends State<PropLinqApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppStrings.appName,
-      theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       navigatorKey: widget.deepLinkRouter.navigatorKey,
       home: const SecondSplashView(),
+      theme: AppTheme.lightTheme.copyWith(
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: <TargetPlatform, PageTransitionsBuilder>{
+            TargetPlatform.iOS: PropLinqPageTransition(),
+            TargetPlatform.android: PropLinqPageTransition(),
+            TargetPlatform.macOS: PropLinqPageTransition(),
+          },
+        ),
+      ),
     );
   }
 }

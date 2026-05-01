@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:proplinq/core/constants/app_colors.dart';
+import '../../../core/animations/animated_list_item.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/services/bookings_cache_service.dart';
 import '../../../core/services/location_service.dart';
@@ -1887,7 +1888,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       itemCount: _promotedProperties.length,
                       separatorBuilder: (context, index) => const SizedBox(width: 16),
                       itemBuilder: (context, index) {
-                        return GestureDetector(
+                        return AnimatedListItem(
+                          index: index,
+                          child: GestureDetector(
                           onTap: () async {
                             final property = _promotedProperties[index];
 
@@ -1933,6 +1936,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                             );
                           },
                           child: _buildFeaturedPropertyCard(index),
+                          ),
                         );
                       },
                     ),
@@ -1994,7 +1998,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: filteredProperties.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 16),
-                        itemBuilder: (context, index) => _buildPropertyListItem(index, filteredProperties),
+                        itemBuilder: (context, index) => AnimatedListItem(index: index, child: _buildPropertyListItem(index, filteredProperties)),
                       );
               }(),
         ],

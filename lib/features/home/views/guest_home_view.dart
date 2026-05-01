@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:ui';
+import '../../../core/animations/animated_list_item.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
@@ -887,7 +888,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   itemCount: _promotedProperties.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) => _buildFeaturedCard(index),
+                  itemBuilder: (context, index) => AnimatedListItem(index: index, child: _buildFeaturedCard(index)),
                 ),
               ),
       ],
@@ -1353,7 +1354,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   itemCount: results.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) => _buildPropertyCard(index, results),
+                  itemBuilder: (context, index) => AnimatedListItem(index: index, child: _buildPropertyCard(index, results)),
                 ),
         ],
       ),

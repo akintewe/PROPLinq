@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
 import 'dart:async';
 import 'dart:ui';
+import '../../../core/animations/animated_list_item.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
@@ -2045,7 +2046,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                   itemCount: _promotedProperties.length,
                   separatorBuilder: (context, index) => const SizedBox(width: 16),
                   itemBuilder: (context, index) {
-                    return _buildFeaturedPropertyCard(index);
+                    return AnimatedListItem(index: index, child: _buildFeaturedPropertyCard(index));
                   },
                 ),
               ),
@@ -2106,7 +2107,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: filteredProperties.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 16),
-                        itemBuilder: (context, index) => _buildPropertyListItem(index, filteredProperties),
+                        itemBuilder: (context, index) => AnimatedListItem(index: index, child: _buildPropertyListItem(index, filteredProperties)),
                       );
               }(),
         ],
