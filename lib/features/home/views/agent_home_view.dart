@@ -14,7 +14,7 @@ import 'saved_view.dart';
 import 'messages_view.dart';
 import 'profile_view.dart';
 import 'settings_view.dart';
-import 'subscription_view.dart';
+// import 'subscription_view.dart'; // disabled — subscription moved to website
 import '../../../core/widgets/kyc_dialog.dart';
 import '../../../core/widgets/search_bottom_sheet.dart';
 import '../../../core/widgets/filter_bottom_sheet.dart';
@@ -2683,15 +2683,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   }
 
   Widget _buildAnimatedBanner() {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const SubscriptionView(),
-          ),
-        );
-      },
-      child: Container(
+    return Container(
       width: double.infinity,
       height: 40,
       decoration: const BoxDecoration(
@@ -2732,7 +2724,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               ),
             );
           },
-          ),
         ),
       ),
     );

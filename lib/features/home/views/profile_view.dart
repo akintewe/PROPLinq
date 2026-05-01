@@ -10,7 +10,7 @@ import 'property_listing_view.dart';
 import 'property_details_view.dart';
 import 'agent_calendar_view.dart';
 import '../models/room_model.dart';
-import 'subscription_view.dart';
+// import 'subscription_view.dart'; // disabled — subscription moved to website
 import 'all_properties_view.dart';
 import 'edit_property_view.dart';
 import '../../finance/views/agent_kyc_view.dart';
@@ -352,11 +352,10 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     }
   }
 
-  bool _isSubscriptionEligible() {
-    final agentType = _currentUser?.agentType?.toLowerCase().replaceAll(' ', '_') ?? '';
-    // Hotel and shortlet hosts don't get subscription
-    return agentType != 'hotel' && agentType != 'shortlet';
-  }
+  // bool _isSubscriptionEligible() {
+  //   final agentType = _currentUser?.agentType?.toLowerCase().replaceAll(' ', '_') ?? '';
+  //   return agentType != 'hotel' && agentType != 'shortlet';
+  // }
 
   /// Refresh all data (profile, KYC status, and properties)
   Future<void> _refreshAllData() async {
@@ -764,11 +763,11 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
           _buildVerifyCheckinSection(),
           const SizedBox(height: 32),
           _buildCalendarSection(),
-          // Subscription: only for realtors and individual agents, not shortlet/hotel hosts
-          if (_isSubscriptionEligible()) ...[
-            const SizedBox(height: 32),
-            _buildSubscriptionSection(),
-          ],
+          // Subscription disabled — moved to website (Apple IAP policy)
+          // if (_isSubscriptionEligible()) ...[
+          //   const SizedBox(height: 32),
+          //   _buildSubscriptionSection(),
+          // ],
           const SizedBox(height: 32),
           _buildReviewSection(),
         ],
@@ -2612,74 +2611,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildSubscriptionSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Color(0xFF426DC2),
-            Color(0xFF63ADDC),
-            Color(0xFF75CFEA),
-          ],
-          stops: [0.0, 1.0, 1.0],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Unlock Unlimited Listings',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-            const Text(
-            'Subscribe for boundess property uploads',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 47,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const SubscriptionView(),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                ),
-              ),
-              child:  Text(
-                'Subscribe',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF426DC2),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // _buildSubscriptionSection removed — subscription moved to website (Apple IAP policy)
 
   Widget _buildReviewSection() {
     return Column(

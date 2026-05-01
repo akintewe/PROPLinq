@@ -4,7 +4,7 @@ import 'api_service.dart';
 enum PaymentType {
   propertyPurchase,
   rentPayment,
-  subscription,
+  // subscription, // disabled — moved to website (Apple IAP policy)
   walletTopup;
 
   String get value {
@@ -13,8 +13,6 @@ enum PaymentType {
         return 'property_purchase';
       case PaymentType.rentPayment:
         return 'rent_payment';
-      case PaymentType.subscription:
-        return 'subscription';
       case PaymentType.walletTopup:
         return 'wallet_deposit';
     }

@@ -93,9 +93,9 @@ class ApiConstants {
   // Agent Ratings Endpoints
   static const String agentPropertiesRatings = '/agent/properties/ratings';
   
-  // Subscription Endpoints
-  static const String subscriptionPlans = '/agent/subscription-plans';
-  static const String paySubscription = '/agent/wallet/pay-subscription';
+  // Subscription Endpoints — disabled (moved to website, Apple IAP policy)
+  // static const String subscriptionPlans = '/agent/subscription-plans';
+  // static const String paySubscription = '/agent/wallet/pay-subscription';
 
   // Payment Endpoints
   static const String initializePayment = '/payments/initialize';
