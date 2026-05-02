@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shimmer/shimmer.dart';
 import 'dart:async';
 import 'dart:ui';
 import '../../../core/animations/animated_list_item.dart';
@@ -872,13 +873,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   itemCount: 3,
                   separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (_, __) => Container(
-                    width: 284,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
+                  itemBuilder: (_, __) => _buildShimmerFeaturedCard(),
                 ),
               )
             : SizedBox(
@@ -983,11 +978,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
           ),
           const SizedBox(height: 20),
           if (_isLoadingProperties)
-            ...List.generate(3, (_) => Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              height: 280,
-              decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(16)),
-            ))
+            ...List.generate(3, (_) => _buildShimmerPropertyCard())
           else if (filteredProperties.isEmpty)
             _buildNoPropertiesFound()
           else
@@ -1659,6 +1650,180 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerFeaturedCard() {
+    return Container(
+      width: 280,
+      height: 180,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Container(
+              height: 100,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 12,
+                      width: double.infinity,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 8,
+                      width: 100,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                  Row(
+                    children: List.generate(3, (i) =>
+                      Expanded(
+                        child: Shimmer.fromColors(
+                          baseColor: Colors.grey[300]!,
+                          highlightColor: Colors.grey[100]!,
+                          child: Container(
+                            height: 6,
+                            margin: EdgeInsets.only(right: i < 2 ? 3 : 0),
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 12,
+                      width: 70,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerPropertyCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            Shimmer.fromColors(
+              baseColor: Colors.grey[300]!,
+              highlightColor: Colors.grey[100]!,
+              child: Container(
+                width: 65,
+                height: 65,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 12,
+                      width: double.infinity,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      height: 8,
+                      width: 80,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: List.generate(2, (i) =>
+                      Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        child: Container(
+                          height: 6,
+                          width: 40,
+                          margin: EdgeInsets.only(right: i < 1 ? 8 : 0),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Shimmer.fromColors(
+              baseColor: Colors.grey[300]!,
+              highlightColor: Colors.grey[100]!,
+              child: Container(
+                height: 12,
+                width: 60,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

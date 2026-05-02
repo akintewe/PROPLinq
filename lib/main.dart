@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_strings.dart';
 import 'core/services/onesignal_service.dart';
+import 'core/services/message_notification_service.dart';
 import 'core/services/deep_linking_service.dart';
 import 'core/services/deep_link_router.dart';
 import 'core/animations/app_transitions.dart';
@@ -14,6 +15,9 @@ void main() async {
   
   // Initialize OneSignal
   await OneSignalService().initialize();
+
+  // Initialize message notification service (sound + local notifications)
+  await MessageNotificationService().initialize();
   
   // Initialize Deep Linking Service with AppsFlyer
   final deepLinkingService = DeepLinkingService();

@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/chat_service.dart';
 import '../../auth/services/auth_service.dart';
+import '../../../core/services/message_notification_service.dart';
 
 class InAppChatView extends StatefulWidget {
   final Map<String, dynamic> agentData;
@@ -49,12 +50,18 @@ class _InAppChatViewState extends State<InAppChatView> {
   @override
   void initState() {
     super.initState();
-    
+
+    // Tell the global notification service we're in this conversation so it
+    // doesn't fire sound/banners for messages from this user.
+    final user = widget.agentData['user'] as Map<String, dynamic>?;
+    final agentId = user?['id']?.toString() ?? widget.agentData['id']?.toString() ?? widget.agentData['user_id']?.toString();
+    MessageNotificationService().setActiveConversationUserId(agentId);
+    MessageNotificationService().acknowledgeAll();
+
     _loadChatHistory();
     _loadPropertyDetails();
     _loadCurrentUserProfile();
     _startWhatsAppTimer();
-    _markMessagesAsRead(); // Mark messages as read when chat is opened
     _updateOnlineStatus(); // Update current user's online status
     _checkAgentOnlineStatus(); // Check agent's online status
     _startOnlineStatusTimer(); // Periodically check online status
@@ -103,7 +110,7 @@ class _InAppChatViewState extends State<InAppChatView> {
       
       
       // Update agent data with phone number if found
-      if (phoneNumber != null || email != null) {
+      if ((phoneNumber != null || email != null) && mounted) {
         setState(() {
           widget.agentData['user']['phone_number'] = phoneNumber;
           widget.agentData['user']['email'] = email;
@@ -116,9 +123,10 @@ class _InAppChatViewState extends State<InAppChatView> {
       
       final previousCount = _messages.length;
       
+      if (!mounted) return;
       setState(() {
         _messages.clear();
-        
+
         // Convert API chat history to ChatMessage objects
         for (final chat in chatHistory) {
           // Extract sender_id and message data from the new API format
@@ -181,11 +189,13 @@ class _InAppChatViewState extends State<InAppChatView> {
       // Mark messages as read now that they are loaded
       await _markMessagesAsRead();
     } catch (e) {
-      setState(() {
-        _messages.clear();
-        _addWelcomeMessage();
-        _isLoadingChats = false;
-      });
+      if (mounted) {
+        setState(() {
+          _messages.clear();
+          _addWelcomeMessage();
+          _isLoadingChats = false;
+        });
+      }
     }
   }
 
@@ -218,8 +228,9 @@ class _InAppChatViewState extends State<InAppChatView> {
       }
 
       // No new incoming message – just refresh
+      if (!mounted) return;
       await _loadChatHistory();
-      _markMessagesAsRead();
+      if (mounted) _markMessagesAsRead();
       _lastConversationLength = conversation.length;
     } catch (_) {
       // ignore polling errors
@@ -647,40 +658,27 @@ class _InAppChatViewState extends State<InAppChatView> {
   }
 
   Future<void> _markMessagesAsRead() async {
-    // Mark all unread received messages as read via API
+    // Mark all unread received messages as read in local state only.
+    // The backend mark-received endpoint is not available, so we skip the API call.
     for (int i = 0; i < _messages.length; i++) {
+      if (!mounted) return;
       final message = _messages[i];
-      if (!message.isFromUser && !message.isRead && message.messageId != null) {
-        // Mark message as received via API
-        await _markMessageAsReceived(message.messageId!);
-        
-        // Update local state to show as read immediately
-        setState(() {
-          _messages[i] = ChatMessage(
-            text: message.text,
-            isFromUser: message.isFromUser,
-            timestamp: message.timestamp,
-            filePath: message.filePath,
-            fileType: message.fileType,
-            isRead: true,
-            receivedAt: message.receivedAt,
-            messageId: message.messageId,
-          );
-        });
+      if (!message.isFromUser && !message.isRead) {
+        if (mounted) {
+          setState(() {
+            _messages[i] = ChatMessage(
+              text: message.text,
+              isFromUser: message.isFromUser,
+              timestamp: message.timestamp,
+              filePath: message.filePath,
+              fileType: message.fileType,
+              isRead: true,
+              receivedAt: message.receivedAt,
+              messageId: message.messageId,
+            );
+          });
+        }
       }
-    }
-  }
-
-  Future<void> _markMessageAsReceived(String messageId) async {
-    try {
-      final success = await _chatService.markMessageAsRead(messageId);
-      if (success) {
-        print('✅ [InAppChatView] Message $messageId marked as received successfully');
-      } else {
-        print('⚠️ [InAppChatView] Failed to mark message $messageId as received');
-      }
-    } catch (e) {
-      print('❌ [InAppChatView] Error marking message as received: $e');
     }
   }
 
@@ -1756,6 +1754,7 @@ class _InAppChatViewState extends State<InAppChatView> {
 
   @override
   void dispose() {
+    MessageNotificationService().setActiveConversationUserId(null);
     _chatRefreshTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();

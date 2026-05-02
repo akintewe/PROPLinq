@@ -20,6 +20,8 @@ import '../../../core/services/api_service.dart';
 import '../services/recently_viewed_service.dart';
 import '../services/property_service.dart';
 import '../services/hotel_service.dart';
+import '../services/favorite_service.dart';
+import '../../../core/services/wishlist_notifier.dart';
 import '../models/room_model.dart';
 import '../../../core/utils/format_utils.dart';
 
@@ -52,6 +54,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   final BookingsCacheService _bookingsCacheService = BookingsCacheService();
   bool _isOwner = false;
   Map<String, dynamic>? _currentPropertyData;
+  final FavoriteService _favoriteService = FavoriteService();
+  bool _isFavorite = false;
+  bool _isTogglingFavorite = false;
   int _inlineRating = 0;
   final TextEditingController _inlineCommentController = TextEditingController();
   bool _isSubmittingRating = false;
@@ -86,7 +91,12 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     
     // Initialize blur state IMMEDIATELY (before any async operations)
     _hasBookedProperty = _checkIfPropertyBookedSync();
-    
+
+    // Init favourite state from navigation data
+    final initProperty = widget.propertyData ?? _getDefaultProperty();
+    final rawLiked = initProperty['is_liked'] ?? initProperty['isLiked'];
+    _isFavorite = rawLiked == true || rawLiked == 1;
+
     _initializeTextAnimation();
     _startTextRotation();
     _checkPropertyOwnership();
@@ -251,6 +261,31 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     }
   }
   
+  Future<void> _toggleFavorite() async {
+    if (_isTogglingFavorite || widget.isGuest) return;
+    final property = _currentPropertyData ?? widget.propertyData ?? _getDefaultProperty();
+    final propertyId = int.tryParse(property['id']?.toString() ?? '');
+    if (propertyId == null) return;
+
+    setState(() => _isTogglingFavorite = true);
+    final success = await _favoriteService.toggleFavorite(propertyId, _isFavorite);
+    if (mounted) {
+      setState(() {
+        if (success) {
+          _isFavorite = !_isFavorite;
+          WishlistNotifier().notify();
+        }
+        _isTogglingFavorite = false;
+      });
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_isFavorite ? 'Added to wishlist' : 'Removed from wishlist'),
+          duration: const Duration(seconds: 2),
+        ));
+      }
+    }
+  }
+
   /// Check if user has booked this property (SYNCHRONOUS - uses cache)
   bool _checkIfPropertyBookedSync() {
     try {
@@ -2432,19 +2467,28 @@ If you don't have the app, the link will open in your browser where you can down
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    shape: BoxShape.circle,
+                                if (!widget.isGuest)
+                                  GestureDetector(
+                                    onTap: _toggleFavorite,
+                                    child: Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.9),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: _isTogglingFavorite
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(10),
+                                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF426DC2)),
+                                            )
+                                          : Icon(
+                                              _isFavorite ? Icons.favorite : Icons.favorite_border,
+                                              color: _isFavorite ? Colors.red : const Color(0xFF426DC2),
+                                              size: 20,
+                                            ),
+                                    ),
                                   ),
-                                  child: const Icon(
-                                    Icons.favorite_border,
-                                    color: Color(0xFF426DC2),
-                                    size: 20,
-                                  ),
-                                ),
                               ],
                             ),
                           ],
@@ -2589,7 +2633,7 @@ If you don't have the app, the link will open in your browser where you can down
                               ),
                               const SizedBox(width: 6),
                               Expanded(
-                                child: (isShortlet && !_hasBookedProperty)
+                                child: (isShortlet && !_hasBookedProperty && !_isOwner)
                                     ? _buildBlurredText(property['location'] as String? ?? 'Location not specified')
                                     : Text(
                                         property['location'] as String? ?? 'Location not specified',
@@ -2700,7 +2744,7 @@ If you don't have the app, the link will open in your browser where you can down
                             const SizedBox(height: 20),
                             
                             // Info banner for blurred contacts
-                            if ((isShortlet && !_hasBookedProperty) || shouldBlurForGuest) ...[
+                            if (((isShortlet && !_hasBookedProperty) || shouldBlurForGuest) && !_isOwner) ...[
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
@@ -2743,19 +2787,19 @@ If you don't have the app, the link will open in your browser where you can down
                                 _buildContactRow(
                                   'assets/icons/fluent_call-24-filled.svg',
                                   _getAgentPhone(property),
-                                  shouldBlur: (isShortlet && !_hasBookedProperty) || shouldBlurForGuest,
+                                  shouldBlur: ((isShortlet && !_hasBookedProperty) || shouldBlurForGuest) && !_isOwner,
                                 ),
                                 const SizedBox(height: 16),
                                 _buildContactRow(
                                   'assets/icons/majesticons_mail.svg',
                                   _getAgentEmail(property),
-                                  shouldBlur: (isShortlet && !_hasBookedProperty) || shouldBlurForGuest,
+                                  shouldBlur: ((isShortlet && !_hasBookedProperty) || shouldBlurForGuest) && !_isOwner,
                                 ),
                                 const SizedBox(height: 16),
                                 _buildContactRow(
                                   'assets/icons/logos_whatsapp-icon.svg',
                                   _getAgentWhatsApp(property),
-                                  shouldBlur: (isShortlet && !_hasBookedProperty) || shouldBlurForGuest,
+                                  shouldBlur: ((isShortlet && !_hasBookedProperty) || shouldBlurForGuest) && !_isOwner,
                                 ),
                               ],
                             ),

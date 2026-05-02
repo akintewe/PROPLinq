@@ -126,6 +126,8 @@ dependencies:
 
   # Real-time WebSocket for AI Chat (Laravel Reverb / Pusher-compatible)
   pusher_channels_flutter: ^2.2.0
+  audioplayers: ^6.6.0
+  flutter_local_notifications: ^21.0.0
 
 dev_dependencies:
   flutter_test:
@@ -161,6 +163,7 @@ flutter:
   - assets/images/
   - assets/icons/
   - assets/videos/
+  - assets/sounds/
   - assets/virtual_tour_360.html
   - privacypolicy.md
   #   - images/a_dot_ham.jpeg

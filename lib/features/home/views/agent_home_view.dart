@@ -26,10 +26,10 @@ import '../../finance/views/agent_kyc_view.dart';
 import '../../finance/views/complete_kyc_view.dart';
 import '../services/property_service.dart';
 import '../services/favorite_service.dart';
-import '../services/chat_service.dart';
 import '../models/property_model.dart';
 import '../models/paginated_properties_response.dart';
 import '../../../core/widgets/ai_chat_fab.dart';
+import '../../../core/services/message_notification_service.dart';
 
 // Image carousel widget for agent property cards
 class _AgentPropertyImageCarousel extends StatefulWidget {
@@ -203,7 +203,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   final AuthService _authService = AuthService();
   final PropertyService _propertyService = PropertyService();
   final FavoriteService _favoriteService = FavoriteService();
-  final ChatService _chatService = ChatService();
   final LocationService _locationService = LocationService.instance;
   final UserPreferencesService _prefsService = UserPreferencesService();
 
@@ -215,7 +214,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   bool _isLoadingProperties = true;
   bool _isLoadingPromotedProperties = true;
   int _unreadMessageCount = 0;
-  Timer? _unreadCountTimer;
 
   // Location-based discovery state
   bool _useProximityDiscovery = false;
@@ -245,25 +243,31 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
     // Start promotional message rotation
     _startPromoMessageRotation();
-    
+
+    // Wire up global message notification service
+    MessageNotificationService().badgeCountNotifier.addListener(_onUnreadCountChanged);
+    MessageNotificationService().startPolling();
+
     // Fetch user profile, properties, and show KYC dialog after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      MessageNotificationService().bannerContext = context;
       await _fetchUserProfile();
       await _initializeLocationBasedDiscovery();
       await _fetchProperties();
       await _fetchPromotedProperties();
-      await _fetchUnreadMessageCount();
       await _showKycDialogIfNeeded();
       await _showCautionFeeNoticeIfNeeded();
       _startFeaturedAutoScroll();
-      
+
       // Pre-load bookings cache for phone number blur feature
       BookingsCacheService().fetchAndCacheBookings();
-      
-      // Periodically refresh unread message count
-      _unreadCountTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        if (mounted) _fetchUnreadMessageCount();
-      });
+    });
+  }
+
+  void _onUnreadCountChanged() {
+    if (!mounted) return;
+    setState(() {
+      _unreadMessageCount = MessageNotificationService().badgeCountNotifier.value;
     });
   }
 
@@ -708,9 +712,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   @override
   void dispose() {
-    _unreadCountTimer?.cancel();
     _featuredScrollTimer?.cancel();
     _promoTimer?.cancel();
+    MessageNotificationService().badgeCountNotifier.removeListener(_onUnreadCountChanged);
     _animationController.dispose();
     _featuredScrollController.dispose();
     _homeScrollController.dispose();
@@ -1068,7 +1072,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               },
             ),
             // Messages Tab
-            MessagesView(isAgent: true, onConversationRead: _fetchUnreadMessageCount),
+            const MessagesView(isAgent: true),
             // Profile Tab
             const ProfileView(isAgent: true),
             // Settings Tab
@@ -2629,6 +2633,33 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       ],
                     ),
                     const SizedBox(height: 12),
+                    if ((property.bedrooms != null && property.bedrooms! > 0) ||
+                        (property.bathrooms != null && property.bathrooms! > 0)) ...[
+                      Row(
+                        children: [
+                          if (property.bedrooms != null && property.bedrooms! > 0) ...[
+                            const Icon(Icons.bed_outlined, size: 16, color: Color(0xFF868686)),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${property.bedrooms} bed',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF868686)),
+                            ),
+                          ],
+                          if (property.bedrooms != null && property.bedrooms! > 0 &&
+                              property.bathrooms != null && property.bathrooms! > 0)
+                            const SizedBox(width: 12),
+                          if (property.bathrooms != null && property.bathrooms! > 0) ...[
+                            const Icon(Icons.bathtub_outlined, size: 16, color: Color(0xFF868686)),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${property.bathrooms} bath',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF868686)),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     Row(
                       children: [
                         Text(
@@ -2733,71 +2764,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     );
   }
 
-  Future<void> _fetchUnreadMessageCount() async {
-    try {
-      final chatData = await _chatService.getUserChats();
-      final currentUser = await _authService.getCurrentUser();
-      final currentUserId = currentUser?.id.toString();
-      
-      if (currentUserId == null) {
-        setState(() {
-          _unreadMessageCount = 0;
-        });
-        return;
-      }
-      
-      // Group conversations and count unread ones
-      Map<String, Map<String, dynamic>> conversationMap = {};
-      
-      for (final chat in chatData) {
-        final user = chat['user'] as Map<String, dynamic>?;
-        final otherPersonId = user?['id']?.toString() ?? '';
-        final receivedAt = chat['received_at'] as String?;
-        
-        // Extract sender_id to determine if current user sent this message
-        final senderId = chat['sender_id']?.toString();
-        final isSentByCurrentUser = senderId == currentUserId;
-        
-        // Message is unread only if received_at is null AND current user is NOT the sender
-        final isUnread = receivedAt == null && !isSentByCurrentUser;
-        
-        if (otherPersonId.isEmpty) continue;
-        
-        String conversationKey = otherPersonId;
-        
-        if (!conversationMap.containsKey(conversationKey)) {
-          conversationMap[conversationKey] = {
-            'has_unread': isUnread,
-          };
-        } else {
-          if (isUnread) {
-            conversationMap[conversationKey]!['has_unread'] = true;
-          }
-        }
-      }
-      
-      // Count conversations with unread messages
-      int unreadCount = 0;
-      for (final conversation in conversationMap.values) {
-        if (conversation['has_unread'] == true) {
-          unreadCount++;
-        }
-      }
-      
-      if (mounted) {
-        setState(() {
-          _unreadMessageCount = unreadCount;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _unreadMessageCount = 0;
-        });
-      }
-    }
-  }
-
   Widget _buildCustomBottomNavBar() {
     return Container(
       height: 80,
@@ -2818,7 +2784,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           _buildNavItem(0, 'Home', 'assets/icons/homeselected.svg', 'assets/icons/homeunselected.svg'),
           _buildNavItem(1, 'Wishlist', 'assets/icons/heartselected.svg', 'assets/icons/heartunselected.svg'),
           _buildNavItem(2, 'Messages', 'assets/icons/tabler_message (1).svg', 'assets/icons/tabler_message.svg'),
-          _buildNavItem(3, 'Profile', 'assets/icons/userselected.svg', 'assets/icons/userunselected.svg'),
+          _buildNavItem(3, 'Dashboard', 'assets/icons/userselected.svg', 'assets/icons/userunselected.svg'),
           _buildNavItem(4, 'Settings', 'assets/icons/settingselected.svg', 'assets/icons/settingunselected.svg'),
         ],
       ),
@@ -2847,27 +2813,11 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
             );
           }
         } else {
-          // Clear unread count when navigating to messages tab
-          if (index == 2) {
-            setState(() {
-              _unreadMessageCount = 0; // Clear badge when viewing messages
-            });
-          }
-          // Clear unread count when leaving messages tab
-          if (_currentIndex == 2 && index != 2) {
-            setState(() {
-              _unreadMessageCount = 0; // Clear badge when leaving messages
-            });
-          }
-          
           setState(() {
             _currentIndex = index;
           });
-          
-          // Fetch unread count only when NOT coming from or going to messages tab
-          // (avoids immediately restoring badge after user visits messages)
-          if (index != 2 && _currentIndex != 2) {
-            _fetchUnreadMessageCount();
+          if (index == 2) {
+            MessageNotificationService().acknowledgeAll();
           }
         }
       },
@@ -2894,6 +2844,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     case 'Messages':
                       fallbackIcon = isSelected ? Icons.message : Icons.message_outlined;
                       break;
+                    case 'Dashboard':
                     case 'Profile':
                       fallbackIcon = isSelected ? Icons.person : Icons.person_outline;
                       break;

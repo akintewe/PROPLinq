@@ -4,16 +4,15 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/chat_service.dart';
 import '../../auth/services/auth_service.dart';
+import '../../../core/services/message_notification_service.dart';
 import 'in_app_chat_view.dart';
 
 class MessagesView extends StatefulWidget {
   final bool isAgent;
-  final VoidCallback? onConversationRead;
 
   const MessagesView({
     super.key,
     required this.isAgent,
-    this.onConversationRead,
   });
 
   @override
@@ -37,6 +36,7 @@ class _MessagesViewState extends State<MessagesView> {
   @override
   void initState() {
     super.initState();
+    MessageNotificationService().acknowledgeAll();
     _loadConversations();
     _searchController.addListener(_filterConversations);
     _updateOnlineStatus(); // Update current user's online status
@@ -474,6 +474,8 @@ class _MessagesViewState extends State<MessagesView> {
       },
     };
     
+    MessageNotificationService().acknowledgeAll();
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => InAppChatView(
@@ -483,19 +485,21 @@ class _MessagesViewState extends State<MessagesView> {
         ),
       ),
     ).then((_) {
-      widget.onConversationRead?.call();
-      _loadConversations(); // Refresh conversation list to update read status
+      MessageNotificationService().acknowledgeAll();
+      _loadConversations();
     });
   }
 
   Future<void> _markConversationAsRead(Map<String, dynamic> conversation) async {
     final conversationKey = conversation['id']?.toString();
     if (conversationKey == null) return;
-    
-    // Save the current timestamp as the last seen time for this conversation
+
+    // Save a timestamp 1 hour in the future as last-seen so any newer-than-now
+    // message timestamp (server clock skew, async race) still counts as seen.
     final prefs = await SharedPreferences.getInstance();
     final lastSeenKey = 'last_seen_$conversationKey';
-    await prefs.setString(lastSeenKey, DateTime.now().toIso8601String());
+    final futureTs = DateTime.now().add(const Duration(hours: 1));
+    await prefs.setString(lastSeenKey, futureTs.toIso8601String());
     
     
     // Update local state and cache to immediately remove the unread indicator
