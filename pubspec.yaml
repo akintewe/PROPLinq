@@ -42,7 +42,7 @@ dependencies:
   flutter_svg: ^2.0.9
   
   # Google Fonts
-  google_fonts: ^6.2.1
+  google_fonts: ^6.3.3
   
   # Path provider for Google Fonts caching
   path_provider: ^2.1.1
