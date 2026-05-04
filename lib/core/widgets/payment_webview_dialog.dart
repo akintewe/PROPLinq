@@ -79,26 +79,31 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
       if (!mounted) return;
 
       if (response.success) {
-        final data = response.data ?? {};
-        final status = (data['status'] as String? ??
-                data['data']?['status'] as String? ??
-                '')
-            .toLowerCase();
+        final raw = response.data ?? {};
+        // Backend may nest the payment record under 'data', 'payment', or root
+        final inner = raw['data'] is Map
+            ? raw['data'] as Map<String, dynamic>
+            : raw['payment'] is Map
+                ? raw['payment'] as Map<String, dynamic>
+                : raw;
 
-        // Accept any success-like status
+        final status = (inner['status']?.toString() ?? raw['status']?.toString() ?? '').toLowerCase();
+
+        // Strict allowlist — only confirmed success states pass
         final isSuccess = status == 'success' ||
             status == 'successful' ||
             status == 'completed' ||
-            status == 'paid' ||
-            status.isEmpty; // backend returned 200 with no status field = success
+            status == 'paid';
 
         if (isSuccess) {
           nav.pop(true);
         } else {
+          // pending, failed, abandoned, or missing status all treated as not yet paid
           setState(() {
             _verifying = false;
             _errorMessage =
-                'Payment not confirmed yet. Complete the payment in your browser, then try again.';
+                'Payment not confirmed yet (status: ${status.isEmpty ? 'unknown' : status}). '
+                'Complete the payment in your browser, then try again.';
           });
         }
       } else {
