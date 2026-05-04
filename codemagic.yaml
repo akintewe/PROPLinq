@@ -14,7 +14,10 @@ workflows:
       cocoapods: default
     scripts:
       - name: Get Flutter packages
-        script: flutter packages pub get
+        script: |
+          PUB_CACHE_DIR="${PUB_CACHE:-$HOME/.pub-cache}"
+          find "$PUB_CACHE_DIR/hosted" -maxdepth 3 -name "google_fonts-*" ! -name "google_fonts-6.3.3" -type d -exec rm -rf {} + 2>/dev/null || true
+          flutter packages pub get
       - name: Install CocoaPods dependencies
         script: find . -name "Podfile" -execdir pod install \;
       - name: Set up code signing
