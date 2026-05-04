@@ -9,8 +9,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.proplinq.app
-        certificate_name: Proplinq
-        provisioning_profile_name: Proplinq App Store Production
       flutter: stable
       xcode: latest
       cocoapods: default
