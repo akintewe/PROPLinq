@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:proplinq/core/services/payment_service.dart';
 
-/// Opens a payment URL in the device's default browser (Safari on iOS)
-/// and shows a waiting screen inside the app while the user completes payment.
+/// Opens a payment URL in Safari and shows a waiting screen.
 ///
-/// Returns true if the user taps "I've completed payment", false if they cancel.
+/// If [reference] is provided the backend `/payments/verify` endpoint is
+/// called when the user returns — payment is only confirmed as successful
+/// if the server says so.  Without a reference the user's tap is trusted
+/// (fallback for flows that don't return a reference).
 Future<bool> showPaymentWebView({
   required BuildContext context,
   required String paymentUrl,
   String title = 'Complete Payment',
+  String? reference,
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -16,6 +20,7 @@ Future<bool> showPaymentWebView({
     builder: (ctx) => _PaymentWaitingDialog(
       paymentUrl: paymentUrl,
       title: title,
+      reference: reference,
     ),
   );
   return result ?? false;
@@ -24,10 +29,12 @@ Future<bool> showPaymentWebView({
 class _PaymentWaitingDialog extends StatefulWidget {
   final String paymentUrl;
   final String title;
+  final String? reference;
 
   const _PaymentWaitingDialog({
     required this.paymentUrl,
     required this.title,
+    this.reference,
   });
 
   @override
@@ -36,6 +43,8 @@ class _PaymentWaitingDialog extends StatefulWidget {
 
 class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
   bool _launching = true;
+  bool _verifying = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -49,6 +58,84 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {}
     if (mounted) setState(() => _launching = false);
+  }
+
+  Future<void> _confirmPayment() async {
+    final nav = Navigator.of(context);
+
+    // No reference — trust the user's tap (e.g. promote listing, pay-on-arrival)
+    if (widget.reference == null) {
+      nav.pop(true);
+      return;
+    }
+
+    setState(() {
+      _verifying = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await PaymentService().verify(reference: widget.reference);
+      if (!mounted) return;
+
+      if (response.success) {
+        final data = response.data ?? {};
+        final status = (data['status'] as String? ??
+                data['data']?['status'] as String? ??
+                '')
+            .toLowerCase();
+
+        // Accept any success-like status
+        final isSuccess = status == 'success' ||
+            status == 'successful' ||
+            status == 'completed' ||
+            status == 'paid' ||
+            status.isEmpty; // backend returned 200 with no status field = success
+
+        if (isSuccess) {
+          nav.pop(true);
+        } else {
+          setState(() {
+            _verifying = false;
+            _errorMessage =
+                'Payment not confirmed yet. Complete the payment in your browser, then try again.';
+          });
+        }
+      } else {
+        setState(() {
+          _verifying = false;
+          _errorMessage = response.message ?? 'Could not verify payment. Please try again.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _verifying = false;
+          _errorMessage = 'Verification failed. Please try again.';
+        });
+      }
+    }
+  }
+
+  Future<bool> _confirmCancel() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Payment?'),
+        content: const Text('Are you sure you want to cancel this payment?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Yes', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   @override
@@ -117,7 +204,7 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
                 Text(
                   _launching
                       ? 'Opening your browser...'
-                      : 'Complete your payment in the browser, then come back here.',
+                      : 'Complete your payment in the browser, then tap the button below.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -125,16 +212,46 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
                     height: 1.5,
                   ),
                 ),
-                if (_launching) ...[
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.red[200]!),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+                if (_launching || _verifying) ...[
                   const SizedBox(height: 32),
                   const CircularProgressIndicator(color: Color(0xFF426DC2)),
+                  if (_verifying) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Verifying payment...',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
                 ],
-                if (!_launching) ...[
+                if (!_launching && !_verifying) ...[
                   const SizedBox(height: 40),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(true),
+                      onPressed: _confirmPayment,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF426DC2),
                         foregroundColor: Colors.white,
@@ -173,26 +290,5 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
         ),
       ),
     );
-  }
-
-  Future<bool> _confirmCancel() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Payment?'),
-        content: const Text('Are you sure you want to cancel this payment?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Yes', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
   }
 }

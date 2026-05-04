@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/payment_webview_dialog.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -746,9 +747,9 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                 // Tenant KYC Section (only for tenants)
                 if (!widget.isAgent) _buildTenantKycSection(context),
                 
-                        // Contact Details Section
-        widget.isAgent ? _buildAgentContactDetailsSection() : _buildContactDetailsSection(),
-        
+                        // Contact Details Section (tenants only — agents don't expose their details here)
+        if (!widget.isAgent) _buildContactDetailsSection(),
+
         const SizedBox(height: 40),
         
         // Bookings Section (for both agents and home seekers)
@@ -1592,84 +1593,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
       default:
         return 'Complete your KYC verification to unlock Rent-Now, Pay-Later features and access to more properties.';
     }
-  }
-
-  Widget _buildAgentContactDetailsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => _contactExpanded = !_contactExpanded),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Contact details',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
-              ),
-              AnimatedRotation(
-                turns: _contactExpanded ? 0.5 : 0,
-                duration: const Duration(milliseconds: 250),
-                child: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF426DC2), size: 28),
-              ),
-            ],
-          ),
-        ),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 250),
-          crossFadeState: _contactExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          firstChild: const SizedBox.shrink(),
-          secondChild: Column(
-            children: [
-              const SizedBox(height: 24),
-              _buildContactDetailItem(
-                icon: Icons.person,
-                iconColor: const Color(0xFF426DC2),
-                label: 'Full Name',
-                value: _isLoadingProfile ? 'Loading...' : _currentUser?.fullName ?? 'Not provided',
-              ),
-              if (_currentUser?.agencyName != null || _isLoadingProfile) ...[
-                const SizedBox(height: 24),
-                _buildContactDetailItem(
-                  icon: Icons.business,
-                  iconColor: const Color(0xFF426DC2),
-                  label: 'Agency Name',
-                  value: _isLoadingProfile ? 'Loading...' : _currentUser?.agencyName ?? 'Not provided',
-                ),
-              ],
-              const SizedBox(height: 24),
-              _buildContactDetailItem(
-                icon: Icons.email,
-                iconColor: const Color(0xFF426DC2),
-                label: 'Email',
-                value: _isLoadingProfile ? 'Loading...' : _currentUser?.email ?? 'Not provided',
-              ),
-              const SizedBox(height: 24),
-              _buildContactDetailItem(
-                icon: Icons.phone,
-                iconColor: const Color(0xFF426DC2),
-                label: 'Phone number',
-                value: _isLoadingProfile ? 'Loading...' : _currentUser?.phoneNumber ?? 'Not provided',
-              ),
-              const SizedBox(height: 24),
-              _buildContactDetailItem(
-                icon: Icons.chat,
-                iconColor: const Color(0xFF426DC2),
-                label: 'Whatsapp number',
-                value: _isLoadingProfile ? 'Loading...' : _currentUser?.whatsappNumber ?? _currentUser?.phoneNumber ?? 'Not provided',
-              ),
-              const SizedBox(height: 24),
-              _buildContactDetailItem(
-                icon: Icons.location_on,
-                iconColor: const Color(0xFF426DC2),
-                label: 'Location',
-                value: _isLoadingProfile ? 'Loading...' : _currentUser?.location ?? 'Not provided',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildBookingsSection() {
@@ -2908,35 +2831,64 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
   }
 
   Future<void> _promoteProperty(PropertyModel property) async {
-    try {
-      print('⭐ [ProfileView] Promoting property ID: ${property.id}');
-      
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFF426DC2),
-          ),
+    if (!mounted) return;
+
+    // Show "Redirecting to secure payment" overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Color(0xFF426DC2)),
+            SizedBox(height: 16),
+            Material(
+              color: Colors.transparent,
+              child: Text(
+                'Redirecting to secure payment',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
 
+    try {
       final response = await _propertyService.promoteProperty(property.id);
-      
-      // Close loading dialog
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
 
-      print('⭐ [ProfileView] Promote property response:');
-      print('   - Success: ${response.success}');
-      print('   - Status Code: ${response.statusCode}');
-      print('   - Message: ${response.message}');
-      print('   - Data: ${response.data}');
+      if (!mounted) return;
+      Navigator.of(context).pop(); // dismiss overlay
 
-      if (mounted) {
-        if (response.success) {
+      if (response.success) {
+        final data = response.data ?? {};
+        final paymentUrl = data['authorization_url']?.toString() ??
+            data['payment_url']?.toString() ??
+            data['link']?.toString() ??
+            data['checkout_url']?.toString();
+        final paymentReference = data['reference']?.toString() ?? data['tx_ref']?.toString();
+
+        if (paymentUrl != null && paymentUrl.isNotEmpty) {
+          final paid = await showPaymentWebView(
+            context: context,
+            paymentUrl: paymentUrl,
+            title: 'Promote Listing',
+            reference: paymentReference,
+          );
+          if (mounted && paid) {
+            _fetchMyProperties();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Property promoted successfully!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        } else {
+          // API succeeded without a payment URL — already promoted or free
+          _fetchMyProperties();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(response.message ?? 'Property promoted successfully!'),
@@ -2944,24 +2896,17 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
               duration: const Duration(seconds: 3),
             ),
           );
-          
-          // Refresh properties to show updated status
-          _fetchMyProperties();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.message ?? 'Failed to promote property. Please try again.'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message ?? 'Failed to promote property. Please try again.'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
-    } catch (e, stackTrace) {
-      print('❌ [ProfileView] Error promoting property: $e');
-      print('❌ [ProfileView] Stack trace: $stackTrace');
-      
-      // Close loading dialog if still open
+    } catch (e) {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
