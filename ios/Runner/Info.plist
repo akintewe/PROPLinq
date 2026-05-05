@@ -43,6 +43,8 @@
 	<string>Proplinq needs access to your photo library so you can upload property photos and personalize your listings.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Proplinq needs access to save photos to your photo library when you take pictures for property listings or chat messages.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Proplinq uses Face ID to securely sign you in to your account.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Proplinq needs access to your camera to take photos for property listings and chat messages.</string>
 	<key>NSMicrophoneUsageDescription</key>

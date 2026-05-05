@@ -45,9 +45,9 @@ class BiometricService {
       final bool didAuthenticate = await _localAuth.authenticate(
         localizedReason: reason,
         options: const AuthenticationOptions(
-          biometricOnly: true,
+          biometricOnly: false,
           stickyAuth: true,
-          sensitiveTransaction: true,
+          sensitiveTransaction: false,
         ),
         authMessages: [
           AndroidAuthMessages(

@@ -732,24 +732,25 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           onTap: isDisabled ? null : () {
             setState(() {
               if (!_selectingCheckout) {
-                // First tap: set check-in
+                // First tap: set check-in only, do NOT auto-set checkout
                 _checkInDate = date;
-                _checkOutDate = date.add(Duration(days: _nights));
                 _selectedDay = day;
-                _datesSelected = true;
+                _datesSelected = false; // checkout not chosen yet
                 _selectingCheckout = true;
               } else {
                 // Second tap: set check-out (must be after check-in)
                 if (date.isAfter(_checkInDate)) {
                   _checkOutDate = date;
                   _nights = _checkOutDate.difference(_checkInDate).inDays;
+                  _datesSelected = true;
+                  _selectingCheckout = false;
                 } else {
-                  // Tapped before check-in: restart
+                  // Tapped same day or before check-in: restart from this date
                   _checkInDate = date;
-                  _checkOutDate = date.add(Duration(days: _nights));
                   _selectedDay = day;
+                  _datesSelected = false;
+                  _selectingCheckout = true;
                 }
-                _selectingCheckout = false;
               }
             });
           },

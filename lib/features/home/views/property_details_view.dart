@@ -1697,8 +1697,8 @@ If you don't have the app, the link will open in your browser where you can down
         
         const SizedBox(height: 24),
         
-        // Rate Property Form (Jumia style) - hide if owner
-        if (!_isOwner) _buildInlineRatingForm(displayProperty),
+        // Rate Property Form — only for logged-in non-owners
+        if (!_isOwner && !widget.isGuest) _buildInlineRatingForm(displayProperty),
         
         const SizedBox(height: 24),
         

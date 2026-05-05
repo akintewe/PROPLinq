@@ -174,10 +174,7 @@ class _InAppChatViewState extends State<InAppChatView> {
         // Sort messages by timestamp (oldest first, newest last for chat display)
         _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
         
-        // If no chat history, add welcome message
-        if (_messages.isEmpty) {
-          _addWelcomeMessage();
-        }
+        // No history — leave empty, user starts the conversation
         
         _isLoadingChats = false;
       });
@@ -192,7 +189,6 @@ class _InAppChatViewState extends State<InAppChatView> {
       if (mounted) {
         setState(() {
           _messages.clear();
-          _addWelcomeMessage();
           _isLoadingChats = false;
         });
       }
@@ -272,19 +268,6 @@ class _InAppChatViewState extends State<InAppChatView> {
         );
       }
     });
-  }
-
-  void _addWelcomeMessage() {
-    setState(() {
-      _messages.add(ChatMessage(
-        text: "Hi! I'm interested in the ${widget.propertyTitle} property. Could you please provide more details?",
-        isFromUser: true,
-        timestamp: DateTime.now(),
-        messageId: null, // Welcome message doesn't have a message ID
-      ));
-    });
-    
-    _scrollToBottom();
   }
 
   Future<void> _loadPropertyDetails() async {

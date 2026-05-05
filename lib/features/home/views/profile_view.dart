@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../../../core/widgets/payment_webview_dialog.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -1865,10 +1864,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
 
     final property = _myProperties[index];
     
-    // Check if property has is_promoted value
-    final isPromoted = property.rawJson?['is_promoted'] as bool? ?? false;
-    print('🏠 [ProfileView] Property ${property.id} - is_promoted: $isPromoted');
-
     return GestureDetector(
       onTap: () {
         // Navigate to property details
@@ -1962,43 +1957,12 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                     ),
                   ),
                 ),
-                // Promote, Favorite and More buttons
+                // Favorite and More buttons
                 Positioned(
                   top: 12,
                   right: 12,
                   child: Row(
                     children: [
-                      // Promote button
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: isPromoted ? null : () {
-                            _promoteProperty(property);
-                          },
-                          customBorder: const CircleBorder(),
-                          child: Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              color: isPromoted ? const Color(0xFF426DC2) : Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.star,
-                              size: 16,
-                              color: isPromoted ? Colors.white : const Color(0xFFFFA726),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       Container(
                         width: 28,
                         height: 28,
@@ -2224,36 +2188,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                               child: SizedBox(
                                 height: 32,
                                 child: OutlinedButton(
-                                  onPressed: isPromoted ? null : () {
-                                    _promoteProperty(property);
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    backgroundColor: isPromoted ? const Color(0xFF426DC2) : Colors.white,
-                                    foregroundColor: isPromoted ? Colors.white : const Color(0xFF426DC2),
-                                    side: const BorderSide(color: Color(0xFF426DC2), width: 1),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                  ),
-                                  child: Text(
-                                    isPromoted ? 'Promoted' : 'Promote',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: isPromoted ? Colors.white : const Color(0xFF426DC2),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: SizedBox(
-                                height: 32,
-                                child: OutlinedButton(
                                   onPressed: () => _openCalendarForProperty(property),
                                   style: OutlinedButton.styleFrom(
                                     backgroundColor: Colors.white,
@@ -2284,37 +2218,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                         ),
                       ],
                     )
-                  else
-                    // For non-hotels, show only Promote property button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 32,
-                      child: OutlinedButton(
-                        onPressed: isPromoted ? null : () {
-                          _promoteProperty(property);
-                        },
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: isPromoted ? const Color(0xFF426DC2) : Colors.white,
-                        foregroundColor: isPromoted ? Colors.white : const Color(0xFF426DC2),
-                        side: BorderSide(
-                          color: isPromoted ? const Color(0xFF426DC2) : const Color(0xFF426DC2),
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      ),
-                      child: Text(
-                        isPromoted ? 'Already Promoted' : 'Promote property',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isPromoted ? Colors.white : const Color(0xFF426DC2),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -2830,96 +2733,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _promoteProperty(PropertyModel property) async {
-    if (!mounted) return;
-
-    // Show "Redirecting to secure payment" overlay
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: Color(0xFF426DC2)),
-            SizedBox(height: 16),
-            Material(
-              color: Colors.transparent,
-              child: Text(
-                'Redirecting to secure payment',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final response = await _propertyService.promoteProperty(property.id);
-
-      if (!mounted) return;
-      Navigator.of(context).pop(); // dismiss overlay
-
-      if (response.success) {
-        final data = response.data ?? {};
-        final paymentUrl = data['authorization_url']?.toString() ??
-            data['payment_url']?.toString() ??
-            data['link']?.toString() ??
-            data['checkout_url']?.toString();
-        final paymentReference = data['reference']?.toString() ?? data['tx_ref']?.toString();
-
-        if (paymentUrl != null && paymentUrl.isNotEmpty) {
-          final paid = await showPaymentWebView(
-            context: context,
-            paymentUrl: paymentUrl,
-            title: 'Promote Listing',
-            reference: paymentReference,
-          );
-          if (mounted && paid) {
-            _fetchMyProperties();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Property promoted successfully!'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
-        } else {
-          // API succeeded without a payment URL — already promoted or free
-          _fetchMyProperties();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.message ?? 'Property promoted successfully!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response.message ?? 'Failed to promote property. Please try again.'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error promoting property: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    }
-  }
-
   void _showPropertyOptionsMenu(BuildContext context, PropertyModel property) {
     showModalBottomSheet(
       context: context,
@@ -2986,51 +2799,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
               },
             ),
             
-            const SizedBox(height: 12),
-            
-            // Promote Property Option
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: (property.rawJson?['is_promoted'] as bool? ?? false)
-                      ? const Color(0xFF426DC2).withValues(alpha: 0.1)
-                      : const Color(0xFFFFA726).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.star,
-                  color: (property.rawJson?['is_promoted'] as bool? ?? false)
-                      ? const Color(0xFF426DC2)
-                      : const Color(0xFFFFA726),
-                ),
-              ),
-              title: Text(
-                (property.rawJson?['is_promoted'] as bool? ?? false)
-                    ? 'Already Promoted'
-                    : 'Promote Property',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: (property.rawJson?['is_promoted'] as bool? ?? false)
-                      ? const Color(0xFF426DC2)
-                      : Colors.black,
-                ),
-              ),
-              subtitle: Text(
-                (property.rawJson?['is_promoted'] as bool? ?? false)
-                    ? 'This property is already featured in promoted listings'
-                    : 'Feature this property in promoted listings',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF868686),
-                ),
-              ),
-              onTap: (property.rawJson?['is_promoted'] as bool? ?? false) ? null : () {
-                Navigator.pop(context);
-                _promoteProperty(property);
-              },
-            ),
             
             const SizedBox(height: 12),
             
