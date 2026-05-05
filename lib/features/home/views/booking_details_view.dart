@@ -203,7 +203,7 @@ class BookingDetailsView extends StatelessWidget {
                   
                   const SizedBox(height: 32),
                   
-                  // Booking Code Section
+                  // Check-in Code Section
                   if (bookingData['booking_code'] != null)
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -226,7 +226,7 @@ class BookingDetailsView extends StatelessWidget {
                       child: Column(
                         children: [
                           Text(
-                            'Booking Code',
+                            'Check-in Code',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.white.withValues(alpha: 0.9),
@@ -255,7 +255,7 @@ class BookingDetailsView extends StatelessWidget {
                                   );
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Booking code copied!'),
+                                      content: Text('Check-in code copied!'),
                                       backgroundColor: Colors.green,
                                       duration: Duration(seconds: 2),
                                     ),
