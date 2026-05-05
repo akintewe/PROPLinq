@@ -692,8 +692,8 @@ class _HotelReservationViewState extends State<HotelReservationView> {
       final isPast = date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
       final isDisabled = isUnavailable || isPast;
 
-      // Show check-in highlight as soon as user taps it (even before checkout is chosen)
-      final isCheckIn = _selectingCheckout &&
+      // Show check-in highlight as soon as user taps it, and keep it after checkout is chosen
+      final isCheckIn = (_selectingCheckout || _datesSelected) &&
                         date.year == _checkInDate.year &&
                         date.month == _checkInDate.month &&
                         date.day == _checkInDate.day;
