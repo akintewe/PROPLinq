@@ -361,8 +361,8 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: _datesSelected ? const Color(0xFF426DC2) : const Color(0xFFE9ECEF),
-                      width: _datesSelected ? 1.5 : 1,
+                      color: (_selectingCheckout || _datesSelected) ? const Color(0xFF426DC2) : const Color(0xFFE9ECEF),
+                      width: (_selectingCheckout || _datesSelected) ? 1.5 : 1,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -375,7 +375,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                             width: 20,
                             height: 20,
                             decoration: BoxDecoration(
-                              color: _datesSelected ? const Color(0xFF426DC2) : const Color(0xFFCED4DA),
+                              color: (_selectingCheckout || _datesSelected) ? const Color(0xFF426DC2) : const Color(0xFFCED4DA),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Icon(Icons.calendar_today, size: 12, color: Colors.white),
@@ -389,13 +389,13 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        _datesSelected
+                        _selectingCheckout || _datesSelected
                             ? '${_checkInDate.day.toString().padLeft(2, '0')}/${_checkInDate.month.toString().padLeft(2, '0')}/${_checkInDate.year}'
                             : 'Select date',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: _datesSelected ? Colors.black : const Color(0xFFADB5BD),
+                          color: _selectingCheckout || _datesSelected ? Colors.black : const Color(0xFFADB5BD),
                         ),
                       ),
                     ],
@@ -692,10 +692,12 @@ class _HotelReservationViewState extends State<HotelReservationView> {
       final isPast = date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
       final isDisabled = isUnavailable || isPast;
 
-      final isCheckIn = _datesSelected &&
+      // Show check-in highlight as soon as user taps it (even before checkout is chosen)
+      final isCheckIn = _selectingCheckout &&
                         date.year == _checkInDate.year &&
                         date.month == _checkInDate.month &&
                         date.day == _checkInDate.day;
+      // Show checkout highlight and range only after both dates are fully selected
       final isCheckOut = _datesSelected &&
                          date.year == _checkOutDate.year &&
                          date.month == _checkOutDate.month &&
