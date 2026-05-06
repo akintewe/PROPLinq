@@ -291,7 +291,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                   : _currentStep == 1
                       ? ((_isHotelType || _isShortletType) ? 'What will your guest get' : 'What will your tenants get')
                       : _currentStep == 2
-                          ? ((_isHotelType || _isShortletType) ? 'Hotel Rooms' : 'Upload property')
+                          ? (_isHotelType ? 'Hotel Rooms' : 'Upload property')
                           : 'Upload property',
               style: const TextStyle(
                 fontSize: 20,
@@ -307,9 +307,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
                   ? 'Let us know the type of property you want to list'
                   : _currentStep == 1
                       ? ((_isHotelType || _isShortletType) ? 'Let us know what you have to offer your guest' : 'Let us know what your property has')
-                      : _currentStep == 2
-                          ? (_isHotelType ? 'Add rooms available for booking in your property' : 'kindly upload pictures and video of your property')
-                          : 'kindly upload pictures and video of your property',
+                      : 'kindly upload pictures and video of your property',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
@@ -375,11 +373,12 @@ class _PropertyListingViewState extends State<PropertyListingView> {
       case 1:
         return (_isHotelType || _isShortletType) ? _buildStep2Hotel() : _buildStep2Regular();
       case 2:
-        // For hotels: Hotel Rooms step; for all others (including shortlets): Images step
-        return _isHotelType ? _buildStep3HotelRooms() : _buildStep3();
+        if (_isHotelType) return _buildStep3HotelRooms();
+        // Shortlets and regular properties both go straight to full media upload
+        return _buildStep3Regular();
       case 3:
-        // Only for hotels: Images step
-        return _buildStep4();
+        // Only hotels reach step 3: images/video upload
+        return _buildStep3Regular();
       default:
         return _buildStep1();
     }
@@ -1400,54 +1399,6 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   }
 
   // Renamed from _buildStep3 to _buildStep4 for hotels
-  // Still _buildStep3 for regular properties
-  Widget _buildStep3() {
-    if (_isHotelType || _isShortletType) {
-      return _buildStep3Hotel();
-    } else {
-      return _buildStep3Regular();
-    }
-  }
-
-  Widget _buildStep4() {
-    if (_isHotelType || _isShortletType) {
-      return _buildStep3Hotel();
-    } else {
-      return _buildStep3Regular();
-    }
-  }
-
-  Widget _buildStep3Hotel() {
-    final String labelText = _isShortletType 
-        ? 'Upload shortlet images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''} (Max 10 images)'
-        : 'Upload hotel images${_selectedImages.isNotEmpty ? ' (${_selectedImages.length} selected)' : ''} (Max 10 images)';
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          labelText,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildFileUploadArea('hotel_images'),
-        
-        const SizedBox(height: 40),
-        
-        GradientButton(
-          text: 'Next',
-          onPressed: _submitListing,
-        ),
-        
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
   Widget _buildStep3Regular() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2244,8 +2195,8 @@ class _PropertyListingViewState extends State<PropertyListingView> {
           parking: _isShortletType ? 'No' : _parkingStatus,
           features: features,
           images: _selectedImages,
-          images360: _isShortletType ? [] : _selected360Images,
-          video: _isShortletType ? null : _selectedVideo,
+          images360: _selected360Images,
+          video: _selectedVideo,
         );
       }
 
