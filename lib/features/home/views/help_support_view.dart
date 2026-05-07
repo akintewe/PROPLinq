@@ -57,10 +57,12 @@ class _HelpSupportViewState extends State<HelpSupportView> with SingleTickerProv
       debugPrint('🎫 [Tickets] Body: ${response.body}');
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = json.decode(response.body);
-        final data = body['data'] ?? body['tickets'] ?? body;
+        // Response: { data: { current_page, data: [...tickets] } }
+        final outer = body['data'];
+        final list = (outer is Map ? outer['data'] : outer) ?? [];
         setState(() {
           _tickets = List<Map<String, dynamic>>.from(
-            (data is List ? data : []).map((e) => Map<String, dynamic>.from(e)),
+            (list as List).map((e) => Map<String, dynamic>.from(e)),
           );
           _loadingTickets = false;
         });
