@@ -303,14 +303,11 @@ class _WalletViewState extends State<WalletView> {
             data['link']?.toString() ??
             data['payment_url']?.toString() ??
             data['checkout_url']?.toString();
-        final paymentReference = data['reference']?.toString() ?? data['tx_ref']?.toString();
-
         if (paymentUrl != null) {
           final paid = await showPaymentWebView(
             context: context,
             paymentUrl: paymentUrl,
             title: 'Fund Wallet',
-            reference: paymentReference,
           );
           if (mounted) {
             _fetchBalance();

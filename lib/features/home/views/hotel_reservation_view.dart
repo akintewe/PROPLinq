@@ -1727,7 +1727,6 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
         }
         
         final authorizationUrl = paymentData?['authorization_url'] as String?;
-        final paymentReference = paymentData?['reference']?.toString() ?? paymentData?['tx_ref']?.toString();
         print('🔗 Authorization URL: $authorizationUrl');
 
         if (authorizationUrl != null && authorizationUrl.isNotEmpty) {
@@ -1758,7 +1757,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
           enrichedBookingData['_remaining_amount'] = _remainingAmount;
 
           // Show payment webview dialog with enriched booking data
-          await _showPaymentWebView(authorizationUrl, enrichedBookingData, reference: paymentReference);
+          await _showPaymentWebView(authorizationUrl, enrichedBookingData);
         } else {
           setState(() {
             _isLoading = false;
