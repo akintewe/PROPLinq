@@ -207,4 +207,5 @@ flutter_launcher_icons:
   image_path: "assets/images/Proplinq Logo-Post-1.jpg"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/images/Proplinq Logo-Post-1.jpg"
+  adaptive_icon_inset: 20
   remove_alpha_ios: true

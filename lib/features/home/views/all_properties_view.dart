@@ -5,6 +5,8 @@ import '../../auth/models/user_model.dart';
 import 'property_details_view.dart';
 import 'edit_property_view.dart';
 import '../services/property_service.dart';
+import '../models/room_model.dart';
+import 'agent_calendar_view.dart';
 
 class AllPropertiesView extends StatefulWidget {
   final List<PropertyModel> properties;
@@ -615,13 +617,35 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    FormatUtils.formatPrice(property.price),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF426DC2),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          FormatUtils.formatPrice(property.price),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF426DC2),
+                          ),
+                        ),
+                      ),
+                      if (property.type.toLowerCase() == 'hotel' || property.type.toLowerCase() == 'shortlet')
+                        GestureDetector(
+                          onTap: () => _openCalendarForProperty(property),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF426DC2).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.calendar_month,
+                              size: 16,
+                              color: Color(0xFF426DC2),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -803,6 +827,72 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
         ),
       ),
     );
+  }
+
+  void _openCalendarForProperty(PropertyModel property) {
+    final rawRooms = property.rawJson?['rooms'] as List<dynamic>?;
+    if (rawRooms == null || rawRooms.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No rooms found for this property.')),
+      );
+      return;
+    }
+
+    final rooms = rawRooms
+        .whereType<Map>()
+        .map((r) {
+          try { return RoomModel.fromJson(Map<String, dynamic>.from(r)); }
+          catch (_) { return null; }
+        })
+        .whereType<RoomModel>()
+        .toList();
+
+    if (rooms.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No rooms found for this property.')),
+      );
+      return;
+    }
+
+    if (rooms.length == 1) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => AgentCalendarView(
+          room: rooms.first,
+          propertyData: property.rawJson ?? {},
+        ),
+      ));
+    } else {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Select a Room', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+            ...rooms.map((room) => ListTile(
+              leading: const Icon(Icons.hotel_outlined, color: Color(0xFF426DC2)),
+              title: Text(room.name),
+              subtitle: Text('₦${room.price.toStringAsFixed(0)}/night · ${room.count} available'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => AgentCalendarView(
+                    room: room,
+                    propertyData: property.rawJson ?? {},
+                  ),
+                ));
+              },
+            )),
+            const SizedBox(height: 16),
+          ],
+        ),
+      );
+    }
   }
 
   void _showPropertyOptionsMenu(BuildContext context, PropertyModel property) {

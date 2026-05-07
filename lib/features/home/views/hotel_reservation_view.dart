@@ -34,12 +34,25 @@ class _HotelReservationViewState extends State<HotelReservationView> {
   final HotelService _hotelService = HotelService();
   Set<String> _blockedDates = {};
   Set<String> _bookedDates = {};
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     // Do NOT pre-select today — _datesSelected stays false until user taps
     _loadAvailabilityFromRooms();
+  }
+
+  void _scrollToCalendar() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          300,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   void _loadAvailabilityFromRooms() {
@@ -126,6 +139,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
             // Content
             Expanded(
               child: SingleChildScrollView(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,6 +370,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                     _datesSelected = false;
                     _selectingCheckout = false;
                   });
+                  _scrollToCalendar();
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),
@@ -409,10 +424,15 @@ class _HotelReservationViewState extends State<HotelReservationView> {
             // Check-out
             Expanded(
               child: GestureDetector(
-                onTap: _datesSelected ? () async {
+                onTap: (_datesSelected || _selectingCheckout) ? () async {
+                  // If only check-in picked, scroll to calendar so user taps checkout there
+                  if (_selectingCheckout && !_datesSelected) {
+                    _scrollToCalendar();
+                    return;
+                  }
                   final DateTime? pickedDate = await showDatePicker(
                     context: context,
-                    initialDate: _checkOutDate,
+                    initialDate: _checkOutDate.isAfter(_checkInDate) ? _checkOutDate : _checkInDate.add(const Duration(days: 1)),
                     firstDate: _checkInDate.add(const Duration(days: 1)),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                     builder: (context, child) {
@@ -459,9 +479,9 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _datesSelected ? Colors.white : const Color(0xFFF8F9FA),
+                    color: (_datesSelected || _selectingCheckout) ? Colors.white : const Color(0xFFF8F9FA),
                     border: Border.all(
-                      color: _datesSelected ? const Color(0xFF426DC2) : const Color(0xFFE9ECEF),
+                      color: _datesSelected ? const Color(0xFF426DC2) : (_selectingCheckout ? const Color(0xFFB0C4DE) : const Color(0xFFE9ECEF)),
                       width: _datesSelected ? 1.5 : 1,
                     ),
                     borderRadius: BorderRadius.circular(12),
@@ -475,7 +495,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                             width: 20,
                             height: 20,
                             decoration: BoxDecoration(
-                              color: _datesSelected ? const Color(0xFF426DC2) : const Color(0xFFCED4DA),
+                              color: _datesSelected ? const Color(0xFF426DC2) : (_selectingCheckout ? const Color(0xFFB0C4DE) : const Color(0xFFCED4DA)),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Icon(Icons.calendar_today, size: 12, color: Colors.white),
