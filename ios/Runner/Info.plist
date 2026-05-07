@@ -101,8 +101,9 @@
 	     1. Open ios/Runner.xcworkspace in Xcode
 	     2. Select Runner target → Signing & Capabilities tab
 	     3. Click "+ Capability" → Add "Associated Domains"
-	     4. Add: applinks:app.proplinq.com
-	     5. Backend must host .well-known/apple-app-site-association at https://app.proplinq.com/.well-known/apple-app-site-association
+	     4. Add: applinks:proplinq.com
+	     5. Backend must host .well-known/apple-app-site-association at https://proplinq.com/.well-known/apple-app-site-association
+	        covering paths: /property/*
 	-->
 </dict>
 </plist>

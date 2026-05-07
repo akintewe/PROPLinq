@@ -121,55 +121,43 @@ class DeepLinkingService {
     }
   }
 
-  /// Handle deep link URL
+  /// Handle deep link URL.
+  /// Supported formats:
+  ///   proplinq://{property_type}/{property_id}
+  ///   https://proplinq.com/property/{property_type}/{property_id}
   void _handleDeepLink(String url) {
-    
     try {
       final uri = Uri.parse(url);
-      
-      final scheme = uri.scheme; // proplinq
-      final host = uri.host; // listing, shortlet, hotel
-      final pathSegments = uri.pathSegments; // [propertyId]
-      
-      if (scheme != 'proplinq') {
-        return;
-      }
-
-      // Extract property ID from path or query parameters
       String? propertyId;
-      if (pathSegments.isNotEmpty) {
-        propertyId = pathSegments.first;
-      } else if (uri.queryParameters.containsKey('id')) {
-        propertyId = uri.queryParameters['id'];
-      } else {
-        // Try to extract from the path directly if pathSegments is empty
-        final path = uri.path;
-        if (path.isNotEmpty && path.startsWith('/')) {
-          propertyId = path.substring(1); // Remove leading slash
-        }
-      }
+      String propertyType = 'apartment';
 
-      if (propertyId == null || propertyId.isEmpty) {
+      if (uri.scheme == 'proplinq') {
+        // proplinq://apartment/123  →  host=apartment, pathSegments=[123]
+        final host = uri.host;
+        final segments = uri.pathSegments;
+        propertyId = segments.isNotEmpty ? segments.first : null;
+        if (host == 'hotel' || host == 'shortlet' || host == 'apartment') {
+          propertyType = host;
+        }
+      } else if (uri.scheme == 'https' &&
+          uri.host == 'proplinq.com' &&
+          uri.pathSegments.length >= 3 &&
+          uri.pathSegments[0] == 'property') {
+        // https://proplinq.com/property/apartment/123
+        propertyType = uri.pathSegments[1];
+        propertyId = uri.pathSegments[2];
+      } else {
         return;
       }
 
+      if (propertyId == null || propertyId.isEmpty) return;
 
-      // Determine property type based on host
-      String propertyType = 'listing'; // default
-      if (host == 'shortlet') {
-        propertyType = 'shortlet';
-      } else if (host == 'hotel') {
-        propertyType = 'hotel';
-      }
-
-      // Store pending deep link data
       _pendingDeepLinkData = {
         'propertyId': propertyId,
         'propertyType': propertyType,
         'url': url,
       };
 
-      // Trigger navigation if callback is set
       if (_onDeepLinkReceived != null) {
         _onDeepLinkReceived!(_pendingDeepLinkData!);
       }
@@ -199,8 +187,7 @@ class DeepLinkingService {
       // Priority 1: If deep_link_value is "property_page", use deep_link_sub1 for property ID
       if (deepLinkValue != null && deepLinkValue.toString() == 'property_page') {
         propertyId = deepLinkSub1?.toString();
-        // Property type can be determined from other parameters or default to listing
-        propertyType = 'listing'; // Default, will be updated if found elsewhere
+        propertyType = 'apartment';
       }
       // Priority 2: Try to extract property ID from deep link value if it's a URL
       else if (deepLinkValue != null && deepLinkValue.toString().isNotEmpty) {
@@ -215,8 +202,8 @@ class DeepLinkingService {
             propertyId = pathSegments.first;
           }
           
-          if (host == 'listing') {
-            propertyType = 'listing';
+          if (host == 'apartment' || host == 'listing') {
+            propertyType = 'apartment';
           } else if (host == 'shortlet') {
             propertyType = 'shortlet';
           } else if (host == 'hotel') {
@@ -248,7 +235,7 @@ class DeepLinkingService {
         // Store pending deep link data
         _pendingDeepLinkData = {
           'propertyId': propertyId,
-          'propertyType': propertyType ?? 'listing',
+          'propertyType': propertyType ?? 'apartment',
           'mediaSource': mediaSource,
           'campaign': campaign,
           'customPayload': customPayload,

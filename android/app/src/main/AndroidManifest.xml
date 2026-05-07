@@ -43,53 +43,37 @@
             </intent-filter>
             
             <!-- Deep linking intent filters -->
-            <!-- Custom URL scheme: proplinq:// -->
-            <intent-filter android:autoVerify="true">
+            <!-- Custom URL scheme: proplinq://{property_type}/{property_id} -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data
-                    android:scheme="proplinq"
-                    android:host="listing"/>
+                <data android:scheme="proplinq" android:host="apartment"/>
             </intent-filter>
-            
-            <intent-filter android:autoVerify="true">
+
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data
-                    android:scheme="proplinq"
-                    android:host="shortlet"/>
+                <data android:scheme="proplinq" android:host="hotel"/>
             </intent-filter>
-            
-            <intent-filter android:autoVerify="true">
+
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data
-                    android:scheme="proplinq"
-                    android:host="hotel"/>
+                <data android:scheme="proplinq" android:host="shortlet"/>
             </intent-filter>
             
-            <!-- Universal links / App Links -->
-            <!-- Support for app.proplinq.com (AppsFlyer OneLink custom domain) -->
+            <!-- Universal links — https://proplinq.com/property/{type}/{id} -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="app.proplinq.com"/>
-            </intent-filter>
-            
-            <!-- Support for proplinq.com (if still needed) -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data
-                    android:scheme="https"
-                    android:host="proplinq.com"/>
+                    android:host="proplinq.com"
+                    android:pathPattern="/property/.*"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

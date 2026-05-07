@@ -121,35 +121,31 @@ class ApiConstants {
   static String supportChatRespond(int id) => '/support/chats/$id/respond';
   static String supportChatClose(int id) => '/support/chats/$id/close';
   
-  // AppsFlyer OneLink Configuration
-  // Template ID from AppsFlyer Dashboard: fOvE
-  // Custom domain: app.proplinq.com (CNAME → proplinq.customlinks.appsflyer.com)
-  static const String appsFlyerOneLinkTemplateId = 'fOvE';
-  static const String appsFlyerOneLinkBaseUrl = 'https://app.proplinq.com';
-  
-  /// Generate AppsFlyer OneLink URL for sharing properties
-  /// Format: https://proplinq.onelink.me/fOvE/{propertyId}?pid=referral&c=in_app_share&deep_link_value=property_page&deep_link_sub1={propertyId}
-  /// Alternative format (if path-based doesn't work): https://proplinq.onelink.me/fOvE/?pid=referral&c=in_app_share&deep_link_value=property_page&deep_link_sub1={propertyId}
+  // Share link base URL — web URL that deep-links back into the app
+  static const String shareLinkBaseUrl = 'https://proplinq.com/property';
+
+  /// Generate a shareable web URL for a property.
+  /// Format: https://proplinq.com/property/{type}/{id}
+  /// On mobile: tapping opens the app (Universal Link / App Link).
+  /// On desktop: opens the web property page.
   static String generateShareLink({
     required String propertyId,
     String? propertyType,
   }) {
-    // Map property type to deep_link_value
-    final deepLinkValue = 'property_page';
-    
-    // Build the OneLink URL with AppsFlyer parameters
-    // Using property ID as path segment for better compatibility
-    // Format: https://proplinq.onelink.me/fOvE/{propertyId}?params
-    final uri = Uri.parse('$appsFlyerOneLinkBaseUrl/$appsFlyerOneLinkTemplateId/$propertyId').replace(
-      queryParameters: {
-        'pid': 'referral',
-        'c': 'in_app_share',
-        'deep_link_value': deepLinkValue,
-        'deep_link_sub1': propertyId,
-      },
-    );
-    
-    return uri.toString();
+    final type = _normalisePropertyType(propertyType);
+    return '$shareLinkBaseUrl/$type/$propertyId';
+  }
+
+  /// Normalise property type to the canonical slug used in deep links.
+  static String _normalisePropertyType(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'hotel':
+        return 'hotel';
+      case 'shortlet':
+        return 'shortlet';
+      default:
+        return 'apartment';
+    }
   }
   
   // AI Chat WebSocket (Laravel Reverb / Pusher-compatible)

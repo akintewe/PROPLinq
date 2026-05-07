@@ -3238,7 +3238,7 @@ If you don't have the app, the link will open in your browser where you can down
                     children: [
                       Text(
                         isHotel
-                            ? (_selectedRoom != null ? 'Selected Room' : 'Rooms Ranging From')
+                            ? (_selectedRoom != null ? 'Selected Room' : 'From')
                             : _getPriceLabel(propertyType, isForSale),
                         style: const TextStyle(
                           fontSize: 14,
