@@ -112,7 +112,7 @@ class ApiConstants {
   static const String payoutBanks = '/payouts/banks';
 
   // Support Endpoints
-  static const String supportTickets = '/support/tickets';
+  static const String supportTickets = '/tickets';
   static const String supportChats = '/support/chats';
   static String supportTicket(int id) => '/support/tickets/$id';
   static String supportTicketRespond(int id) => '/support/tickets/$id/respond';
