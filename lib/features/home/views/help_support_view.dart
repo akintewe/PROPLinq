@@ -32,6 +32,8 @@ class _HelpSupportViewState extends State<HelpSupportView> with SingleTickerProv
         _loadTickets();
       }
     });
+    // Pre-load tickets so they're ready when the user switches tabs
+    _loadTickets();
   }
 
   @override
