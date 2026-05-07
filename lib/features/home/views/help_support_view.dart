@@ -51,6 +51,8 @@ class _HelpSupportViewState extends State<HelpSupportView> with SingleTickerProv
         headers: ApiConstants.getAuthHeaders(token ?? ''),
       );
       if (!mounted) return;
+      debugPrint('🎫 [Tickets] Status: ${response.statusCode}');
+      debugPrint('🎫 [Tickets] Body: ${response.body}');
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = json.decode(response.body);
         final data = body['data'] ?? body['tickets'] ?? body;
@@ -527,6 +529,8 @@ class _TicketDetailViewState extends State<TicketDetailView> {
         headers: ApiConstants.getAuthHeaders(token ?? ''),
       );
       if (!mounted) return;
+      debugPrint('🎫 [TicketDetail] Status: ${response.statusCode}');
+      debugPrint('🎫 [TicketDetail] Body: ${response.body}');
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = json.decode(response.body);
         final data = body['data'] ?? body['ticket'] ?? body;
