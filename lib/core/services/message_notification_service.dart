@@ -73,7 +73,7 @@ class MessageNotificationService {
     _knownMessageIds = {};
     // Run immediately, then every 4 seconds
     _poll();
-    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) => _poll());
+    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) => _poll());
   }
 
   void stopPolling() {

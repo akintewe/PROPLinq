@@ -42,21 +42,16 @@ class _MessagesViewState extends State<MessagesView> {
     _updateOnlineStatus(); // Update current user's online status
     _checkOnlineStatuses(); // Check online statuses for all conversations
     
-    // Periodically refresh conversations list (faster)
-    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    // Refresh conversation list every 8 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       if (!mounted) return;
       _loadConversations();
     });
-    
-    // Periodically check online statuses
-    _onlineStatusRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+
+    // Check online statuses every 15 seconds
+    _onlineStatusRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (!mounted) return;
       _checkOnlineStatuses();
-    });
-    
-    // Update current user's online status every 30 seconds
-    _onlineStatusRefreshTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!mounted) return;
       _updateOnlineStatus();
     });
   }

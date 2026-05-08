@@ -45,7 +45,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   final PageController _pageController = PageController();
   int _currentImageIndex = 0;
   late AnimationController _textAnimationController;
-  int _currentTextIndex = 0;
+  final ValueNotifier<int> _currentTextIndex = ValueNotifier(0);
   Timer? _textTimer;
   final AuthService _authService = AuthService();
   final RecentlyViewedService _recentlyViewedService = RecentlyViewedService();
@@ -524,9 +524,7 @@ If you don't have the app, the link will open in your browser where you can down
   void _startTextRotation() {
     _textTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (mounted) {
-        setState(() {
-          _currentTextIndex = (_currentTextIndex + 1) % _promotionalMessages.length;
-        });
+        _currentTextIndex.value = (_currentTextIndex.value + 1) % _promotionalMessages.length;
       }
     });
   }
@@ -548,6 +546,7 @@ If you don't have the app, the link will open in your browser where you can down
     _pageController.dispose();
     _textAnimationController.dispose();
     _textTimer?.cancel();
+    _currentTextIndex.dispose();
     _inlineCommentController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -3729,27 +3728,32 @@ If you don't have the app, the link will open in your browser where you can down
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: AnimatedBuilder(
-          animation: _textAnimationController,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(_textAnimationController.value * -200, 0),
-              child: Row(
-                children: List.generate(10, (index) => 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      _promotionalMessages[_currentTextIndex],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
+        child: ValueListenableBuilder<int>(
+          valueListenable: _currentTextIndex,
+          builder: (context, textIndex, _) {
+            return AnimatedBuilder(
+              animation: _textAnimationController,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(_textAnimationController.value * -200, 0),
+                  child: Row(
+                    children: List.generate(10, (index) =>
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          _promotionalMessages[textIndex],
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         ),

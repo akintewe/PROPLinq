@@ -190,7 +190,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
   String _selectedCategory = 'Shortlets';
-  int _currentPromoIndex = 0;
+  final ValueNotifier<int> _currentPromoIndex = ValueNotifier(0);
   Timer? _promoTimer;
   Timer? _featuredScrollTimer;
   
@@ -714,6 +714,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   void dispose() {
     _featuredScrollTimer?.cancel();
     _promoTimer?.cancel();
+    _currentPromoIndex.dispose();
     MessageNotificationService().badgeCountNotifier.removeListener(_onUnreadCountChanged);
     _animationController.dispose();
     _featuredScrollController.dispose();
@@ -763,15 +764,9 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   void _startPromoMessageRotation() {
     _promoTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (mounted) {
-        setState(() {
-          _currentPromoIndex = (_currentPromoIndex + 1) % _promotionalMessages.length;
-        });
+        _currentPromoIndex.value = (_currentPromoIndex.value + 1) % _promotionalMessages.length;
       }
     });
-  }
-
-  String _getCurrentPromotionalMessage() {
-    return _promotionalMessages[_currentPromoIndex];
   }
 
   Future<void> _toggleFavorite(PropertyModel property) async {
@@ -2736,27 +2731,32 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
           physics: const NeverScrollableScrollPhysics(),
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(_animationController.value * -200, 0),
-              child: Row(
-                children: List.generate(10, (index) => 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      _getCurrentPromotionalMessage(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
+        child: ValueListenableBuilder<int>(
+          valueListenable: _currentPromoIndex,
+          builder: (context, promoIndex, _) {
+            return AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(_animationController.value * -200, 0),
+                  child: Row(
+                    children: List.generate(10, (index) =>
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          _promotionalMessages[promoIndex],
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         ),

@@ -66,8 +66,8 @@ class _InAppChatViewState extends State<InAppChatView> {
     _checkAgentOnlineStatus(); // Check agent's online status
     _startOnlineStatusTimer(); // Periodically check online status
 
-    // Poll for new messages periodically while this screen is open (faster)
-    _chatRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+    // Poll for new messages periodically while this screen is open
+    _chatRefreshTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (!mounted) return;
       await _checkForIncomingMessageAndMaybeShowTyping();
     });
