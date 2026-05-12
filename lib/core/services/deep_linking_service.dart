@@ -140,7 +140,7 @@ class DeepLinkingService {
           propertyType = host;
         }
       } else if (uri.scheme == 'https' &&
-          uri.host == 'proplinq.com' &&
+          (uri.host == 'www.proplinq.com' || uri.host == 'proplinq.com') &&
           uri.pathSegments.length >= 3 &&
           uri.pathSegments[0] == 'property') {
         // https://proplinq.com/property/apartment/123

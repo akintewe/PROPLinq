@@ -122,10 +122,10 @@ class ApiConstants {
   static String supportChatClose(int id) => '/support/chats/$id/close';
   
   // Share link base URL — web URL that deep-links back into the app
-  static const String shareLinkBaseUrl = 'https://proplinq.com/property';
+  static const String shareLinkBaseUrl = 'https://www.proplinq.com/property';
 
   /// Generate a shareable web URL for a property.
-  /// Format: https://proplinq.com/property/{type}/{id}
+  /// Format: https://www.proplinq.com/property/{type}/{id}
   /// On mobile: tapping opens the app (Universal Link / App Link).
   /// On desktop: opens the web property page.
   static String generateShareLink({
