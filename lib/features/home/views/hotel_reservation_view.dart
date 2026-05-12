@@ -125,9 +125,9 @@ class _HotelReservationViewState extends State<HotelReservationView> {
 
   @override
   Widget build(BuildContext context) {
-    final price = _extractPrice(widget.propertyData['price'] as String);
-    final totalCost = price * _nights;
-    
+    final pricePerNight = _extractPrice(widget.propertyData['price'] as String);
+    final totalCost = pricePerNight * _nights;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -135,7 +135,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           children: [
             // Header
             _buildHeader(),
-            
+
             // Content
             Expanded(
               child: SingleChildScrollView(
@@ -144,30 +144,30 @@ class _HotelReservationViewState extends State<HotelReservationView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Room Price and Quantity
-                    _buildPriceAndQuantity(price),
-                    
+                    // Room Price display (no stepper — nights come from calendar)
+                    _buildPriceDisplay(pricePerNight),
+
                     const SizedBox(height: 32),
-                    
+
                     // Date Selection
                     _buildDateSelection(),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Calendar
                     _buildCalendar(),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Guest Selection
                     _buildGuestSelection(),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Total Cost Summary
-                    _buildTotalCostSummary(totalCost),
-                    
-                    const SizedBox(height: 100), // Space for bottom button
+                    _buildTotalCostSummary(pricePerNight),
+
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
@@ -175,7 +175,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           ],
         ),
       ),
-      
+
       // Bottom Button
       bottomNavigationBar: _buildBottomButton(totalCost),
     );
@@ -243,105 +243,14 @@ class _HotelReservationViewState extends State<HotelReservationView> {
     );
   }
 
-  Widget _buildPriceAndQuantity(double price) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Price
-        Text(
-              '₦${_formatPrice(price)}/night',
-              style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-                color: Colors.black,
-          ),
-        ),
-        
-        // Quantity selector with better design
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFE9ECEF)),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  if (_nights > 1) {
-                    setState(() {
-                      _nights--;
-                      _updateCheckOutDate();
-                    });
-                  }
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(8),
-                      bottomLeft: Radius.circular(8),
-                  ),
-                  ),
-                  child: Icon(
-                    Icons.remove,
-                    size: 18,
-                    color: _nights > 1 ? const Color(0xFF426DC2) : const Color(0xFFCED4DA),
-                  ),
-                ),
-              ),
-              
-              Container(
-                width: 50,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    left: BorderSide(color: Color(0xFFE9ECEF)),
-                    right: BorderSide(color: Color(0xFFE9ECEF)),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                '$_nights',
-                style: const TextStyle(
-                      fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                    ),
-                  ),
-                ),
-              ),
-              
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _nights++;
-                    _updateCheckOutDate();
-                  });
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(8),
-                      bottomRight: Radius.circular(8),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.add,
-                    size: 18,
-                    color: Color(0xFF426DC2),
-                  ),
-                ),
-              ),
-            ],
-          ),
+  Widget _buildPriceDisplay(double price) {
+    return Text(
+      '₦${_formatPrice(price)}/night',
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: Colors.black,
       ),
-      ],
     );
   }
 
@@ -1136,7 +1045,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
     return _pricePerNight * widget.nights;
   }
 
-  double get _depositAmount => (_totalCost * 0.10).ceilToDouble();
+  double get _depositAmount => (_totalCost * 0.10).roundToDouble();
   double get _remainingAmount => _totalCost - _depositAmount;
 
   String _fmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
@@ -2232,7 +2141,7 @@ class BookingDetailsView extends StatelessWidget {
     if (priceString == null) return 'N/A';
     try {
       final price = double.tryParse(priceString) ?? 0.0;
-      return '#${price.toStringAsFixed(0).replaceAllMapped(
+      return '₦${price.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
         (Match m) => '${m[1]},',
       )}';

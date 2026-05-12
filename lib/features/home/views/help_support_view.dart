@@ -517,11 +517,66 @@ class _TicketDetailViewState extends State<TicketDetailView> {
   Map<String, dynamic>? _ticket;
   bool _loading = true;
   String? _error;
+  bool _sending = false;
+  final TextEditingController _replyCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadTicket();
+  }
+
+  @override
+  void dispose() {
+    _replyCtrl.dispose();
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendReply() async {
+    final message = _replyCtrl.text.trim();
+    if (message.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      final token = await StorageService().getToken();
+      final response = await http.post(
+        Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.supportTickets}/${widget.ticketId}/respond'),
+        headers: {
+          ...ApiConstants.getAuthHeaders(token ?? ''),
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({'message': message}),
+      );
+      debugPrint('🎫 [TicketReply] Status: ${response.statusCode}');
+      debugPrint('🎫 [TicketReply] Body: ${response.body}');
+      if (!mounted) return;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        _replyCtrl.clear();
+        await _loadTicket();
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (_scrollCtrl.hasClients) {
+            _scrollCtrl.animateTo(
+              _scrollCtrl.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      } else {
+        final body = json.decode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(body['message']?.toString() ?? 'Failed to send reply')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to send reply')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   Future<void> _loadTicket() async {
@@ -593,6 +648,7 @@ class _TicketDetailViewState extends State<TicketDetailView> {
                   ),
                 )
               : _buildBody(),
+      bottomNavigationBar: _loading || _error != null ? null : _buildReplyBar(),
     );
   }
 
@@ -611,114 +667,200 @@ class _TicketDetailViewState extends State<TicketDetailView> {
       _ => const Color(0xFFF09800),
     };
 
-    String dateLabel = '';
-    if (createdAt.isNotEmpty) {
+    return Column(
+      children: [
+        // Thin header bar: subject + status badge
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: const BoxDecoration(
+            color: Color(0xFFF8F9FF),
+            border: Border(bottom: BorderSide(color: Color(0xFFEFF0F2))),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  subject,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  status[0].toUpperCase() + status.substring(1),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Chat messages
+        Expanded(
+          child: ListView(
+            controller: _scrollCtrl,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            children: [
+              // Original ticket message as first user bubble
+              if (description.isNotEmpty)
+                _buildBubble(
+                  message: description,
+                  isMe: true,
+                  dateStr: createdAt,
+                ),
+
+              // Replies
+              ...replies.map((r) {
+                final reply = Map<String, dynamic>.from(r as Map);
+                final message = reply['message']?.toString() ?? reply['body']?.toString() ?? '';
+                final isAdmin = (reply['is_admin'] == true) || (reply['sender_type']?.toString() == 'admin');
+                return _buildBubble(
+                  message: message,
+                  isMe: !isAdmin,
+                  dateStr: reply['created_at']?.toString() ?? '',
+                  senderLabel: isAdmin ? 'Support Team' : null,
+                );
+              }),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBubble({
+    required String message,
+    required bool isMe,
+    String dateStr = '',
+    String? senderLabel,
+  }) {
+    String timeLabel = '';
+    if (dateStr.isNotEmpty) {
       try {
-        final dt = DateTime.parse(createdAt).toLocal();
-        dateLabel = '${dt.day}/${dt.month}/${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        final dt = DateTime.parse(dateStr).toLocal();
+        timeLabel = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {}
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Header card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F9FF),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFEFF0F2)),
+          if (!isMe) ...[
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: const Color(0xFF426DC2).withValues(alpha: 0.12),
+              child: const Icon(Icons.support_agent_rounded, size: 16, color: Color(0xFF426DC2)),
             ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(subject, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black)),
+                if (senderLabel != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4, left: 4),
+                    child: Text(senderLabel, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF426DC2))),
+                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isMe ? const Color(0xFF426DC2) : const Color(0xFFF0F2F5),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(18),
+                      topRight: const Radius.circular(18),
+                      bottomLeft: Radius.circular(isMe ? 18 : 4),
+                      bottomRight: Radius.circular(isMe ? 4 : 18),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        status[0].toUpperCase() + status.substring(1),
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
-                      ),
+                  ),
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isMe ? Colors.white : const Color(0xFF1A1A1A),
+                      height: 1.45,
                     ),
-                  ],
+                  ),
                 ),
-                if (dateLabel.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(dateLabel, style: const TextStyle(fontSize: 12, color: Color(0xFF868686))),
-                ],
-                if (description.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(description, style: const TextStyle(fontSize: 13, color: Color(0xFF555555), height: 1.6)),
-                ],
+                if (timeLabel.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                    child: Text(timeLabel, style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA))),
+                  ),
               ],
             ),
           ),
+          if (isMe) const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
 
-          if (replies.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            const Text('Responses', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
-            const SizedBox(height: 12),
-            ...replies.map((r) {
-              final reply = Map<String, dynamic>.from(r as Map);
-              final message = reply['message']?.toString() ?? reply['body']?.toString() ?? '';
-              final isAdmin = (reply['is_admin'] == true) || (reply['sender_type']?.toString() == 'admin');
-              final replyDate = reply['created_at']?.toString() ?? '';
-              String replyDateLabel = '';
-              if (replyDate.isNotEmpty) {
-                try {
-                  final dt = DateTime.parse(replyDate).toLocal();
-                  replyDateLabel = '${dt.day}/${dt.month}/${dt.year}';
-                } catch (_) {}
-              }
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: isAdmin ? const Color(0xFFEEF3FF) : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFEFF0F2)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            isAdmin ? 'Support Team' : 'You',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: isAdmin ? const Color(0xFF426DC2) : Colors.black,
-                            ),
-                          ),
-                          if (replyDateLabel.isNotEmpty) ...[
-                            const Spacer(),
-                            Text(replyDateLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF868686))),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(message, style: const TextStyle(fontSize: 13, color: Color(0xFF555555), height: 1.5)),
-                    ],
-                  ),
+  Widget _buildReplyBar() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFEFF0F2))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _replyCtrl,
+              minLines: 1,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: 'Write a reply…',
+                hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 14),
+                filled: true,
+                fillColor: const Color(0xFFF8F9FF),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: Color(0xFFEFF0F2)),
                 ),
-              );
-            }),
-          ],
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: Color(0xFFEFF0F2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: Color(0xFF426DC2)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: _sendReply,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFF426DC2),
+                shape: BoxShape.circle,
+              ),
+              child: _sending
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+            ),
+          ),
         ],
       ),
     );
