@@ -421,12 +421,14 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
       // Fetch ALL pages at once
       // Note: API has a bug where lastPage is always 1 and total is always 0
-      // So we fetch pages until we get less than 12 items (empty or partial page)
+      // So we fetch pages until we get less than 12 items (empty or partial page).
+      // Hard cap at 20 pages to guard against the API returning the same data forever.
       List<PropertyModel> allProperties = [];
       int currentPage = 1;
       bool hasMorePages = true;
+      const int maxPages = 20;
 
-      while (hasMorePages) {
+      while (hasMorePages && currentPage <= maxPages) {
         print('🟢🟢🟢 [TenantHomeView] ========================================');
         print('🟢 [TenantHomeView] Requesting page: $currentPage');
 
