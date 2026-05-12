@@ -68,6 +68,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   RoomModel? _selectedRoom;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _roomsSectionKey = GlobalKey();
+  final GlobalKey _shareButtonKey = GlobalKey();
   
   // Default fallback images for when property has no images
   final List<String> _fallbackImages = [
@@ -485,9 +486,14 @@ If you don't have the app, the link will open in your browser where you can down
       }
       
       // Share using platform share sheet
+      final box = _shareButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      final rect = box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : Rect.fromLTWH(0, 0, 10, 10);
       final result = await Share.share(
         shareText,
         subject: 'Check out this property: $title',
+        sharePositionOrigin: rect,
       );
       
       if (result.status == ShareResultStatus.success) {
@@ -2452,6 +2458,7 @@ If you don't have the app, the link will open in your browser where you can down
                                 GestureDetector(
                                   onTap: () => _shareProperty(context),
                                   child: Container(
+                                  key: _shareButtonKey,
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
