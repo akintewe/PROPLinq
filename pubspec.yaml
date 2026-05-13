@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.1+27
+version: 1.0.1+28
 
 environment:
   sdk: ^3.6.1
@@ -200,12 +200,12 @@ flutter_launcher_icons:
   ios: true
   web:
     generate: true
-    image_path: "assets/images/Proplinq Logo-Post-1.jpg"
+    image_path: "assets/images/proplinq_icon.jpg"
   macos:
     generate: true
-    image_path: "assets/images/Proplinq Logo-Post-1.jpg"
-  image_path: "assets/images/Proplinq Logo-Post-1.jpg"
+    image_path: "assets/images/proplinq_icon.jpg"
+  image_path: "assets/images/proplinq_icon.jpg"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/Proplinq Logo-Post-1.jpg"
-  adaptive_icon_inset: 50
+  adaptive_icon_foreground: "assets/images/proplinq_icon.jpg"
+  adaptive_icon_inset: 10
   remove_alpha_ios: true
