@@ -213,14 +213,16 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
 
     if (_bookings.isEmpty) {
       return Container(
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(Icons.calendar_today_outlined, size: 48, color: Color(0xFFDDDDDD)),
             SizedBox(height: 12),
-            Text('No pending bookings', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black)),
+            Text('No pending bookings', textAlign: TextAlign.center, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black)),
             SizedBox(height: 4),
-            Text('Your upcoming bookings will appear here', style: TextStyle(fontSize: 13, color: Color(0xFF868686))),
+            Text('Your upcoming bookings will appear here', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Color(0xFF868686))),
           ],
         ),
       );
