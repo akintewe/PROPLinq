@@ -1,3 +1,5 @@
+import 'dart:io';
+
 String _toTitleCase(String s) => s
     .split(' ')
     .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
@@ -14,6 +16,8 @@ class RoomModel {
   final int count;
   final List<String> features;
   final String? imageUrl;
+  // Local files picked by the user (not yet uploaded)
+  final List<File> localImages;
 
   const RoomModel({
     this.id,
@@ -25,6 +29,7 @@ class RoomModel {
     required this.count,
     required this.features,
     this.imageUrl,
+    this.localImages = const [],
   });
 
   factory RoomModel.fromJson(Map<String, dynamic> json) {

@@ -25,17 +25,27 @@ class HotelService {
       // Add rooms as indexed form fields (Laravel array format)
       final fieldsWithRooms = Map<String, String>.from(fields);
 
+      final allFiles = Map<String, File>.from(files);
+
       for (int i = 0; i < rooms.length; i++) {
         final room = rooms[i];
-        fieldsWithRooms['rooms[$i][name]'] = room.name;
-        fieldsWithRooms['rooms[$i][type]'] = room.type;
+        fieldsWithRooms['rooms[$i][proplinq_name]'] = room.name;
+        fieldsWithRooms['rooms[$i][custom_name]'] = room.type;
         fieldsWithRooms['rooms[$i][price]'] = room.price.toString();
         fieldsWithRooms['rooms[$i][capacity]'] = room.capacity.toString();
         fieldsWithRooms['rooms[$i][count]'] = room.count.toString();
 
-        // Add features as indexed array
         for (int j = 0; j < room.features.length; j++) {
           fieldsWithRooms['rooms[$i][features][$j]'] = room.features[j];
+        }
+
+        // Attach room images: first image as `rooms[i][image]`, rest as `rooms[i][images][j]`
+        for (int j = 0; j < room.localImages.length; j++) {
+          if (j == 0) {
+            allFiles['rooms[$i][image]'] = room.localImages[j];
+          } else {
+            allFiles['rooms[$i][images][${j - 1}]'] = room.localImages[j];
+          }
         }
       }
 
@@ -44,7 +54,7 @@ class HotelService {
       final response = await _apiService.postFormData<Map<String, dynamic>>(
         '/hotels',
         fields: fieldsWithRooms,
-        files: files,
+        files: allFiles,
         requiresAuth: true,
         fromJson: (json) => json,
       );

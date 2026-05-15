@@ -803,91 +803,152 @@ class _PropertyListingViewState extends State<PropertyListingView> {
   }
 
   void _showAddRoomDialog() {
-    // Clear controllers
     _roomNameController.clear();
     _roomTypeController.clear();
     _roomPriceController.clear();
     _roomCapacityController.clear();
     _roomCountController.clear();
     _roomFeaturesController.clear();
+    final List<File> dialogImages = [];
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'Add Room',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CustomTextField(
-                  label: 'Room Name',
-                  hintText: 'e.g., Deluxe Suite',
-                  controller: _roomNameController,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text(
+                'Add Room',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomTextField(
+                      label: 'Room Name',
+                      hintText: 'e.g., Deluxe Suite',
+                      controller: _roomNameController,
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      label: 'Room Type',
+                      hintText: 'e.g., Suite, Single, Double',
+                      controller: _roomTypeController,
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      label: 'Price per Night (₦)',
+                      hintText: 'Enter price',
+                      controller: _roomPriceController,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      label: 'Capacity',
+                      hintText: 'Number of guests',
+                      controller: _roomCapacityController,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      label: 'Number of Rooms Available',
+                      hintText: 'e.g., 5',
+                      controller: _roomCountController,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      label: 'Features (comma-separated)',
+                      hintText: 'e.g., wifi, ac, balcony',
+                      controller: _roomFeaturesController,
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 20),
+                    // Room photos
+                    const Text('Room Photos', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ...dialogImages.asMap().entries.map((e) => Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(e.value, width: 70, height: 70, fit: BoxFit.cover),
+                            ),
+                            Positioned(
+                              top: 2, right: 2,
+                              child: GestureDetector(
+                                onTap: () => setDialogState(() => dialogImages.removeAt(e.key)),
+                                child: Container(
+                                  width: 20, height: 20,
+                                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                  child: const Icon(Icons.close, size: 12, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )),
+                        GestureDetector(
+                          onTap: () async {
+                            final picker = ImagePicker();
+                            final picked = await picker.pickMultiImage(imageQuality: 80);
+                            if (picked.isNotEmpty) {
+                              setDialogState(() {
+                                dialogImages.addAll(picked.map((x) => File(x.path)));
+                              });
+                            }
+                          },
+                          child: Container(
+                            width: 70, height: 70,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: const Color(0xFF426DC2), width: 1.5),
+                              borderRadius: BorderRadius.circular(8),
+                              color: const Color(0xFFF0F4FF),
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate_outlined, color: Color(0xFF426DC2), size: 24),
+                                SizedBox(height: 4),
+                                Text('Add', style: TextStyle(fontSize: 11, color: Color(0xFF426DC2))),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Room Type',
-                  hintText: 'e.g., Suite, Single, Double',
-                  controller: _roomTypeController,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
                 ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Price per Night (₦)',
-                  hintText: 'Enter price',
-                  controller: _roomPriceController,
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Capacity',
-                  hintText: 'Number of guests',
-                  controller: _roomCapacityController,
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Number of Rooms Available',
-                  hintText: 'e.g., 5',
-                  controller: _roomCountController,
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Features (comma-separated)',
-                  hintText: 'e.g., wifi, ac, balcony',
-                  controller: _roomFeaturesController,
-                  maxLines: 2,
+                ElevatedButton(
+                  onPressed: () {
+                    _addRoomManually(images: dialogImages);
+                    Navigator.pop(dialogContext);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF426DC2),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Add Room'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                _addRoomManually();
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF426DC2),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Add Room'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
   }
 
-  void _addRoomManually() {
+  void _addRoomManually({List<File> images = const []}) {
     try {
       // Validate fields
       if (_roomNameController.text.trim().isEmpty ||
@@ -918,6 +979,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         capacity: int.parse(_roomCapacityController.text.trim()),
         count: int.parse(_roomCountController.text.trim()),
         features: features,
+        localImages: images,
       );
 
       setState(() {
