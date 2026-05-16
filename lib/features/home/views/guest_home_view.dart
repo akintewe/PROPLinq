@@ -958,7 +958,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Properties',
+            'Categories',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black),
           ),
           const SizedBox(height: 16),
