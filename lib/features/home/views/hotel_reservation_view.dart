@@ -1194,7 +1194,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     _buildPaymentOption(
                       'pay_now',
                       'Pay Now (Recommended)',
-                      'Pay ${_fmt(_totalCost)} now. Your booking is 100% guaranteed.',
+                      'Pay ${_fmt(_totalCost)} now to fully reserve this physical property for your stay.',
                       true,
                     ),
 
@@ -1203,7 +1203,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     _buildPaymentOption(
                       'pay_arrival',
                       'Pay on Arrival',
-                      'Pay ${_fmt(_depositAmount)} (10%) now to secure your booking. Remaining ${_fmt(_remainingAmount)} paid on arrival.',
+                      'Pay a ${_fmt(_depositAmount)} (10%) property deposit now. The remaining ${_fmt(_remainingAmount)} is paid physically to the host upon arrival at the premises.',
                       false,
                     ),
 
