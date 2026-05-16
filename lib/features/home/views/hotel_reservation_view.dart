@@ -57,13 +57,11 @@ class _HotelReservationViewState extends State<HotelReservationView> {
 
   void _loadAvailabilityFromRooms() {
     // Prefer the specific room the user tapped "Book Room" on
-    final selectedRoomId = widget.propertyData['selected_room_id'];
-    if (selectedRoomId != null) {
-      final id = int.tryParse(selectedRoomId.toString());
-      if (id != null) {
-        _loadAvailability(id);
-        return;
-      }
+    final selectedRoomId = widget.propertyData['selected_room_uuid']?.toString()
+        ?? widget.propertyData['selected_room_id']?.toString();
+    if (selectedRoomId != null && selectedRoomId.isNotEmpty) {
+      _loadAvailability(selectedRoomId);
+      return;
     }
 
     // Fallback: pick the cheapest room
@@ -75,19 +73,20 @@ class _HotelReservationViewState extends State<HotelReservationView> {
       final pb = double.tryParse(b['price']?.toString() ?? '0') ?? 0;
       return pa.compareTo(pb);
     });
-    final roomId = sortedRooms.first['id'];
-    if (roomId == null) return;
-    _loadAvailability(int.parse(roomId.toString()));
+    final firstRoom = sortedRooms.first;
+    final roomUuid = firstRoom['uuid']?.toString() ?? firstRoom['id']?.toString();
+    if (roomUuid == null) return;
+    _loadAvailability(roomUuid);
   }
 
-  Future<void> _loadAvailability(int roomId) async {
+  Future<void> _loadAvailability(String roomUuid) async {
     final now = DateTime.now();
     final start = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
     final end3Months = DateTime(now.year, now.month + 3, 0);
     final end = '${end3Months.year}-${end3Months.month.toString().padLeft(2, '0')}-${end3Months.day.toString().padLeft(2, '0')}';
     try {
       final response = await _hotelService.getRoomAvailability(
-        roomId: roomId,
+        roomUuid: roomUuid,
         startDate: start,
         endDate: end,
       );
@@ -1531,30 +1530,10 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
     });
 
     try {
-      // Extract property ID (similar to share functionality)
-      String? propertyId;
       final property = widget.propertyData;
-      final idValue = property['id'];
-      
-      if (idValue != null) {
-        if (idValue is int) {
-          propertyId = idValue.toString();
-        } else if (idValue is String) {
-          propertyId = idValue;
-        } else {
-          propertyId = idValue.toString();
-        }
-      }
-      
-      // If still not found, try to extract from images array
-      if ((propertyId == null || propertyId.isEmpty) && property['images'] != null) {
-        final images = property['images'];
-        if (images is List && images.isNotEmpty) {
-          final first = images.first;
-          if (first is Map<String, dynamic> && first['property_id'] != null) {
-            propertyId = first['property_id'].toString();
-          }
-        }
+      String? propertyId = property['uuid']?.toString();
+      if (propertyId == null || propertyId.isEmpty) {
+        propertyId = property['id']?.toString();
       }
       
       if (propertyId == null || propertyId.isEmpty) {

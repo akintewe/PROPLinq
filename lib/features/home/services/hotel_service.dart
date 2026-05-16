@@ -138,14 +138,14 @@ class HotelService {
   /// Get availability for a specific room over a date range (public, no auth)
   /// GET /api/v1/rooms/{room_id}/availability?start_date=...&end_date=...
   Future<ApiResponse<List<Map<String, dynamic>>>> getRoomAvailability({
-    required int roomId,
+    required String roomUuid,
     required String startDate,
     required String endDate,
   }) async {
     try {
-      debugPrint('🏨 [HotelService] Fetching availability for room $roomId: $startDate → $endDate');
+      debugPrint('🏨 [HotelService] Fetching availability for room $roomUuid: $startDate → $endDate');
       final response = await _apiService.get<List<Map<String, dynamic>>>(
-        ApiConstants.roomAvailability(roomId),
+        ApiConstants.roomAvailability(roomUuid),
         queryParams: {'start_date': startDate, 'end_date': endDate},
         requiresAuth: false,
         fromJson: (json) {
@@ -165,14 +165,14 @@ class HotelService {
   /// Get agent calendar for a room
   /// GET /api/v1/agent/calendar/room/{room_id}?start_date=...&end_date=...
   Future<ApiResponse<List<Map<String, dynamic>>>> getAgentCalendar({
-    required int roomId,
+    required String roomUuid,
     required String startDate,
     required String endDate,
   }) async {
     try {
-      debugPrint('🏨 [HotelService] Fetching agent calendar for room $roomId');
+      debugPrint('🏨 [HotelService] Fetching agent calendar for room $roomUuid');
       final response = await _apiService.get<List<Map<String, dynamic>>>(
-        ApiConstants.agentCalendarRoom(roomId),
+        ApiConstants.agentCalendarRoom(roomUuid),
         queryParams: {'start_date': startDate, 'end_date': endDate},
         requiresAuth: true,
         fromJson: (json) {
@@ -191,15 +191,15 @@ class HotelService {
   /// Block dates for a room (agent only)
   /// POST /api/v1/agent/calendar/room/{room_id}/block
   Future<ApiResponse<Map<String, dynamic>>> blockRoomDates({
-    required int roomId,
+    required String roomUuid,
     required String startDate,
     required String endDate,
     required String reason,
   }) async {
     try {
-      debugPrint('🏨 [HotelService] Blocking dates for room $roomId: $startDate → $endDate ($reason)');
+      debugPrint('🏨 [HotelService] Blocking dates for room $roomUuid: $startDate → $endDate ($reason)');
       final response = await _apiService.post<Map<String, dynamic>>(
-        ApiConstants.agentBlockRoom(roomId),
+        ApiConstants.agentBlockRoom(roomUuid),
         body: {'start_date': startDate, 'end_date': endDate, 'reason': reason},
         requiresAuth: true,
         fromJson: (json) => json,

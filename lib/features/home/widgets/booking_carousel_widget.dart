@@ -74,7 +74,7 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
     }
   }
 
-  Future<void> _cancelBooking(int bookingId, String bookingCode) async {
+  Future<void> _cancelBooking(String bookingUuid, String bookingCode) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -104,7 +104,7 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
 
     try {
       final token = await StorageService().getToken();
-      final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.cancelBooking(bookingId)}');
+      final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.cancelBooking(bookingUuid)}');
       final response = await http.post(url, headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -371,10 +371,10 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () {
-                          final id = booking['id'];
+                          final uuid = booking['uuid']?.toString();
                           final code = booking['booking_code']?.toString() ?? 'N/A';
-                          if (id != null) {
-                            _cancelBooking(id is int ? id : int.tryParse(id.toString()) ?? 0, code);
+                          if (uuid != null && uuid.isNotEmpty) {
+                            _cancelBooking(uuid, code);
                           }
                         },
                         child: const Text(

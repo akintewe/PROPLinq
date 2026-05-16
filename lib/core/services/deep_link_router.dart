@@ -20,9 +20,7 @@ class DeepLinkRouter {
   }) async {
     try {
       
-      // Parse property ID as integer
-      final int? parsedId = int.tryParse(propertyId);
-      if (parsedId == null) {
+      if (propertyId.isEmpty) {
         _showError(context, 'Invalid property ID');
         return;
       }
@@ -42,7 +40,7 @@ class DeepLinkRouter {
       // Fetch property details from API
       PropertyModel? propertyModel;
       try {
-        propertyModel = await _propertyService.fetchPropertyDetails(parsedId);
+        propertyModel = await _propertyService.fetchPropertyDetails(propertyId);
       } catch (e) {
         propertyModel = null;
       }

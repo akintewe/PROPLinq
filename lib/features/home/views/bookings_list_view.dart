@@ -45,20 +45,29 @@ class _BookingsListViewState extends State<BookingsListView> {
       if (!mounted) return;
 
       debugPrint('📋 [Bookings] Status: ${response.statusCode}');
-      debugPrint('📋 [Bookings] Body: ${response.body.substring(0, response.body.length.clamp(0, 600))}');
+      debugPrint('📋 [Bookings] Body: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final jsonBody = json.decode(response.body);
         List<dynamic> list = [];
+
+        debugPrint('📋 [Bookings] Top-level keys: ${jsonBody is Map ? jsonBody.keys.toList() : "IS_LIST"}');
+        if (jsonBody is Map && jsonBody['data'] != null) {
+          debugPrint('📋 [Bookings] data type: ${jsonBody['data'].runtimeType}');
+          if (jsonBody['data'] is Map) {
+            debugPrint('📋 [Bookings] data keys: ${(jsonBody['data'] as Map<dynamic, dynamic>).keys.toList()}');
+          }
+        }
 
         if (jsonBody['data'] is List) {
           list = jsonBody['data'] as List;
         } else if (jsonBody['data'] is Map && jsonBody['data']['data'] is List) {
           list = jsonBody['data']['data'] as List;
         } else if (jsonBody is List) {
-          list = jsonBody as List;
+          list = jsonBody;
         }
 
+        debugPrint('📋 [Bookings] Parsed list length: ${list.length}');
         if (list.isNotEmpty) {
           debugPrint('📋 [Bookings] First item keys: ${(list[0] as Map).keys.toList()}');
         }
@@ -94,7 +103,7 @@ class _BookingsListViewState extends State<BookingsListView> {
     }
   }
 
-  Future<void> _cancelBooking(int bookingId, String bookingCode) async {
+  Future<void> _cancelBooking(String bookingUuid, String bookingCode) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -124,7 +133,7 @@ class _BookingsListViewState extends State<BookingsListView> {
 
     try {
       final token = await StorageService().getToken();
-      final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.cancelBooking(bookingId)}');
+      final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.cancelBooking(bookingUuid)}');
       final response = await http.post(url, headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -482,10 +491,10 @@ class _BookingsListViewState extends State<BookingsListView> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () {
-                          final id = booking['id'];
+                          final uuid = booking['uuid']?.toString();
                           final code = booking['booking_code']?.toString() ?? 'N/A';
-                          if (id != null) {
-                            _cancelBooking(id is int ? id : int.tryParse(id.toString()) ?? 0, code);
+                          if (uuid != null && uuid.isNotEmpty) {
+                            _cancelBooking(uuid, code);
                           }
                         },
                         child: const Text(

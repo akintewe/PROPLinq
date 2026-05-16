@@ -606,11 +606,11 @@ class PropertyService {
   }
 
   /// Fetch property details by ID using the dedicated endpoint
-  Future<PropertyModel?> fetchPropertyDetails(int propertyId) async {
+  Future<PropertyModel?> fetchPropertyDetails(String uuid) async {
     try {
-      
+
       final response = await _apiService.get<Map<String, dynamic>>(
-        '${ApiConstants.properties}/$propertyId',
+        '${ApiConstants.properties}/$uuid',
         requiresAuth: true,
         fromJson: (json) => json,
       );
@@ -740,13 +740,13 @@ class PropertyService {
   }
 
   /// Promote a property
-  Future<ApiResponse<Map<String, dynamic>>> promoteProperty(int propertyId) async {
+  Future<ApiResponse<Map<String, dynamic>>> promoteProperty(String uuid) async {
     try {
-      print('🔵 [PropertyService] Promoting property ID: $propertyId');
-      print('🔵 [PropertyService] Endpoint: ${ApiConstants.promoteProperty(propertyId)}');
-      
+      print('🔵 [PropertyService] Promoting property UUID: $uuid');
+      print('🔵 [PropertyService] Endpoint: ${ApiConstants.promoteProperty(uuid)}');
+
       final response = await _apiService.post<Map<String, dynamic>>(
-        ApiConstants.promoteProperty(propertyId),
+        ApiConstants.promoteProperty(uuid),
         body: {
           'is_promoted': true,
         },
@@ -906,13 +906,13 @@ class PropertyService {
 
   /// Rate a property
   Future<ApiResponse<Map<String, dynamic>>> rateProperty({
-    required int propertyId,
+    required String uuid,
     required int rating,
     required String comment,
   }) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
-        ApiConstants.rateProperty(propertyId),
+        ApiConstants.rateProperty(uuid),
         body: {
           'rating': rating,
           'comment': comment,

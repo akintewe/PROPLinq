@@ -132,10 +132,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   Future<void> _refreshPropertyData() async {
     try {
       final property = widget.propertyData ?? _getDefaultProperty();
-      final propertyId = property['id'];
+      final propertyUuid = property['uuid']?.toString() ?? property['id']?.toString();
 
-      if (propertyId != null) {
-        final updatedProperty = await _propertyService.fetchPropertyDetails(int.parse(propertyId.toString()));
+      if (propertyUuid != null) {
+        final updatedProperty = await _propertyService.fetchPropertyDetails(propertyUuid);
         if (updatedProperty != null && mounted) {
           setState(() {
             // Preserve the original user data with KYC info when updating property
@@ -179,7 +179,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
             }
           } else {
             // Fall back to dedicated rooms endpoint
-            _fetchHotelRooms(int.parse(propertyId.toString()));
+            final numericId = property['id'];
+            if (numericId != null) _fetchHotelRooms(numericId is int ? numericId : int.tryParse(numericId.toString()) ?? 0);
           }
         }
       }
@@ -361,30 +362,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
       final property = widget.propertyData ?? _getDefaultProperty();
       
       
-      // Get property ID - property.id is an int, so handle both int and string
-      String? propertyId;
-      final idValue = property['id'];
-      
-      if (idValue != null) {
-        // Handle both int and string IDs
-        if (idValue is int) {
-          propertyId = idValue.toString();
-        } else if (idValue is String) {
-          propertyId = idValue;
-        } else {
-          propertyId = idValue.toString();
-        }
-      }
-      
-      // Fallback: Try to get from images
-      if ((propertyId == null || propertyId.isEmpty) && property['images'] != null) {
-        final images = property['images'];
-        if (images is List && images.isNotEmpty) {
-          final first = images.first;
-          if (first is Map<String, dynamic> && first['property_id'] != null) {
-            propertyId = first['property_id'].toString();
-          }
-        }
+      // Use uuid for share link, fall back to id if uuid not present
+      String? propertyId = property['uuid']?.toString();
+      if (propertyId == null || propertyId.isEmpty) {
+        propertyId = property['id']?.toString();
       }
       
       if (propertyId == null || propertyId.isEmpty) {
@@ -780,10 +761,8 @@ If you don't have the app, the link will open in your browser where you can down
   /// Mark property as rented (for agents only)
   Future<void> _markAsRented() async {
     final propertyData = _currentPropertyData ?? widget.propertyData;
-    final idValue = propertyData?['id'];
-    if (idValue == null) return;
-    final propertyId = idValue is int ? idValue : int.tryParse(idValue.toString());
-    if (propertyId == null) return;
+    final propertyId = propertyData?['uuid']?.toString() ?? propertyData?['id']?.toString();
+    if (propertyId == null || propertyId.isEmpty) return;
 
     // Ask user to choose: Rented or Sold
     final selectedStatus = await showDialog<String>(
@@ -1025,15 +1004,15 @@ If you don't have the app, the link will open in your browser where you can down
                           });
 
                           final property = _currentPropertyData ?? widget.propertyData ?? _getDefaultProperty();
-                          final propertyId = property['id'];
+                          final propertyUuid = property['uuid']?.toString() ?? property['id']?.toString();
 
-                          if (propertyId == null) {
+                          if (propertyUuid == null || propertyUuid.isEmpty) {
                             setDialogState(() {
                               isSubmitting = false;
                             });
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Error: Property ID not found'),
+                                content: Text('Error: Property not found'),
                                 backgroundColor: Colors.red,
                               ),
                             );
@@ -1042,7 +1021,7 @@ If you don't have the app, the link will open in your browser where you can down
 
                           try {
                             final response = await _propertyService.rateProperty(
-                              propertyId: int.parse(propertyId.toString()),
+                              uuid: propertyUuid,
                               rating: selectedRating,
                               comment: commentController.text.trim(),
                             );
@@ -1896,15 +1875,15 @@ If you don't have the app, the link will open in your browser where you can down
                         _isSubmittingRating = true;
                       });
 
-                      final propertyId = property['id'];
+                      final propertyUuid = property['uuid']?.toString() ?? property['id']?.toString();
 
-                      if (propertyId == null) {
+                      if (propertyUuid == null || propertyUuid.isEmpty) {
                         setState(() {
                           _isSubmittingRating = false;
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Error: Property ID not found'),
+                            content: Text('Error: Property not found'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -1913,7 +1892,7 @@ If you don't have the app, the link will open in your browser where you can down
 
                       try {
                         final response = await _propertyService.rateProperty(
-                          propertyId: int.parse(propertyId.toString()),
+                          uuid: propertyUuid,
                           rating: _inlineRating,
                           comment: _inlineCommentController.text.trim(),
                         );
@@ -2357,19 +2336,7 @@ If you don't have the app, the link will open in your browser where you can down
     // Get property data or use defaults (prefer updated data from rating)
     final property = _currentPropertyData ?? widget.propertyData ?? _getDefaultProperty();
     // Derive a propertyId if missing (e.g., from images list)
-    String derivedPropertyId = (property['id']?.toString()) ?? '';
-    if (derivedPropertyId.isEmpty) {
-      final images = property['images'];
-      if (images is List && images.isNotEmpty) {
-        final first = images.first;
-        if (first is Map<String, dynamic>) {
-          final pid = first['property_id'];
-          if (pid != null) {
-            derivedPropertyId = pid.toString();
-          }
-        }
-      }
-    }
+
     final propertyType = property['type'] as String? ?? 'Apartment';
     final normalizedType = propertyType.toLowerCase();
     final isHotel = normalizedType == 'hotel';
@@ -3339,20 +3306,7 @@ If you don't have the app, the link will open in your browser where you can down
                                 'email': _getAgentEmail(property),
                               },
                             };
-                            // Derive property id similarly
-                            String bottomPropertyId = (property['id']?.toString()) ?? '';
-                            if (bottomPropertyId.isEmpty) {
-                              final images = property['images'];
-                              if (images is List && images.isNotEmpty) {
-                                final first = images.first;
-                                if (first is Map<String, dynamic>) {
-                                  final pid = first['property_id'];
-                                  if (pid != null) {
-                                    bottomPropertyId = pid.toString();
-                                  }
-                                }
-                              }
-                            }
+                            final bottomPropertyId = property['uuid']?.toString() ?? property['id']?.toString() ?? '';
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) => InAppChatView(

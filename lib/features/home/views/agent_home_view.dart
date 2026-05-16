@@ -701,7 +701,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   }
 
   // Test method to fetch property details
-  Future<void> _testPropertyDetails(int propertyId) async {
+  Future<void> _testPropertyDetails(String propertyId) async {
     try {
       final propertyDetails = await _propertyService.fetchPropertyDetails(propertyId);
       
@@ -1904,7 +1904,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                             print('🔍 [AgentHome-Featured] User.toJson(): ${property.user?.toJson()}');
 
                             // Test property details endpoint first
-                            await _testPropertyDetails(property.id);
+                            await _testPropertyDetails(property.uuid ?? property.id.toString());
 
                             // Then navigate to property details
                             Navigator.of(context).push(

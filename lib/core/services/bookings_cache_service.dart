@@ -23,15 +23,15 @@ class BookingsCacheService {
   List<Map<String, dynamic>> get cachedBookings => List.unmodifiable(_cachedBookings);
 
   /// Check if a specific property has been booked with successful payment
-  bool hasBookedProperty(String propertyId) {
+  bool hasBookedProperty(String propertyUuid) {
     return _cachedBookings.any((booking) {
-      final bookingPropertyId = booking['property_id']?.toString();
+      final bookingPropertyUuid = booking['property']?['uuid']?.toString()
+          ?? booking['property_uuid']?.toString();
       final paymentStatus = (booking['payment_status'] as String?)?.toLowerCase();
-      
-      // Check if property ID matches and payment is successful
-      return bookingPropertyId == propertyId && 
-             (paymentStatus == 'paid' || 
-              paymentStatus == 'successful' || 
+
+      return bookingPropertyUuid == propertyUuid &&
+             (paymentStatus == 'paid' ||
+              paymentStatus == 'successful' ||
               paymentStatus == 'completed');
     });
   }
@@ -130,11 +130,11 @@ class BookingsCacheService {
   }
 
   /// Update booking in cache (call after payment success)
-  void updateBookingInCache(String bookingId, Map<String, dynamic> updatedData) {
-    final index = _cachedBookings.indexWhere((b) => b['id']?.toString() == bookingId);
+  void updateBookingInCache(String bookingUuid, Map<String, dynamic> updatedData) {
+    final index = _cachedBookings.indexWhere((b) => b['uuid']?.toString() == bookingUuid);
     if (index != -1) {
       _cachedBookings[index] = {..._cachedBookings[index], ...updatedData};
-      debugPrint('🔄 [BookingsCacheService] Updated booking in cache: $bookingId');
+      debugPrint('🔄 [BookingsCacheService] Updated booking in cache: $bookingUuid');
     }
   }
 }

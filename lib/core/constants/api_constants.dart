@@ -38,9 +38,9 @@ class ApiConstants {
   static const String myProperties = '/agent/properties';
   static const String promotedProperties = '/properties/promoted';
   static const String promotedPropertiesPublic = '/properties/promoted'; // no auth — guests
-  static String rateProperty(int propertyId) => '/properties/$propertyId/rate';
-  static String promoteProperty(int propertyId) => '/properties/$propertyId/promote';
-  static String markPropertyStatus(int propertyId) => '/agent/properties/$propertyId/mark-status';
+  static String rateProperty(String uuid) => '/properties/$uuid/rate';
+  static String promoteProperty(String uuid) => '/properties/$uuid/promote';
+  static String markPropertyStatus(String uuid) => '/agent/properties/$uuid/mark-status';
   
   // KYC Endpoints
   static const String kycSubmission = '/kyc/submit';
@@ -73,14 +73,14 @@ class ApiConstants {
   
   // Booking Endpoints
   static const String bookings = '/bookings';
-  static String cancelBooking(int bookingId) => '/bookings/$bookingId/cancel';
+  static String cancelBooking(String uuid) => '/bookings/$uuid/cancel';
 
   // Room Availability (Public)
-  static String roomAvailability(int roomId) => '/rooms/$roomId/availability';
+  static String roomAvailability(String uuid) => '/rooms/$uuid/availability';
 
   // Agent Calendar Management
-  static String agentCalendarRoom(int roomId) => '/agent/calendar/room/$roomId';
-  static String agentBlockRoom(int roomId) => '/agent/calendar/room/$roomId/block';
+  static String agentCalendarRoom(String uuid) => '/agent/calendar/room/$uuid';
+  static String agentBlockRoom(String uuid) => '/agent/calendar/room/$uuid/block';
   static String agentUnblockDates(String uuid) => '/agent/calendar/unblock/$uuid';
   
   // Agent Check-in Endpoints

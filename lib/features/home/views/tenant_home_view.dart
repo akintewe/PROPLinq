@@ -787,7 +787,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
   // Test method to fetch property details
-  Future<void> _testPropertyDetails(int propertyId) async {
+  Future<void> _testPropertyDetails(String propertyId) async {
     try {
       final propertyDetails = await _propertyService.fetchPropertyDetails(propertyId);
       
@@ -2138,11 +2138,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     final isShortlet = type.toLowerCase() == 'shortlet';
     if (!isShortlet) return false;
 
-    final propertyId = property['id']?.toString();
-    if (propertyId == null) return false;
+    final propertyUuid = property['uuid']?.toString() ?? property['id']?.toString();
+    if (propertyUuid == null) return false;
 
     final bookingsCacheService = BookingsCacheService();
-    return !bookingsCacheService.hasBookedProperty(propertyId);
+    return !bookingsCacheService.hasBookedProperty(propertyUuid);
   }
 
   /// Build blurred text widget
@@ -2275,10 +2275,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     return GestureDetector(
       onTap: () async {
         // Test property details endpoint first
-        await _testPropertyDetails(property.id);
-        
+        await _testPropertyDetails(property.uuid ?? property.id.toString());
+
         // DEBUG: Check what imageUrl we're passing
-        
+
         // Then navigate to property details with actual API data
         // Build propertyData with ratings from rawJson
         final propertyData = <String, dynamic>{
@@ -2641,10 +2641,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     return GestureDetector(
       onTap: () async {
         // Test property details endpoint first
-        await _testPropertyDetails(property.id);
-        
+        await _testPropertyDetails(property.uuid ?? property.id.toString());
+
         // DEBUG: Check what imageUrl we're passing
-        
+
         // Build propertyData with ratings from rawJson
         final propertyData = <String, dynamic>{
           'id': property.id,

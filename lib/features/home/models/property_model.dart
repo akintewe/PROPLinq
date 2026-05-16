@@ -6,6 +6,7 @@ String _toTitleCase(String s) => s
 /// Property model representing a real estate property
 class PropertyModel {
   final int id;
+  final String? uuid;
   final int userId;
   final String type;
   final String title;
@@ -28,6 +29,7 @@ class PropertyModel {
 
   const PropertyModel({
     required this.id,
+    this.uuid,
     required this.userId,
     required this.type,
     required this.title,
@@ -52,6 +54,7 @@ class PropertyModel {
   /// Create a copy of this model with updated fields
   PropertyModel copyWith({
     int? id,
+    String? uuid,
     int? userId,
     String? type,
     String? title,
@@ -74,6 +77,7 @@ class PropertyModel {
   }) {
     return PropertyModel(
       id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       userId: userId ?? this.userId,
       type: type ?? this.type,
       title: title ?? this.title,
@@ -100,6 +104,7 @@ class PropertyModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'uuid': uuid,
       'user_id': userId,
       'type': type,
       'title': title,
@@ -242,6 +247,7 @@ class PropertyModel {
 
     return PropertyModel(
       id: _parseInt(json['id']) ?? 0,
+      uuid: json['uuid']?.toString(),
       userId: _parseInt(json['user_id']) ?? 0,
       type: _toTitleCase(json['type']?.toString() ?? ''),
       title: _toTitleCase(json['title']?.toString() ?? ''),

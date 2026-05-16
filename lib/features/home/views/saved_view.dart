@@ -227,11 +227,11 @@ class _SavedViewState extends State<SavedView> {
     final isShortlet = type.toLowerCase() == 'shortlet';
     if (!isShortlet) return false;
 
-    final propertyId = property['id']?.toString();
-    if (propertyId == null) return false;
+    final propertyUuid = property['uuid']?.toString() ?? property['id']?.toString();
+    if (propertyUuid == null) return false;
 
     final bookingsCacheService = BookingsCacheService();
-    return !bookingsCacheService.hasBookedProperty(propertyId);
+    return !bookingsCacheService.hasBookedProperty(propertyUuid);
   }
 
   /// Build blurred text widget

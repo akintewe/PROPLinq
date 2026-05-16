@@ -46,8 +46,8 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _loadCalendar() async {
-    final roomId = widget.room.id;
-    if (roomId == null) return;
+    final roomUuid = widget.room.uuid ?? widget.room.id?.toString();
+    if (roomUuid == null) return;
     setState(() => _isLoading = true);
 
     final startOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
@@ -55,7 +55,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
 
     try {
       final response = await _hotelService.getAgentCalendar(
-        roomId: roomId,
+        roomUuid: roomUuid,
         startDate: _fmt(startOfMonth),
         endDate: _fmt(endOfMonth),
       );
@@ -215,12 +215,12 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
   }
 
   Future<void> _blockDates() async {
-    final roomId = widget.room.id;
-    if (roomId == null || _rangeStart == null) return;
+    final roomUuid = widget.room.uuid ?? widget.room.id?.toString();
+    if (roomUuid == null || _rangeStart == null) return;
     setState(() => _isLoading = true);
     try {
       final response = await _hotelService.blockRoomDates(
-        roomId: roomId,
+        roomUuid: roomUuid,
         startDate: _fmt(_rangeStart!),
         endDate: _fmt(_rangeEnd ?? _rangeStart!),
         reason: _selectedReason,
