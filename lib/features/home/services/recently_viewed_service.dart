@@ -1,170 +1,124 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/services/storage_service.dart';
 
 class RecentlyViewedService {
-  static const String _prefsKey = 'recently_viewed_properties';
+  static const String _prefsKeyPrefix = 'recently_viewed_properties_';
   static const int _expirationHours = 24;
 
-  /// Add a property to recently viewed
-  Future<void> addToRecentlyViewed(Map<String, dynamic> propertyData) async {
+  /// Returns a user-scoped prefs key so different accounts never share data.
+  Future<String> _key() async {
+    final userData = await StorageService().getUserData();
+    final userId = userData?['id']?.toString();
+    if (userId == null || userId.isEmpty) return '${_prefsKeyPrefix}guest';
+    return '$_prefsKeyPrefix$userId';
+  }
+
+  /// Add a property to recently viewed (only for non-owners)
+  Future<void> addToRecentlyViewed(Map<String, dynamic> propertyData,
+      {bool isOwner = false}) async {
+    if (isOwner) return;
     try {
-      print('👁️ [RecentlyViewedService] Adding property to recently viewed');
-      print('👁️ [RecentlyViewedService] Property data: ${propertyData['id']}, title: ${propertyData['title']}');
-      
+      final key = await _key();
       final prefs = await SharedPreferences.getInstance();
-      
-      // Get existing recently viewed properties
-      final existingJson = prefs.getString(_prefsKey);
+
+      final existingJson = prefs.getString(key);
       List<Map<String, dynamic>> recentlyViewed = [];
-      
+
       if (existingJson != null) {
         final decoded = json.decode(existingJson);
         if (decoded is List) {
-          recentlyViewed = decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
-        }
-        print('👁️ [RecentlyViewedService] Found ${recentlyViewed.length} existing recently viewed properties');
-      } else {
-        print('👁️ [RecentlyViewedService] No existing recently viewed properties');
-      }
-      
-      // Extract property ID - handle both int and string
-      final idValue = propertyData['id'];
-      String? propertyId;
-      if (idValue != null) {
-        if (idValue is int) {
-          propertyId = idValue.toString();
-        } else if (idValue is String) {
-          propertyId = idValue;
-        } else {
-          propertyId = idValue.toString();
+          recentlyViewed = decoded
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
         }
       }
-      
-      if (propertyId == null || propertyId.isEmpty) {
-        print('⚠️ [RecentlyViewedService] Property has no valid ID, cannot add');
-        return;
-      }
-      
-      print('👁️ [RecentlyViewedService] Property ID: $propertyId');
-      
-      // Remove existing entry with same ID (if any) to update position
-      final beforeCount = recentlyViewed.length;
-      recentlyViewed.removeWhere((p) {
-        final pId = p['id'];
-        final pIdStr = pId is int ? pId.toString() : (pId is String ? pId : pId?.toString());
-        return pIdStr == propertyId;
-      });
-      final removed = beforeCount != recentlyViewed.length;
-      if (removed) {
-        print('👁️ [RecentlyViewedService] Removed existing entry for property $propertyId');
-      }
-      
-      // Add property with current timestamp
+
+      final propertyId = propertyData['id']?.toString();
+      if (propertyId == null || propertyId.isEmpty) return;
+
+      recentlyViewed.removeWhere(
+          (p) => p['id']?.toString() == propertyId);
+
       final now = DateTime.now().toIso8601String();
-      recentlyViewed.insert(0, {
-        ...propertyData,
-        'viewed_at': now,
-      });
-      print('👁️ [RecentlyViewedService] Added property at position 0 with timestamp: $now');
-      
-      // Remove expired properties (older than 24 hours)
-      final cutoffTime = DateTime.now().subtract(Duration(hours: _expirationHours));
-      final beforeExpiredCount = recentlyViewed.length;
+      recentlyViewed.insert(0, {...propertyData, 'viewed_at': now});
+
+      final cutoffTime =
+          DateTime.now().subtract(Duration(hours: _expirationHours));
       recentlyViewed.removeWhere((p) {
-        final viewedAtStr = p['viewed_at'] as String?;
-        if (viewedAtStr == null) return true; // Remove if no timestamp
-        final viewedAt = DateTime.tryParse(viewedAtStr);
-        if (viewedAt == null) return true; // Remove if invalid timestamp
-        return viewedAt.isBefore(cutoffTime); // Remove if older than 24 hours
+        final viewedAt = DateTime.tryParse(p['viewed_at'] as String? ?? '');
+        return viewedAt == null || viewedAt.isBefore(cutoffTime);
       });
-      final expiredCount = beforeExpiredCount - recentlyViewed.length;
-      if (expiredCount > 0) {
-        print('👁️ [RecentlyViewedService] Removed $expiredCount expired properties');
-      }
-      
-      // Save back to preferences
-      final updatedJson = json.encode(recentlyViewed);
-      await prefs.setString(_prefsKey, updatedJson);
-      print('✅ [RecentlyViewedService] Successfully saved ${recentlyViewed.length} recently viewed properties');
-    } catch (e, stackTrace) {
-      print('❌ [RecentlyViewedService] Error adding to recently viewed: $e');
-      print('❌ [RecentlyViewedService] Stack trace: $stackTrace');
-    }
+
+      await prefs.setString(key, json.encode(recentlyViewed));
+    } catch (_) {}
   }
 
-  /// Get all recently viewed properties (non-expired)
+  /// Get all recently viewed properties for the current user.
   Future<List<Map<String, dynamic>>> getRecentlyViewed() async {
     try {
+      final key = await _key();
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_prefsKey);
-      
+      final jsonString = prefs.getString(key);
       if (jsonString == null) return [];
-      
+
       final decoded = json.decode(jsonString);
-      final recentlyViewed = decoded is List
-          ? decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+      final all = decoded is List
+          ? decoded
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
           : <Map<String, dynamic>>[];
 
-      // Filter out expired properties (older than 24 hours)
-      final cutoffTime = DateTime.now().subtract(Duration(hours: _expirationHours));
-      final validProperties = recentlyViewed.where((p) {
-        final viewedAtStr = p['viewed_at'] as String?;
-        if (viewedAtStr == null) return false;
-        final viewedAt = DateTime.tryParse(viewedAtStr);
-        if (viewedAt == null) return false;
-        return viewedAt.isAfter(cutoffTime);
+      final cutoffTime =
+          DateTime.now().subtract(Duration(hours: _expirationHours));
+      final valid = all.where((p) {
+        final viewedAt = DateTime.tryParse(p['viewed_at'] as String? ?? '');
+        return viewedAt != null && viewedAt.isAfter(cutoffTime);
       }).toList();
-      
-      // Clean up expired properties from storage
-      if (validProperties.length != recentlyViewed.length) {
-        final updatedJson = json.encode(validProperties);
-        await prefs.setString(_prefsKey, updatedJson);
+
+      if (valid.length != all.length) {
+        await prefs.setString(key, json.encode(valid));
       }
-      
-      return validProperties;
-    } catch (e) {
+      return valid;
+    } catch (_) {
       return [];
     }
   }
 
-  /// Remove a property from recently viewed
+  /// Remove a specific property from the current user's recently viewed.
   Future<void> removeFromRecentlyViewed(int propertyId) async {
     try {
+      final key = await _key();
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_prefsKey);
-      
+      final jsonString = prefs.getString(key);
       if (jsonString == null) return;
-      
+
       final decoded = json.decode(jsonString);
-      final recentlyViewed = decoded is List
-          ? decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+      final all = decoded is List
+          ? decoded
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
           : <Map<String, dynamic>>[];
-      
-      // Remove property with matching ID
-      recentlyViewed.removeWhere((p) => p['id']?.toString() == propertyId.toString());
-      
-      // Save back
-      final updatedJson = json.encode(recentlyViewed);
-      await prefs.setString(_prefsKey, updatedJson);
-    } catch (e) {
-      // Silently handle errors
-    }
+
+      all.removeWhere((p) => p['id']?.toString() == propertyId.toString());
+      await prefs.setString(key, json.encode(all));
+    } catch (_) {}
   }
 
-  /// Clear all recently viewed properties
+  /// Clear recently viewed for the current user.
   Future<void> clearAll() async {
     try {
+      final key = await _key();
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_prefsKey);
-    } catch (e) {
-      // Silently handle errors
-    }
+      await prefs.remove(key);
+    } catch (_) {}
   }
 
-  /// Get count of recently viewed properties
   Future<int> getCount() async {
     final properties = await getRecentlyViewed();
     return properties.length;
   }
 }
-

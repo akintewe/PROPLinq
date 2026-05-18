@@ -229,20 +229,13 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   Future<void> _addToRecentlyViewed() async {
     try {
       final property = widget.propertyData ?? _getDefaultProperty();
-      print('👁️ [PropertyDetailsView] Adding to recently viewed: property=${property['id']}, title=${property['title']}');
-      
-      // Ensure property has an ID
-      if (property['id'] == null) {
-        print('⚠️ [PropertyDetailsView] Property has no ID, cannot add to recently viewed');
-        return;
-      }
-      
-      await _recentlyViewedService.addToRecentlyViewed(property);
-      print('✅ [PropertyDetailsView] Successfully added to recently viewed');
-    } catch (e, stackTrace) {
-      print('❌ [PropertyDetailsView] Error adding to recently viewed: $e');
-      print('❌ [PropertyDetailsView] Stack trace: $stackTrace');
-    }
+      if (property['id'] == null) return;
+      // Don't record views by the property owner
+      await _recentlyViewedService.addToRecentlyViewed(
+        property,
+        isOwner: _isOwner,
+      );
+    } catch (_) {}
   }
   
   Future<void> _checkPropertyOwnership() async {

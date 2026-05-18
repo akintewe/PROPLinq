@@ -1038,21 +1038,29 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
     return double.tryParse(clean) ?? 0;
   }
 
-  double get _totalCost {
+  double get _baseAmount {
     final apiTotal = _priceBreakdown?['total'];
     if (apiTotal != null) return (apiTotal as num).toDouble();
     return _pricePerNight * widget.nights;
   }
 
-  double get _depositAmount => (_totalCost * 0.10).roundToDouble();
-  double get _remainingAmount => _totalCost - _depositAmount;
+  double get _serviceFee => (_baseAmount * 0.02).roundToDouble();
+  double get _vatAmount => (_baseAmount * 0.075).roundToDouble();
+  double get _totalCost => _baseAmount + _serviceFee + _vatAmount;
+
+  // Deposit is 10% of base; service fee and VAT are on the deposit base
+  double get _depositBase => (_baseAmount * 0.10).roundToDouble();
+  double get _depositServiceFee => (_baseAmount * 0.02).roundToDouble();
+  double get _depositVat => (_depositBase * 0.075).roundToDouble();
+  double get _depositAmount => _depositBase + _depositServiceFee + _depositVat;
+  double get _remainingAmount => _baseAmount - _depositBase;
 
   String _fmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
 
   String get _buttonLabel => _selectedPaymentMethod == 'pay_now'
       ? 'Pay ${_fmt(_totalCost)}'
-      : 'Pay ${_fmt(_depositAmount)} Deposit';
+      : 'Pay ${_fmt(_depositAmount)}';
 
   @override
   void initState() {
@@ -1193,7 +1201,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     _buildPaymentOption(
                       'pay_now',
                       'Pay Now (Recommended)',
-                      'Pay ${_fmt(_totalCost)} now to fully reserve this physical property for your stay.',
+                      '${_fmt(_baseAmount)} + ${_fmt(_serviceFee)} (2%) service fee + ${_fmt(_vatAmount)} (7.5%) VAT = ${_fmt(_totalCost)}. Pay in full now to fully reserve this physical property for your stay.',
                       true,
                     ),
 
@@ -1202,7 +1210,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     _buildPaymentOption(
                       'pay_arrival',
                       'Pay on Arrival',
-                      'Pay a ${_fmt(_depositAmount)} (10%) property deposit now. The remaining ${_fmt(_remainingAmount)} is paid physically to the host upon arrival at the premises.',
+                      '${_fmt(_depositBase)} (10%) deposit + ${_fmt(_depositServiceFee)} (2%) service fee + ${_fmt(_depositVat)} (7.5%) VAT = ${_fmt(_depositAmount)}. The remaining ${_fmt(_remainingAmount)} is paid physically to the host upon arrival.',
                       false,
                     ),
 
@@ -1360,7 +1368,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
     final tax = breakdown != null ? (breakdown['tax'] as num?)?.toDouble() : null;
     final discount = breakdown != null ? (breakdown['discount'] as num?)?.toDouble() : null;
 
-    final hasBreakdown = breakdown != null &&
+    final hasApiBreakdown = breakdown != null &&
         (basePrice != null || serviceFee != null || cautionFee != null || tax != null);
 
     return Container(
@@ -1373,7 +1381,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (hasBreakdown) ...[
+          if (hasApiBreakdown) ...[
             if (basePrice != null)
               _breakdownRow('${_fmt(_pricePerNight)} × ${widget.nights} night${widget.nights == 1 ? '' : 's'}', _fmt(basePrice)),
             if (serviceFee != null && serviceFee > 0) ...[
@@ -1392,11 +1400,21 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
               const SizedBox(height: 6),
               _breakdownRow('Discount', '-${_fmt(discount)}', valueColor: const Color(0xFF2E7D32)),
             ],
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Divider(color: Color(0xFFD0D8F0), height: 1),
+          ] else ...[
+            // Client-calculated breakdown
+            _breakdownRow(
+              '${_fmt(_pricePerNight)} × ${widget.nights} night${widget.nights == 1 ? '' : 's'}',
+              _fmt(_baseAmount),
             ),
+            const SizedBox(height: 6),
+            _breakdownRow('Service fee (2%)', _fmt(_serviceFee)),
+            const SizedBox(height: 6),
+            _breakdownRow('VAT (7.5%)', _fmt(_vatAmount)),
           ],
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Divider(color: Color(0xFFD0D8F0), height: 1),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
