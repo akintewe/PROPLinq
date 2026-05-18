@@ -37,12 +37,36 @@ class DeepLinkRouter {
         );
       }
 
-      // Fetch property details from API
+      // Fetch property details from API.
+      // Deep link URLs use integer IDs (e.g. /property/shortlet/10).
+      // Try direct fetch first; if that fails and the ID is a plain integer,
+      // search the property list to find the matching UUID then fetch by UUID.
       PropertyModel? propertyModel;
       try {
         propertyModel = await _propertyService.fetchPropertyDetails(propertyId);
       } catch (e) {
         propertyModel = null;
+      }
+
+      if (propertyModel == null && int.tryParse(propertyId) != null) {
+        try {
+          final intId = int.parse(propertyId);
+          final result = await _propertyService.fetchPropertiesPaginated(
+            type: propertyType,
+            page: 1,
+          );
+          PropertyModel? matched;
+          for (final p in result.properties) {
+            if (p.id == intId) {
+              matched = p;
+              break;
+            }
+          }
+          if (matched != null) {
+            final resolvedId = matched.uuid ?? matched.id.toString();
+            propertyModel = await _propertyService.fetchPropertyDetails(resolvedId);
+          }
+        } catch (_) {}
       }
 
       // Dismiss loading indicator

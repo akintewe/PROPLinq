@@ -608,18 +608,14 @@ class PropertyService {
   /// Fetch property details by ID using the dedicated endpoint
   Future<PropertyModel?> fetchPropertyDetails(String uuid) async {
     try {
-
       final response = await _apiService.get<Map<String, dynamic>>(
         '${ApiConstants.properties}/$uuid',
         requiresAuth: true,
         fromJson: (json) => json,
       );
 
-
       if (response.success && response.data != null) {
         final data = response.data!;
-        
-        // Check if the response has a 'data' wrapper or is direct
         Map<String, dynamic> propertyData;
         final inner = data['data'];
         if (inner is Map) {
@@ -627,15 +623,10 @@ class PropertyService {
         } else {
           propertyData = data;
         }
-        
-        final property = PropertyModel.fromJson(propertyData);
-        return property;
-      } else {
-        if (response.errors != null && response.errors!.isNotEmpty) {
-        }
-        return null;
+        return PropertyModel.fromJson(propertyData);
       }
-    } catch (e, stackTrace) {
+      return null;
+    } catch (e) {
       return null;
     }
   }
