@@ -80,10 +80,11 @@ class _PropLinqAppState extends State<PropLinqApp> {
   void _checkPendingDeepLink() {
     final pendingData = widget.deepLinkingService.getPendingDeepLinkData();
     if (pendingData != null) {
+      // Clear immediately — deferred deep links must only fire once.
+      widget.deepLinkingService.clearPendingDeepLinkData();
       final context = widget.deepLinkRouter.navigatorKey.currentContext;
       if (context != null && context.mounted) {
         widget.deepLinkRouter.handleDeepLink(context, pendingData);
-        widget.deepLinkingService.clearPendingDeepLinkData();
       }
     }
   }

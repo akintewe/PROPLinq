@@ -132,7 +132,6 @@ class DeepLinkingService {
       String propertyType = 'apartment';
 
       if (uri.scheme == 'proplinq') {
-        // proplinq://apartment/123  →  host=apartment, pathSegments=[123]
         final host = uri.host;
         final segments = uri.pathSegments;
         propertyId = segments.isNotEmpty ? segments.first : null;
@@ -143,7 +142,6 @@ class DeepLinkingService {
           (uri.host == 'www.proplinq.com' || uri.host == 'proplinq.com') &&
           uri.pathSegments.length >= 3 &&
           uri.pathSegments[0] == 'property') {
-        // https://proplinq.com/property/apartment/123
         propertyType = uri.pathSegments[1];
         propertyId = uri.pathSegments[2];
       } else {
@@ -152,14 +150,16 @@ class DeepLinkingService {
 
       if (propertyId == null || propertyId.isEmpty) return;
 
-      _pendingDeepLinkData = {
+      // Don't persist live deep links — fire and forget so hot restart
+      // or app re-init never replays them.
+      final data = {
         'propertyId': propertyId,
         'propertyType': propertyType,
         'url': url,
       };
 
       if (_onDeepLinkReceived != null) {
-        _onDeepLinkReceived!(_pendingDeepLinkData!);
+        _onDeepLinkReceived!(data);
       }
     } catch (e) {
     }
@@ -241,10 +241,11 @@ class DeepLinkingService {
           'customPayload': customPayload,
         };
 
-        // Trigger navigation if callback is set
+        // Trigger navigation if callback is set, then clear so it never replays
         if (_onDeepLinkReceived != null) {
           _onDeepLinkReceived!(_pendingDeepLinkData!);
         }
+        _pendingDeepLinkData = null;
       } else {
       }
     } catch (e) {
