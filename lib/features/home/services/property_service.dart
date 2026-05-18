@@ -605,17 +605,15 @@ class PropertyService {
     }
   }
 
-  /// Resolve an integer property ID to a PropertyModel by querying the list
-  /// endpoint with ?id=N. Used when deep links still carry legacy integer IDs.
+  /// Resolve an integer property ID by scanning all pages of the properties list.
+  /// The backend list endpoint doesn't return uuid, so we return the PropertyModel
+  /// directly from the list data (enough to open PropertyDetailsView).
   Future<PropertyModel?> fetchPropertyByIntegerId(int id, {String? type}) async {
-    // Try common Laravel filter conventions
-    final paramVariants = [
-      {'id': id.toString()},
-      {'filter[id]': id.toString()},
-    ];
-    for (final params in paramVariants) {
-      try {
-        final queryParams = <String, String>{...params};
+    try {
+      int page = 1;
+      int lastPage = 1;
+      do {
+        final queryParams = <String, String>{'page': page.toString()};
         if (type != null && type.isNotEmpty) queryParams['type'] = type;
         final response = await _apiService.get<dynamic>(
           ApiConstants.properties,
@@ -623,27 +621,26 @@ class PropertyService {
           requiresAuth: false,
           fromJson: (json) => json,
         );
-        if (response.success && response.data != null) {
-          final data = response.data!;
-          List<dynamic> list = [];
-          if (data is Map) {
-            final inner = data['data'];
-            if (inner is List) list = inner;
-            else if (inner is Map && inner['data'] is List) list = inner['data'] as List;
-          } else if (data is List) {
-            list = data;
-          }
-          for (final item in list) {
-            if (item is Map && item['id'] == id) {
-              final prop = PropertyModel.fromJson(Map<String, dynamic>.from(item));
-              // Fetch full details by UUID now that we have it
-              final resolvedId = prop.uuid ?? prop.id.toString();
-              return await fetchPropertyDetails(resolvedId);
-            }
+        if (!response.success || response.data == null) break;
+        final data = response.data!;
+        List<dynamic> list = [];
+        if (data is Map) {
+          final meta = data['meta'];
+          if (meta is Map) lastPage = (meta['last_page'] as num?)?.toInt() ?? 1;
+          final inner = data['data'];
+          if (inner is List) list = inner;
+          else if (inner is Map && inner['data'] is List) list = inner['data'] as List;
+        } else if (data is List) {
+          list = data;
+        }
+        for (final item in list) {
+          if (item is Map && item['id'] == id) {
+            return PropertyModel.fromJson(Map<String, dynamic>.from(item));
           }
         }
-      } catch (_) {}
-    }
+        page++;
+      } while (page <= lastPage);
+    } catch (_) {}
     return null;
   }
 
