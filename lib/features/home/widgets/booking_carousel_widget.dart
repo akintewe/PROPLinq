@@ -56,10 +56,15 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
             .toList();
 
         setState(() {
-          _bookings = all
-              .where((b) => b['status']?.toString().toLowerCase() != 'cancelled')
-              .take(5)
-              .toList();
+          _bookings = all.where((b) {
+            final status = b['status']?.toString().toLowerCase();
+            final paymentStatus = b['payment_status']?.toString().toLowerCase();
+            return status == 'accepted' ||
+                status == 'confirmed' ||
+                paymentStatus == 'paid' ||
+                paymentStatus == 'successful' ||
+                paymentStatus == 'completed';
+          }).take(5).toList();
           _isLoading = false;
         });
 
