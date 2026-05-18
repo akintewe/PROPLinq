@@ -50,22 +50,10 @@ class DeepLinkRouter {
 
       if (propertyModel == null && int.tryParse(propertyId) != null) {
         try {
-          final intId = int.parse(propertyId);
-          final result = await _propertyService.fetchPropertiesPaginated(
+          propertyModel = await _propertyService.fetchPropertyByIntegerId(
+            int.parse(propertyId),
             type: propertyType,
-            page: 1,
           );
-          PropertyModel? matched;
-          for (final p in result.properties) {
-            if (p.id == intId) {
-              matched = p;
-              break;
-            }
-          }
-          if (matched != null) {
-            final resolvedId = matched.uuid ?? matched.id.toString();
-            propertyModel = await _propertyService.fetchPropertyDetails(resolvedId);
-          }
         } catch (_) {}
       }
 
