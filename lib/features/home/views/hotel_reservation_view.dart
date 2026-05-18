@@ -1201,7 +1201,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     _buildPaymentOption(
                       'pay_now',
                       'Pay Now (Recommended)',
-                      '${_fmt(_baseAmount)} + ${_fmt(_serviceFee)} (2%) service fee + ${_fmt(_vatAmount)} (7.5%) VAT = ${_fmt(_totalCost)}. Pay in full now to fully reserve this physical property for your stay.',
+                      'Pay the full amount of ${_fmt(_totalCost)} now to instantly secure this property for your stay. This total includes the booking rate, service fee, and all applicable taxes.',
                       true,
                     ),
 
@@ -1210,7 +1210,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                     _buildPaymentOption(
                       'pay_arrival',
                       'Pay on Arrival',
-                      '${_fmt(_depositBase)} (10%) deposit + ${_fmt(_depositServiceFee)} (2%) service fee + ${_fmt(_depositVat)} (7.5%) VAT = ${_fmt(_depositAmount)}. The remaining ${_fmt(_remainingAmount)} is paid physically to the host upon arrival.',
+                      'Pay a secure deposit of ${_fmt(_depositAmount)} now to lock in your booking dates. The remaining balance of ${_fmt(_remainingAmount)} will be paid directly to the host when you arrive.',
                       false,
                     ),
 
