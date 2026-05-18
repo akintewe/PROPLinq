@@ -77,11 +77,17 @@ class _BookingsListViewState extends State<BookingsListView> {
             .map((e) => Map<String, dynamic>.from(e))
             .toList();
 
-        // Only show pending bookings (exclude cancelled)
+        // Only show accepted/confirmed/paid bookings — hide pending and cancelled
         setState(() {
-          _bookings = all
-              .where((b) => b['status']?.toString().toLowerCase() != 'cancelled')
-              .toList();
+          _bookings = all.where((b) {
+            final status = b['status']?.toString().toLowerCase();
+            final paymentStatus = b['payment_status']?.toString().toLowerCase();
+            return status == 'accepted' ||
+                status == 'confirmed' ||
+                paymentStatus == 'paid' ||
+                paymentStatus == 'successful' ||
+                paymentStatus == 'completed';
+          }).toList();
           _isLoading = false;
         });
 
@@ -278,7 +284,7 @@ class _BookingsListViewState extends State<BookingsListView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${_bookings.length} pending ${_bookings.length == 1 ? 'booking' : 'bookings'}',
+                                '${_bookings.length} active ${_bookings.length == 1 ? 'booking' : 'bookings'}',
                                 style: const TextStyle(
                                   fontSize: 13,
                                   color: Color(0xFF868686),
