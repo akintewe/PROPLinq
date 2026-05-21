@@ -41,7 +41,15 @@ class AiChatService {
     _conversationId = null;
   }
 
+  Future<AiChatResponse> sendOptionSelection(int optionId, String label) async {
+    return _post({'query': optionId.toString()});
+  }
+
   Future<AiChatResponse> sendMessage(String message) async {
+    return _post({'query': message});
+  }
+
+  Future<AiChatResponse> _post(Map<String, dynamic> payload) async {
     final token = await _storageService.getToken();
     final isAuthenticated = token != null && token.isNotEmpty;
 
@@ -51,7 +59,6 @@ class AiChatService {
       if (isAuthenticated) 'Authorization': 'Bearer $token',
     };
 
-    final payload = <String, dynamic>{'query': message};
     if (_conversationId != null) {
       payload['conversation_id'] = _conversationId;
     }
@@ -80,6 +87,7 @@ class AiChatService {
       throw Exception(errorMsg);
     }
   }
+
 
   AiChatResponse _parseResponse(dynamic json) {
     if (json is! Map) {

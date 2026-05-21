@@ -55,8 +55,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
   List<Map<String, dynamic>> _agentRatings = [];
   bool _isLoadingRatings = true;
 
-  bool _contactExpanded = false;
-
   // KYC Approval Animation
   bool _showKycApprovedAnimation = false;
   AnimationController? _approvalAnimationController;
@@ -746,9 +744,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                 // Tenant KYC Section (only for tenants)
                 if (!widget.isAgent) _buildTenantKycSection(context),
                 
-                        // Contact Details Section (tenants only — agents don't expose their details here)
-        if (!widget.isAgent) _buildContactDetailsSection(),
-
         const SizedBox(height: 40),
         
         // Bookings Section (for both agents and home seekers)
@@ -992,123 +987,6 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactDetailsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => _contactExpanded = !_contactExpanded),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Contact details',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
-              ),
-              AnimatedRotation(
-                turns: _contactExpanded ? 0.5 : 0,
-                duration: const Duration(milliseconds: 250),
-                child: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF426DC2), size: 28),
-              ),
-            ],
-          ),
-        ),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 250),
-          crossFadeState: _contactExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          firstChild: const SizedBox.shrink(),
-          secondChild: Column(
-            children: [
-              const SizedBox(height: 24),
-              _buildContactDetailItem(
-                icon: Icons.person,
-                iconColor: const Color(0xFF426DC2),
-                label: 'Full Name',
-                value: _isLoadingProfile ? 'Loading...' : _currentUser?.fullName ?? 'Not provided',
-              ),
-              const SizedBox(height: 24),
-              _buildContactDetailItem(
-                icon: Icons.email,
-                iconColor: const Color(0xFF426DC2),
-                label: 'Email',
-                value: _isLoadingProfile ? 'Loading...' : _currentUser?.email ?? 'Not provided',
-              ),
-              const SizedBox(height: 24),
-              _buildContactDetailItem(
-                icon: Icons.phone,
-                iconColor: const Color(0xFF426DC2),
-                label: 'Phone number',
-                value: _isLoadingProfile ? 'Loading...' : _currentUser?.phoneNumber ?? 'Not provided',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildContactDetailItem({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String value,
-  }) {
-    return Container(
-      height: 51,
-        decoration: BoxDecoration(
-        color: Color.fromRGBO(250, 250, 250, 1),
-        borderRadius: BorderRadius.circular(10),
-       
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: Row(
-          children: [
-            // Icon
-            Icon(
-              icon,
-              size: 20,
-              color: iconColor,
-            ),
-            
-            const SizedBox(width: 16),
-            
-            // Label
-            Expanded(
-              flex: 1,
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            
-            const SizedBox(width: 8),
-            
-            // Value
-            Expanded(
-              flex: 2,
-              child: Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF999999),
-                ),
-                textAlign: TextAlign.end,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
         ),
       ),
     );

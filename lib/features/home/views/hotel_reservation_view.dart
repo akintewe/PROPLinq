@@ -1031,6 +1031,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   bool _isLoadingBreakdown = true;
   Map<String, dynamic>? _priceBreakdown;
   final ApiService _apiService = ApiService();
+  late bool _isGuest;
 
   double get _pricePerNight {
     final raw = widget.propertyData['price']?.toString() ?? '0';
@@ -1065,6 +1066,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   @override
   void initState() {
     super.initState();
+    _isGuest = widget.isGuest;
     _fetchPriceBreakdown();
   }
 
@@ -1240,7 +1242,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                   ),
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : () {
-                      if (widget.isGuest) {
+                      if (_isGuest) {
                         _showGuestLoginPrompt();
                       } else {
                         _processBooking();
@@ -1320,18 +1322,38 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    final navigator = Navigator.of(context);
-                    navigator.push(MaterialPageRoute(
+                    // Capture booking data before pushing login
+                    final propertyData = widget.propertyData;
+                    final nights = widget.nights;
+                    final guests = widget.guests;
+                    final adults = widget.adults;
+                    final checkIn = widget.checkInDate;
+                    final checkOut = widget.checkOutDate;
+                    Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => LoginView(
                         onLoginSuccess: (loginCtx, userType) {
                           final isAgent = userType != null && userType != 'home_seeker';
-                          final nav = Navigator.of(loginCtx);
-                          nav.pushReplacement(MaterialPageRoute(
-                            builder: (_) => isAgent ? const AgentHomeView() : const TenantHomeView(),
-                          ));
+                          // Clear the entire guest stack, go to authenticated home,
+                          // then push the payment screen inside the authenticated context
+                          Navigator.of(loginCtx).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (_) => isAgent
+                                  ? const AgentHomeView()
+                                  : const TenantHomeView(),
+                            ),
+                            (_) => false,
+                          );
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            nav.push(MaterialPageRoute(
-                              builder: (_) => HotelReservationView(propertyData: widget.propertyData),
+                            Navigator.of(loginCtx).push(MaterialPageRoute(
+                              builder: (_) => HotelPaymentView(
+                                propertyData: propertyData,
+                                nights: nights,
+                                guests: guests,
+                                adults: adults,
+                                checkInDate: checkIn,
+                                checkOutDate: checkOut,
+                                isGuest: false,
+                              ),
                             ));
                           });
                         },

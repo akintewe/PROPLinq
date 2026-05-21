@@ -51,19 +51,24 @@ class _HelpSupportViewState extends State<HelpSupportView> with SingleTickerProv
       final response = await http.get(
         Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.supportTickets}'),
         headers: ApiConstants.getAuthHeaders(token ?? ''),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (!mounted) return;
       debugPrint('🎫 [Tickets] Status: ${response.statusCode}');
       debugPrint('🎫 [Tickets] Body: ${response.body}');
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = json.decode(response.body);
-        // Response: { data: { current_page, data: [...tickets] } }
+        // Backend returns { data: [...] } or { data: { data: [...] } }
         final outer = body['data'];
-        final list = (outer is Map ? outer['data'] : outer) ?? [];
+        final List<dynamic> list;
+        if (outer is List) {
+          list = outer;
+        } else if (outer is Map && outer['data'] is List) {
+          list = outer['data'] as List;
+        } else {
+          list = [];
+        }
         setState(() {
-          _tickets = List<Map<String, dynamic>>.from(
-            (list as List).map((e) => Map<String, dynamic>.from(e)),
-          );
+          _tickets = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
           _loadingTickets = false;
         });
       } else {
@@ -71,6 +76,7 @@ class _HelpSupportViewState extends State<HelpSupportView> with SingleTickerProv
       }
     } catch (e) {
       if (!mounted) return;
+      debugPrint('🎫 [Tickets] Error: $e');
       setState(() { _ticketsError = 'Failed to load tickets'; _loadingTickets = false; });
     }
   }
@@ -586,7 +592,7 @@ class _TicketDetailViewState extends State<TicketDetailView> {
       final response = await http.get(
         Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.supportTickets}/${widget.ticketId}'),
         headers: ApiConstants.getAuthHeaders(token ?? ''),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (!mounted) return;
       debugPrint('🎫 [TicketDetail] Status: ${response.statusCode}');
       debugPrint('🎫 [TicketDetail] Body: ${response.body}');

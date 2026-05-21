@@ -73,9 +73,45 @@ class _AiChatViewState extends State<AiChatView> {
     _scrollToBottom();
   }
 
-  void _onOptionTap(int messageIndex, String label) {
+  void _onOptionTap(int messageIndex, AiChatOption option) {
     setState(() => _respondedIndexes.add(messageIndex));
-    _sendMessage(label);
+    _sendOption(option);
+  }
+
+  Future<void> _sendOption(AiChatOption option) async {
+    if (_isSending) return;
+
+    setState(() {
+      _messages.add(_AiMessage(text: option.label, isFromUser: true));
+      _isSending = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final reply = await _service.sendOptionSelection(option.id, option.label);
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_AiMessage(
+          text: reply.text,
+          isFromUser: false,
+          title: reply.title,
+          instruction: reply.instruction,
+          options: reply.options,
+        ));
+        _isSending = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_AiMessage(
+          text: 'Sorry, something went wrong. Please try again.',
+          isFromUser: false,
+          isError: true,
+        ));
+        _isSending = false;
+      });
+    }
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -225,7 +261,7 @@ class _AiChatViewState extends State<AiChatView> {
               runSpacing: 8,
               children: msg.options.map((opt) {
                 return GestureDetector(
-                  onTap: optionsUsed ? null : () => _onOptionTap(index, opt.label),
+                  onTap: optionsUsed ? null : () => _onOptionTap(index, opt),
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 200),
                     opacity: optionsUsed ? 0.4 : 1.0,
