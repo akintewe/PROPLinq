@@ -211,9 +211,14 @@ class _LoginViewState extends State<LoginView> {
   Future<void> _continueWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      final googleUser = await GoogleSignIn(
-        serverClientId: '1001918940088-ojltopdgg71rkusq50p104tqmg5mdk8n.apps.googleusercontent.com',
-      ).signIn();
+      // On iOS, GIDClientID in Info.plist is used automatically.
+      // serverClientId is only needed on Android to request an id_token.
+      final googleSignIn = Theme.of(context).platform == TargetPlatform.iOS
+          ? GoogleSignIn()
+          : GoogleSignIn(
+              serverClientId: '1001918940088-ojltopdgg71rkusq50p104tqmg5mdk8n.apps.googleusercontent.com',
+            );
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         setState(() => _isLoading = false);
         return; // user cancelled
