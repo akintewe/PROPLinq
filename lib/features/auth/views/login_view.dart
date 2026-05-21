@@ -211,7 +211,9 @@ class _LoginViewState extends State<LoginView> {
   Future<void> _continueWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      final googleUser = await GoogleSignIn().signIn();
+      final googleUser = await GoogleSignIn(
+        serverClientId: '1001918940088-ojltopdgg71rkusq50p104tqmg5mdk8n.apps.googleusercontent.com',
+      ).signIn();
       if (googleUser == null) {
         setState(() => _isLoading = false);
         return; // user cancelled

@@ -77,6 +77,10 @@
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
 	
+	<!-- Google Sign-In client ID -->
+	<key>GIDClientID</key>
+	<string>1001918940088-ojltopdgg71rkusq50p104tqmg5mdk8n.apps.googleusercontent.com</string>
+
 	<!-- Deep Linking URL Schemes -->
 	<key>CFBundleURLTypes</key>
 	<array>
@@ -88,6 +92,17 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>proplinq</string>
+			</array>
+		</dict>
+		<!-- Google Sign-In reversed client ID scheme -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.proplinq.app.google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1001918940088-ojltopdgg71rkusq50p104tqmg5mdk8n</string>
 			</array>
 		</dict>
 	</array>
