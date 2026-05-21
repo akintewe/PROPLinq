@@ -1045,13 +1045,13 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   }
 
   double get _serviceFee => (_baseAmount * 0.02).roundToDouble();
-  double get _vatAmount => (_baseAmount * 0.075).roundToDouble();
+  double get _vatAmount => (_serviceFee * 0.075).roundToDouble(); // VAT only on service fee
   double get _totalCost => _baseAmount + _serviceFee + _vatAmount;
 
-  // Deposit is 10% of base; service fee and VAT are on the deposit base
+  // Deposit is 10% of base; service fee and VAT are on the deposit service fee
   double get _depositBase => (_baseAmount * 0.10).roundToDouble();
   double get _depositServiceFee => (_baseAmount * 0.02).roundToDouble();
-  double get _depositVat => (_depositBase * 0.075).roundToDouble();
+  double get _depositVat => (_depositServiceFee * 0.075).roundToDouble(); // VAT only on service fee
   double get _depositAmount => _depositBase + _depositServiceFee + _depositVat;
   double get _remainingAmount => _baseAmount - _depositBase;
 
