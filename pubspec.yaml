@@ -77,6 +77,10 @@ dependencies:
   # Shared preferences for token storage
   shared_preferences: ^2.2.2
 
+  # Social authentication
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.2
+
   # Image processing for resizing and validation
   image: ^4.1.7
 

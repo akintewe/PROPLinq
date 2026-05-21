@@ -87,8 +87,12 @@ class ApiConstants {
   static const String agentCheckIn = '/agent/check-in';
   static const String agentCheckInAvailable = '/agent/check-in/available';
 
-  // AI Chat Endpoint
+  // Social Auth Endpoints (mobile token flow)
+  static String socialAuth(String provider) => '/auth/$provider/token';
+
+  // AI Chat Endpoints
   static const String aiChat = '/chat/ai';
+  static const String aiChatPublic = '/chat/ai/public';
 
   // Agent Ratings Endpoints
   static const String agentPropertiesRatings = '/agent/properties/ratings';

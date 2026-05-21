@@ -43,10 +43,12 @@ class AiChatService {
 
   Future<AiChatResponse> sendMessage(String message) async {
     final token = await _storageService.getToken();
+    final isAuthenticated = token != null && token.isNotEmpty;
+
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
+      if (isAuthenticated) 'Authorization': 'Bearer $token',
     };
 
     final payload = <String, dynamic>{'query': message};
@@ -55,7 +57,8 @@ class AiChatService {
     }
 
     final body = jsonEncode(payload);
-    final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.aiChat}');
+    final endpoint = isAuthenticated ? ApiConstants.aiChat : ApiConstants.aiChatPublic;
+    final url = Uri.parse('${ApiConstants.apiBaseUrl}$endpoint');
 
     debugPrint('🤖 [AiChat] POST $url');
     debugPrint('🤖 [AiChat] body: $body');

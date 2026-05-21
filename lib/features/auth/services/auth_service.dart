@@ -49,6 +49,38 @@ class AuthService {
     return response;
   }
 
+  // Social login — POST /auth/{provider}/token
+  // provider: 'google' or 'apple'
+  // For Google: body contains id_token
+  // For Apple: body contains identity_token, optional full_name
+  Future<ApiResponse<AuthResponse>> socialLogin({
+    required String provider,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _apiService.post<AuthResponse>(
+      ApiConstants.socialAuth(provider),
+      body: body,
+      fromJson: (json) => AuthResponse.fromJson(json),
+    );
+
+    if (response.success && response.data != null) {
+      await _storageService.saveToken(response.data!.token);
+      try {
+        final profileResponse = await getProfile();
+        if (profileResponse.success && profileResponse.data != null) {
+          await _storageService.saveUserData(profileResponse.data!.toJson());
+        } else {
+          await _storageService.saveUserData(response.data!.user.toJson());
+        }
+      } catch (_) {
+        await _storageService.saveUserData(response.data!.user.toJson());
+      }
+      await _storageService.saveUserType(response.data!.user.userType);
+    }
+
+    return response;
+  }
+
   // Login user
   Future<ApiResponse<AuthResponse>> login({
     required String email,

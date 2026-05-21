@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/services/biometric_service.dart';
@@ -206,30 +208,89 @@ class _LoginViewState extends State<LoginView> {
     }
   }
 
-  void _continueWithGoogle() {
-    // Handle Google sign in
-    // For demo purposes, navigate to tenant home (since no email input for social login)
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const TenantHomeView(),
-      ),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Continue with Google - Navigated to Tenant Home')),
-    );
+  Future<void> _continueWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return; // user cancelled
+      }
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) {
+        _showErrorMessage('Google sign-in failed. Please try again.');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final response = await _authService.socialLogin(
+        provider: 'google',
+        body: {'id_token': idToken},
+      );
+
+      if (response.success && response.data != null) {
+        await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
+        await _oneSignalService.setUserType(response.data!.user.userType);
+        DeepLinkingService().setUserId(response.data!.user.id.toString());
+        _navigateToHome(response.data!.user.userType);
+      } else {
+        _showErrorMessage(response.message ?? 'Google sign-in failed. Please try again.');
+      }
+    } catch (e) {
+      _showErrorMessage('Google sign-in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  void _continueWithApple() {
-    // Handle Apple sign in
-    // For demo purposes, navigate to tenant home (since no email input for social login)
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const TenantHomeView(),
-      ),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Continue with Apple - Navigated to Tenant Home')),
-    );
+  Future<void> _continueWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final identityToken = credential.identityToken;
+      if (identityToken == null) {
+        _showErrorMessage('Apple sign-in failed. Please try again.');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final fullName = [
+        credential.givenName,
+        credential.familyName,
+      ].where((n) => n != null && n.isNotEmpty).join(' ');
+
+      final response = await _authService.socialLogin(
+        provider: 'apple',
+        body: {
+          'identity_token': identityToken,
+          if (fullName.isNotEmpty) 'full_name': fullName,
+        },
+      );
+
+      if (response.success && response.data != null) {
+        await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
+        await _oneSignalService.setUserType(response.data!.user.userType);
+        DeepLinkingService().setUserId(response.data!.user.id.toString());
+        _navigateToHome(response.data!.user.userType);
+      } else {
+        _showErrorMessage(response.message ?? 'Apple sign-in failed. Please try again.');
+      }
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code != AuthorizationErrorCode.canceled) {
+        _showErrorMessage('Apple sign-in failed. Please try again.');
+      }
+    } catch (e) {
+      _showErrorMessage('Apple sign-in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _forgotPassword() {
@@ -588,54 +649,55 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               
-              const SizedBox(height: 16),
-              
-              // Apple sign in button
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: ElevatedButton(
-                  onPressed: _continueWithApple,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFECF0F9),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 50,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Continue with Apple',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w300,
-                          color: Colors.black,
-                        ),
+              // Apple sign in — iOS only
+              if (Theme.of(context).platform == TargetPlatform.iOS) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: _continueWithApple,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFECF0F9),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100),
                       ),
-                      const SizedBox(width: 10),
-                      SvgPicture.asset(
-                        'assets/icons/Apple svg.svg',
-                        width: 20,
-                        height: 20,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.apple,
-                            size: 20,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 50,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Continue with Apple',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w300,
                             color: Colors.black,
-                          );
-                        },
-                      ),
-                    ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SvgPicture.asset(
+                          'assets/icons/Apple svg.svg',
+                          width: 20,
+                          height: 20,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.apple,
+                              size: 20,
+                              color: Colors.black,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
               
               const SizedBox(height: 24),
                     ],
