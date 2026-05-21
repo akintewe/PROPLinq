@@ -211,14 +211,12 @@ class _LoginViewState extends State<LoginView> {
   Future<void> _continueWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      // On iOS, GIDClientID in Info.plist is used automatically.
-      // serverClientId is only needed on Android to request an id_token.
-      final googleSignIn = Theme.of(context).platform == TargetPlatform.iOS
-          ? GoogleSignIn()
-          : GoogleSignIn(
-              serverClientId: '1001918940088-ojltopdgg71rkusq50p104tqmg5mdk8n.apps.googleusercontent.com',
-            );
-      final googleUser = await googleSignIn.signIn();
+      // serverClientId tells the SDK to request an id_token whose audience
+      // is the web client ID — required by the backend for token verification.
+      // On iOS the primary client comes from GIDClientID in Info.plist.
+      final googleUser = await GoogleSignIn(
+        serverClientId: '1001918940088-ojltopdgg71rkusq50p104tqmg5mdk8n.apps.googleusercontent.com',
+      ).signIn();
       if (googleUser == null) {
         setState(() => _isLoading = false);
         return; // user cancelled
