@@ -35,16 +35,9 @@ class _SecondSplashViewState extends State<SecondSplashView> {
 
   Future<void> _checkAuthenticationStatus() async {
     try {
-      // First, check if there's a pending deep link
-      // Give app_links a moment to process the initial link
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      final deepLinkingService = DeepLinkingService();
-      final pendingDeepLink = deepLinkingService.getPendingDeepLinkData();
-      
-      if (pendingDeepLink != null) {
-      }
-      
+      // Give app_links a moment to fire the initial link before we check auth
+      await Future.delayed(const Duration(milliseconds: 600));
+
       // Check if user is logged in
       final isLoggedIn = await _storageService.isLoggedIn();
       final token = await _storageService.getToken();
@@ -103,14 +96,13 @@ class _SecondSplashViewState extends State<SecondSplashView> {
   void _navigateToGuestHome() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const GuestHomeView(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
+        pageBuilder: (_, __, ___) => const GuestHomeView(),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
     );
+    _openPendingDeepLinkAfterNav();
   }
 
   void _navigateToLogin() {
@@ -140,74 +132,40 @@ class _SecondSplashViewState extends State<SecondSplashView> {
   }
 
   Future<void> _navigateToHome() async {
-    // Get user type to determine which home screen to show
     final userType = await _storageService.getUserType();
-    
     if (!mounted) return;
-    
-    // Check for pending deep link before navigating
-    _handlePendingDeepLink();
-    
-    // Navigate based on user type
-    if (userType != null && userType != 'home_seeker') {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const AgentHomeView(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
-    } else {
-      // Default to tenant home for 'home_seeker' or any other type
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const TenantHomeView(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
-    }
+
+    final isAgent = userType != null && userType != 'home_seeker';
+    final homeWidget = isAgent ? const AgentHomeView() : const TenantHomeView();
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => homeWidget,
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+
+    // After home is on screen, open property from deep link (if any)
+    _openPendingDeepLinkAfterNav();
   }
-  
-  /// Handle pending deep link after navigation
-  void _handlePendingDeepLink() {
-    // Wait a bit longer to ensure navigation is complete
-    Future.delayed(const Duration(milliseconds: 1500), () async {
-      if (!mounted) return;
-      
-      final deepLinkingService = DeepLinkingService();
-      final pendingData = deepLinkingService.getPendingDeepLinkData();
-      
-      if (pendingData != null) {
-        final deepLinkRouter = DeepLinkRouter();
-        
-        // Get context from navigator key - try multiple times
-        BuildContext? navContext;
-        for (int i = 0; i < 5; i++) {
-          navContext = deepLinkRouter.navigatorKey.currentContext;
-          if (navContext != null && navContext.mounted) {
-            break;
-          }
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-        
-        if (navContext != null && navContext.mounted) {
-          deepLinkRouter.handleDeepLink(navContext, pendingData);
-          // Clear after a delay to allow error messages to show
-          Future.delayed(const Duration(seconds: 1), () {
-            deepLinkingService.clearPendingDeepLinkData();
-          });
-        } else {
-          // Clear the deep link so app doesn't get stuck
-          deepLinkingService.clearPendingDeepLinkData();
-        }
-      } else {
+
+  void _openPendingDeepLinkAfterNav() {
+    final deepLinkingService = DeepLinkingService();
+    final pendingData = deepLinkingService.getPendingDeepLinkData();
+    if (pendingData == null) return;
+
+    deepLinkingService.clearPendingDeepLinkData();
+    final deepLinkRouter = DeepLinkRouter();
+
+    // Wait for the pushReplacement transition (500ms) to fully complete before
+    // pushing the property screen. Using 800ms gives a safe margin so the home
+    // screen is fully on the stack before we push on top of it.
+    Future.delayed(const Duration(milliseconds: 800), () {
+      final navContext = deepLinkRouter.navigatorKey.currentContext;
+      if (navContext != null && navContext.mounted) {
+        deepLinkRouter.handleDeepLink(navContext, pendingData);
       }
     });
   }

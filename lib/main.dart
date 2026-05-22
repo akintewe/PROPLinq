@@ -23,26 +23,19 @@ void main() async {
   final deepLinkingService = DeepLinkingService();
   final deepLinkRouter = DeepLinkRouter();
   
-  // Set up deep link callback
-  deepLinkingService.setDeepLinkCallback((deepLinkData) {
-    
-    // Use the router to handle navigation
-    // Note: Context might not be available immediately, so we'll handle it after app initializes
-    Future.delayed(const Duration(milliseconds: 500), () {
-      final context = deepLinkRouter.navigatorKey.currentContext;
-      if (context != null) {
-        deepLinkRouter.handleDeepLink(context, deepLinkData);
-      } else {
-        // Deep link will be handled when app is ready
-      }
-    });
-  });
-  
-  // Initialize AppsFlyer SDK
+  // Initialize AppsFlyer SDK — deep link navigation is handled by SecondSplashView
+  // after it finishes routing, to avoid race conditions with pushReplacement.
   await deepLinkingService.initialize(
     isDebug: kDebugMode,
     onDeepLinkReceived: (deepLinkData) {
-      deepLinkRouter.handleDeepLink(null, deepLinkData);
+      // App already running (foreground link) — navigate immediately if context ready,
+      // otherwise stash for splash to pick up.
+      final context = deepLinkRouter.navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        deepLinkRouter.handleDeepLink(context, deepLinkData);
+      } else {
+        deepLinkingService.storePendingDeepLink(deepLinkData);
+      }
     },
   );
   
@@ -52,10 +45,10 @@ void main() async {
   ));
 }
 
-class PropLinqApp extends StatefulWidget {
+class PropLinqApp extends StatelessWidget {
   final DeepLinkRouter deepLinkRouter;
   final DeepLinkingService deepLinkingService;
-  
+
   const PropLinqApp({
     super.key,
     required this.deepLinkRouter,
@@ -63,38 +56,11 @@ class PropLinqApp extends StatefulWidget {
   });
 
   @override
-  State<PropLinqApp> createState() => _PropLinqAppState();
-}
-
-class _PropLinqAppState extends State<PropLinqApp> {
-  @override
-  void initState() {
-    super.initState();
-    
-    // Check for pending deep link after a delay (allowing app to initialize)
-    Future.delayed(const Duration(seconds: 3), () {
-      _checkPendingDeepLink();
-    });
-  }
-  
-  void _checkPendingDeepLink() {
-    final pendingData = widget.deepLinkingService.getPendingDeepLinkData();
-    if (pendingData != null) {
-      // Clear immediately — deferred deep links must only fire once.
-      widget.deepLinkingService.clearPendingDeepLinkData();
-      final context = widget.deepLinkRouter.navigatorKey.currentContext;
-      if (context != null && context.mounted) {
-        widget.deepLinkRouter.handleDeepLink(context, pendingData);
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
-      navigatorKey: widget.deepLinkRouter.navigatorKey,
+      navigatorKey: deepLinkRouter.navigatorKey,
       home: const SecondSplashView(),
       theme: AppTheme.lightTheme.copyWith(
         pageTransitionsTheme: const PageTransitionsTheme(
