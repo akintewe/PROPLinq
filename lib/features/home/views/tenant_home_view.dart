@@ -1062,6 +1062,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                             Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => PropertyDetailsView(propertyData: {
                                 'id': property.id,
+                                'uuid': property.uuid,
                                 'badges': [property.user?.verificationStatus ?? 'Unverified'],
                                 'title': property.title,
                                 'location': property.location,
@@ -1649,6 +1650,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       
       return {
         'id': property.id,
+        'uuid': property.uuid,
         'badges': [property.user?.verificationStatus ?? 'Unverified'],
         'title': property.title,
         'location': property.location,
@@ -2283,6 +2285,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // Build propertyData with ratings from rawJson
         final propertyData = <String, dynamic>{
           'id': property.id,
+          'uuid': property.uuid,
           'badges': [property.user?.verificationStatus ?? 'Unverified'],
           'title': property.title,
           'location': property.location,
@@ -2648,6 +2651,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         // Build propertyData with ratings from rawJson
         final propertyData = <String, dynamic>{
           'id': property.id,
+          'uuid': property.uuid,
           'badges': [property.user?.verificationStatus ?? 'Unverified'],
           'title': property.title,
           'location': property.location,

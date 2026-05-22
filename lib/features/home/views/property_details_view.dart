@@ -352,15 +352,13 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
   /// Share property with deep link
   Future<void> _shareProperty(BuildContext context) async {
     try {
-      final property = widget.propertyData ?? _getDefaultProperty();
-      
-      
-      // Use uuid for share link, fall back to id if uuid not present
-      String? propertyId = property['uuid']?.toString();
-      if (propertyId == null || propertyId.isEmpty) {
-        propertyId = property['id']?.toString();
-      }
-      
+      // Use refreshed data (has uuid from detail API) if available
+      final property = _currentPropertyData ?? widget.propertyData ?? _getDefaultProperty();
+
+      // Prefer UUID (available from both list and detail API responses); fall back to integer id.
+      final uuid = property['uuid']?.toString();
+      final propertyId = (uuid != null && uuid.isNotEmpty) ? uuid : property['id']?.toString();
+
       if (propertyId == null || propertyId.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

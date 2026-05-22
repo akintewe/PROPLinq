@@ -288,6 +288,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
   Map<String, dynamic> _buildPropertyData(PropertyModel property) {
     final data = <String, dynamic>{
       'id': property.id,
+      'uuid': property.uuid,
       'badges': [property.user?.verificationStatus ?? 'Unverified'],
       'title': property.title,
       'location': property.location,
