@@ -150,8 +150,6 @@ class DeepLinkingService {
 
       if (propertyId == null || propertyId.isEmpty) return;
 
-      // Don't persist live deep links — fire and forget so hot restart
-      // or app re-init never replays them.
       final data = {
         'propertyId': propertyId,
         'propertyType': propertyType,
@@ -160,6 +158,9 @@ class DeepLinkingService {
 
       if (_onDeepLinkReceived != null) {
         _onDeepLinkReceived!(data);
+      } else {
+        // Callback not yet wired (cold start) — store so splash can consume it
+        _pendingDeepLinkData = data;
       }
     } catch (e) {
     }
@@ -255,6 +256,11 @@ class DeepLinkingService {
   /// Get pending deep link data (for deferred deep linking)
   Map<String, dynamic>? getPendingDeepLinkData() {
     return _pendingDeepLinkData;
+  }
+
+  /// Store a deep link to be consumed later (e.g. when context isn't ready yet)
+  void storePendingDeepLink(Map<String, dynamic> data) {
+    _pendingDeepLinkData = data;
   }
 
   /// Clear pending deep link data
