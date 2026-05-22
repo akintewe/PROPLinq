@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/api_constants.dart';
@@ -157,6 +158,65 @@ class _WalletViewState extends State<WalletView> {
   }
 
   void _showFundWalletSheet() {
+    if (Platform.isIOS) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 48),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECF0F9),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF426DC2), size: 28),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Fund Wallet',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'To fund your wallet, please visit our website at proplinq.com and log in to your account.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Color(0xFF868686), height: 1.5),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'proplinq.com',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF426DC2)),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF426DC2),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  child: const Text('Got it', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
     final amountController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
