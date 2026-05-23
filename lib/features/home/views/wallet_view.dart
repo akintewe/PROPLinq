@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
-
 import '../../../core/services/storage_service.dart';
 import '../../../core/widgets/payment_webview_dialog.dart';
+import '../../auth/models/user_model.dart';
+import '../../auth/services/auth_service.dart';
 
 class WalletView extends StatefulWidget {
   const WalletView({super.key});
@@ -17,6 +18,7 @@ class WalletView extends StatefulWidget {
 
 class _WalletViewState extends State<WalletView> {
   final ApiService _apiService = ApiService();
+  final AuthService _authService = AuthService();
 
   bool _isLoadingBalance = true;
   bool _isLoadingTransactions = true;
@@ -26,11 +28,23 @@ class _WalletViewState extends State<WalletView> {
   String? _balanceError;
   String? _transactionsError;
 
+  // Existing payout account from profile
+  Map<String, dynamic>? _existingPayout;
+
   @override
   void initState() {
     super.initState();
     _fetchBalance();
     _fetchTransactions();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    final response = await _authService.getProfile();
+    if (!mounted) return;
+    if (response.success && response.data != null) {
+      setState(() => _existingPayout = response.data!.payout);
+    }
   }
 
   Future<void> _fetchBalance() async {
@@ -449,9 +463,18 @@ class _WalletViewState extends State<WalletView> {
       return;
     }
 
-    final accountCtrl = TextEditingController();
+    final accountCtrl = TextEditingController(
+      text: _existingPayout?['account_number']?.toString() ?? '',
+    );
     final formKey = GlobalKey<FormState>();
-    Map<String, dynamic>? selectedBank;
+    // Pre-select bank from existing payout if available
+    Map<String, dynamic>? selectedBank = _existingPayout != null &&
+            (_existingPayout!['bank_name']?.toString().isNotEmpty == true)
+        ? {
+            'name': _existingPayout!['bank_name'],
+            'code': _existingPayout!['bank_code'] ?? '',
+          }
+        : null;
     bool isSaving = false;
     bool bankError = false;
 
@@ -551,7 +574,10 @@ class _WalletViewState extends State<WalletView> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Payout Account', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+                    Text(
+                      _existingPayout != null ? 'Update Payout Account' : 'Payout Account',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+                    ),
                     const SizedBox(height: 6),
                     const Text('Add your bank details to receive payouts.', style: TextStyle(fontSize: 14, color: Color(0xFF868686))),
                     const SizedBox(height: 24),
@@ -728,6 +754,7 @@ class _WalletViewState extends State<WalletView> {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             const SnackBar(content: Text('Payout account saved successfully!'), backgroundColor: Colors.green),
                                           );
+                                          _fetchProfile();
                                         }
                                       }
                                     } else {
@@ -924,6 +951,12 @@ class _WalletViewState extends State<WalletView> {
   }
 
   Widget _buildPayoutAccountCard() {
+    final hasAccount = _existingPayout != null &&
+        (_existingPayout!['account_number']?.toString().isNotEmpty == true);
+    final bankName = _existingPayout?['bank_name']?.toString() ?? '';
+    final accountNumber = _existingPayout?['account_number']?.toString() ?? '';
+    final accountName = _existingPayout?['account_name']?.toString() ?? '';
+
     return GestureDetector(
       onTap: _showPayoutSheet,
       child: Container(
@@ -932,7 +965,10 @@ class _WalletViewState extends State<WalletView> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFEFF0F2), width: 1.5),
+          border: Border.all(
+            color: hasAccount ? const Color(0xFF426DC2).withValues(alpha: 0.3) : const Color(0xFFEFF0F2),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
           ],
@@ -943,23 +979,42 @@ class _WalletViewState extends State<WalletView> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFECF0F9),
+                color: hasAccount ? const Color(0xFFE8F5E9) : const Color(0xFFECF0F9),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.account_balance_outlined, color: Color(0xFF426DC2), size: 22),
+              child: Icon(
+                hasAccount ? Icons.account_balance : Icons.account_balance_outlined,
+                color: hasAccount ? Colors.green[700] : const Color(0xFF426DC2),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Payout Account', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
-                  SizedBox(height: 3),
-                  Text('Add your bank details to receive payouts', style: TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                  Text('Payout Account',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
+                  const SizedBox(height: 3),
+                  if (hasAccount) ...[
+                    Text(accountName.isNotEmpty ? accountName : bankName,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${bankName.isNotEmpty ? '$bankName · ' : ''}$accountNumber',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF868686)),
+                    ),
+                  ] else
+                    const Text('Add your bank details to receive payouts',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF868686))),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Color(0xFF868686), size: 20),
+            Icon(
+              hasAccount ? Icons.edit_outlined : Icons.chevron_right,
+              color: const Color(0xFF868686),
+              size: 20,
+            ),
           ],
         ),
       ),

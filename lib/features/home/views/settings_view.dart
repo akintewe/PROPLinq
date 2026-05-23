@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
@@ -49,7 +50,7 @@ class _SettingsViewState extends State<SettingsView> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      if (widget.isAgent) ...[
+                      if (widget.isAgent && !Platform.isIOS) ...[
                         _buildWalletCard(),
                         const SizedBox(height: 24),
                       ],

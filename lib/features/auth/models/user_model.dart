@@ -15,6 +15,7 @@ class UserModel {
   final DateTime? phoneVerifiedAt;
   final bool? kycStatus;
   final Map<String, dynamic>? kycData;
+  final Map<String, dynamic>? payout;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -35,6 +36,7 @@ class UserModel {
     this.phoneVerifiedAt,
     this.kycStatus,
     this.kycData,
+    this.payout,
     this.createdAt,
     this.updatedAt,
   });
@@ -95,6 +97,7 @@ class UserModel {
           : null,
       kycStatus: kycStatus,
       kycData: kycData,
+      payout: json['payout'] is Map ? Map<String, dynamic>.from(json['payout'] as Map) : null,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -123,6 +126,7 @@ class UserModel {
       'phone_verified_at': phoneVerifiedAt?.toIso8601String(),
       'kyc_status': kycStatus,
       'kyc': kycData,
+      'payout': payout,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
