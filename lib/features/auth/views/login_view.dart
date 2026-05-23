@@ -243,6 +243,7 @@ class _LoginViewState extends State<LoginView> {
         _showErrorMessage(response.message ?? 'Google sign-in failed. Please try again.');
       }
     } catch (e) {
+      debugPrint('❌ [Google] Sign-in error: $e');
       _showErrorMessage('Google sign-in failed. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -292,6 +293,7 @@ class _LoginViewState extends State<LoginView> {
         _showErrorMessage('Apple sign-in failed. Please try again.');
       }
     } catch (e) {
+      debugPrint('❌ [Apple] Sign-in error: $e');
       _showErrorMessage('Apple sign-in failed. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);

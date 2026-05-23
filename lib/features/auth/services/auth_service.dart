@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
@@ -57,11 +58,13 @@ class AuthService {
     required String provider,
     required Map<String, dynamic> body,
   }) async {
+    debugPrint('🔵 [SocialAuth] Provider: $provider, keys: ${body.keys.toList()}');
     final response = await _apiService.post<AuthResponse>(
       ApiConstants.socialAuth(provider),
       body: body,
       fromJson: (json) => AuthResponse.fromJson(json),
     );
+    debugPrint('🔵 [SocialAuth] Success: ${response.success}, message: ${response.message}');
 
     if (response.success && response.data != null) {
       await _storageService.saveToken(response.data!.token);
