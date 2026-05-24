@@ -1021,22 +1021,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   }
 
   String _getAgentMotivation() {
-    const quotes = [
-      'Rise and shine. Deals await. 🌅',
-      'Keep grinding. Success is close. 💪',
-      'Every listing is an opportunity.',
-      'Make today count. 🔥',
-      'Your next deal is one call away.',
-      'Stay consistent. Stay winning.',
-      'Big moves happen every day. 🚀',
-      'Hustle smart. Close strong.',
-      'Champions show up daily. 🏆',
-      'Build the future, one deal at a time.',
-      'Your effort today shapes tomorrow.',
-      'Keep pushing. The best is ahead.',
-    ];
-    final index = DateTime.now().day % quotes.length;
-    return quotes[index];
+    return 'Your listing is live. Guests are searching.';
   }
 
   @override

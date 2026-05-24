@@ -1538,6 +1538,7 @@ If you don't have the app, the link will open in your browser where you can down
     if (_selectedRoom == null) return;
     final property = Map<String, dynamic>.from(widget.propertyData ?? _getDefaultProperty());
     property['selected_room_id'] = _selectedRoom!.id;
+    if (_selectedRoom!.uuid != null) property['selected_room_uuid'] = _selectedRoom!.uuid;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => HotelReservationView(propertyData: property, isGuest: widget.isGuest),

@@ -1040,21 +1040,50 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   }
 
   double get _baseAmount {
-    final apiTotal = _priceBreakdown?['total'];
-    if (apiTotal != null) return (apiTotal as num).toDouble();
+    final apiBase = _priceBreakdown?['base_price'];
+    if (apiBase != null) return (apiBase as num).toDouble();
     return _pricePerNight * widget.nights;
   }
 
-  double get _serviceFee => (_baseAmount * 0.02).roundToDouble();
-  double get _vatAmount => (_serviceFee * 0.075).roundToDouble(); // VAT only on service fee
-  double get _totalCost => _baseAmount + _serviceFee + _vatAmount;
+  double get _serviceFee {
+    final apiVal = _priceBreakdown?['service_fee'];
+    if (apiVal != null) return (apiVal as num).toDouble();
+    return (_baseAmount * 0.02).roundToDouble();
+  }
 
-  // Deposit is 10% of base; service fee and VAT are on the deposit service fee
-  double get _depositBase => (_baseAmount * 0.10).roundToDouble();
-  double get _depositServiceFee => (_baseAmount * 0.02).roundToDouble();
-  double get _depositVat => (_depositServiceFee * 0.075).roundToDouble(); // VAT only on service fee
-  double get _depositAmount => _depositBase + _depositServiceFee + _depositVat;
-  double get _remainingAmount => _baseAmount - _depositBase;
+  double get _vatAmount {
+    final apiVal = _priceBreakdown?['tax'];
+    if (apiVal != null) return (apiVal as num).toDouble();
+    return (_serviceFee * 0.075).roundToDouble();
+  }
+
+  double get _totalCost {
+    final apiTotal = _priceBreakdown?['total'];
+    if (apiTotal != null) return (apiTotal as num).toDouble();
+    return _baseAmount + _serviceFee + _vatAmount;
+  }
+
+  // For pay_on_arrival: the breakdown API returns 'total' as the deposit amount due now.
+  // 'remaining_amount' comes from the API too when available.
+  double get _depositAmount {
+    // When payment method is pay_arrival, API total IS the deposit (what's due now)
+    if (_selectedPaymentMethod == 'pay_arrival') {
+      final apiTotal = _priceBreakdown?['total'];
+      if (apiTotal != null) return (apiTotal as num).toDouble();
+    }
+    // Fallback client-side: 10% base + 2% service fee + 7.5% VAT on service fee
+    final base = (_baseAmount * 0.10).roundToDouble();
+    final svc = (_baseAmount * 0.02).roundToDouble();
+    final vat = (svc * 0.075).roundToDouble();
+    return base + svc + vat;
+  }
+
+  double get _remainingAmount {
+    final apiRemaining = _priceBreakdown?['remaining_amount'];
+    if (apiRemaining != null) return (apiRemaining as num).toDouble();
+    // Fallback: full base minus 10% deposit base
+    return _baseAmount - (_baseAmount * 0.10).roundToDouble();
+  }
 
   String _fmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
@@ -1072,7 +1101,10 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
 
   Future<void> _fetchPriceBreakdown() async {
     try {
-      final propertyId = widget.propertyData['id']?.toString() ?? '';
+      final uuid = widget.propertyData['uuid']?.toString();
+      final propertyId = (uuid != null && uuid.isNotEmpty)
+          ? uuid
+          : widget.propertyData['id']?.toString() ?? '';
       if (propertyId.isEmpty) {
         setState(() => _isLoadingBreakdown = false);
         return;
@@ -1081,7 +1113,8 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
       final checkOut = '${widget.checkOutDate.year}-${widget.checkOutDate.month.toString().padLeft(2, '0')}-${widget.checkOutDate.day.toString().padLeft(2, '0')}';
       final paymentType = _selectedPaymentMethod == 'pay_arrival' ? 'pay_on_arrival' : 'full';
 
-      final selectedRoomId = widget.propertyData['selected_room_id']?.toString();
+      final selectedRoomId = widget.propertyData['selected_room_uuid']?.toString()
+          ?? widget.propertyData['selected_room_id']?.toString();
       final response = await _apiService.get<Map<String, dynamic>>(
         '${ApiConstants.bookings}/price-breakdown',
         requiresAuth: true,
@@ -1443,14 +1476,30 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Total', style: TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
-                  Text(_fmt(_totalCost), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
+                  Text(
+                    _selectedPaymentMethod == 'pay_arrival' ? 'Due now (deposit)' : 'Total',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF6C757D)),
+                  ),
+                  Text(
+                    _selectedPaymentMethod == 'pay_arrival' ? _fmt(_depositAmount) : _fmt(_totalCost),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF426DC2)),
+                  ),
                 ],
               ),
               Text('${widget.nights} night${widget.nights == 1 ? '' : 's'} · ${widget.guests} guest${widget.guests == 1 ? '' : 's'}',
                   style: const TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
             ],
           ),
+          if (_selectedPaymentMethod == 'pay_arrival') ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Remaining on arrival', style: TextStyle(fontSize: 13, color: Color(0xFF6C757D))),
+                Text(_fmt(_remainingAmount), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFFE65100))),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1471,9 +1520,13 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                         
     return GestureDetector(
                           onTap: () {
+                            if (_selectedPaymentMethod == value) return;
                             setState(() {
           _selectedPaymentMethod = value;
+          _isLoadingBreakdown = true;
+          _priceBreakdown = null;
                             });
+                            _fetchPriceBreakdown();
                           },
                           child: Container(
         padding: const EdgeInsets.all(20),
@@ -1603,19 +1656,19 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
       final checkInDateStr = '${widget.checkInDate.year}-${widget.checkInDate.month.toString().padLeft(2, '0')}-${widget.checkInDate.day.toString().padLeft(2, '0')}';
       final checkOutDateStr = '${widget.checkOutDate.year}-${widget.checkOutDate.month.toString().padLeft(2, '0')}-${widget.checkOutDate.day.toString().padLeft(2, '0')}';
 
-      // Extract room_id (if a specific room was selected)
-      final selectedRoomId = widget.propertyData['selected_room_id'];
-      final roomIdInt = selectedRoomId != null ? int.tryParse(selectedRoomId.toString()) : null;
+      // Extract room_id (UUID string — prefer selected_room_uuid, fall back to selected_room_id)
+      final selectedRoomId = widget.propertyData['selected_room_uuid']?.toString()
+          ?? widget.propertyData['selected_room_id']?.toString();
 
       // Prepare booking payload
       final bookingPayload = <String, dynamic>{
-        'property_id': int.tryParse(propertyId.toString()) ?? 0,
+        'property_id': propertyId,
         'check_in_date': checkInDateStr,
         'check_out_date': checkOutDateStr,
         'guests': widget.guests,
         'adults': widget.adults,
         'payment_type': _selectedPaymentMethod == 'pay_arrival' ? 'pay_on_arrival' : 'full',
-        if (roomIdInt != null) 'room_id': roomIdInt,
+        if (selectedRoomId != null && selectedRoomId.isNotEmpty) 'room_id': selectedRoomId,
       };
 
       print('📋 Creating booking with payload: $bookingPayload');
@@ -1678,7 +1731,6 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
             _isLoading = false;
           });
 
-          // Attach payment method so success screen can show deposit/remaining
           enrichedBookingData['_payment_type'] = _selectedPaymentMethod;
           enrichedBookingData['_total_cost'] = _totalCost;
           enrichedBookingData['_deposit_amount'] = _depositAmount;
@@ -1745,14 +1797,17 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Dates Unavailable'),
+        title: const Text('Dates Not Available'),
         content: const Text(
-          'This property is not available for the selected dates. Please choose different check-in or check-out dates.',
+          'These dates are already booked or temporarily held by another guest. Please go back and select different dates.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).pop(); // back to date selection
+            },
+            child: const Text('Change Dates'),
           ),
         ],
       ),
