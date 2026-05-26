@@ -1062,7 +1062,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           ],
         ),
       ),
-      floatingActionButton: const AiChatFab(),
+      // floatingActionButton: const AiChatFab(),
       bottomNavigationBar: _buildCustomBottomNavBar(),
     );
   }

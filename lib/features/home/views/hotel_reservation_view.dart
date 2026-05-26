@@ -85,6 +85,47 @@ class _HotelReservationViewState extends State<HotelReservationView> {
     final end3Months = DateTime(now.year, now.month + 3, 0);
     final end = '${end3Months.year}-${end3Months.month.toString().padLeft(2, '0')}-${end3Months.day.toString().padLeft(2, '0')}';
     try {
+      // Use agent calendar endpoint — it returns authoritative blocked/booked state per date
+      final response = await _hotelService.getAgentCalendar(
+        roomUuid: roomUuid,
+        startDate: start,
+        endDate: end,
+      );
+
+      if (response.success && response.data != null && mounted) {
+        final blocked = <String>{};
+        final booked = <String>{};
+        for (final entry in response.data!) {
+          final date = entry['date'] as String?;
+          if (date == null) continue;
+          final isBlocked = entry['is_blocked'] == true;
+          final status = entry['status'] as String?;
+          final isBooked = entry['is_booked'] == true;
+          final availableCount = (entry['available_count'] as num?)?.toInt()
+              ?? (entry['metadata'] is Map ? (entry['metadata']['available_count'] as num?)?.toInt() : null)
+              ?? 1;
+
+          if (isBlocked || status == 'blocked' || status == 'unavailable') {
+            blocked.add(date);
+          } else if (isBooked || status == 'booked' || availableCount <= 0) {
+            booked.add(date);
+          }
+        }
+        setState(() {
+          _blockedDates = blocked;
+          _bookedDates = booked;
+        });
+      } else {
+        // Fallback to public availability endpoint if agent calendar fails (e.g. not logged in)
+        await _loadAvailabilityPublic(roomUuid, start, end);
+      }
+    } catch (e) {
+      await _loadAvailabilityPublic(roomUuid, start, end);
+    }
+  }
+
+  Future<void> _loadAvailabilityPublic(String roomUuid, String start, String end) async {
+    try {
       final response = await _hotelService.getRoomAvailability(
         roomUuid: roomUuid,
         startDate: start,
@@ -113,8 +154,8 @@ class _HotelReservationViewState extends State<HotelReservationView> {
           _bookedDates = booked;
         });
       }
-    } catch (e) {
-      // Availability load failure is non-critical — calendar still works
+    } catch (_) {
+      // Non-critical — calendar still works without availability data
     }
   }
 
@@ -124,7 +165,9 @@ class _HotelReservationViewState extends State<HotelReservationView> {
 
   @override
   Widget build(BuildContext context) {
-    final pricePerNight = _extractPrice(widget.propertyData['price'] as String);
+    final pricePerNight = _extractPrice(
+      (widget.propertyData['selected_room_price'] ?? widget.propertyData['price'] ?? '0').toString(),
+    );
     final totalCost = pricePerNight * _nights;
 
     return Scaffold(
@@ -984,7 +1027,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
   double _extractPrice(String priceString) {
     // Remove currency symbols and non-numeric characters, then parse
     final cleanPrice = priceString.replaceAll(RegExp(r'[^\d.]'), '');
-    return double.tryParse(cleanPrice) ?? 90000.0;
+    return double.tryParse(cleanPrice) ?? 0.0;
   }
 
   String _formatPrice(double price) {
@@ -1034,56 +1077,48 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   late bool _isGuest;
 
   double get _pricePerNight {
-    final raw = widget.propertyData['price']?.toString() ?? '0';
+    final raw = (widget.propertyData['selected_room_price'] ?? widget.propertyData['price'])?.toString() ?? '0';
     final clean = raw.replaceAll(RegExp(r'[^\d.]'), '');
     return double.tryParse(clean) ?? 0;
   }
 
-  double get _baseAmount {
-    final apiBase = _priceBreakdown?['base_price'];
-    if (apiBase != null) return (apiBase as num).toDouble();
-    return _pricePerNight * widget.nights;
-  }
-
-  double get _serviceFee {
-    final apiVal = _priceBreakdown?['service_fee'];
-    if (apiVal != null) return (apiVal as num).toDouble();
-    return (_baseAmount * 0.02).roundToDouble();
-  }
-
-  double get _vatAmount {
-    final apiVal = _priceBreakdown?['tax'];
-    if (apiVal != null) return (apiVal as num).toDouble();
-    return (_serviceFee * 0.075).roundToDouble();
-  }
-
-  double get _totalCost {
-    final apiTotal = _priceBreakdown?['total'];
-    if (apiTotal != null) return (apiTotal as num).toDouble();
-    return _baseAmount + _serviceFee + _vatAmount;
-  }
-
-  // For pay_on_arrival: the breakdown API returns 'total' as the deposit amount due now.
-  // 'remaining_amount' comes from the API too when available.
-  double get _depositAmount {
-    // When payment method is pay_arrival, API total IS the deposit (what's due now)
-    if (_selectedPaymentMethod == 'pay_arrival') {
-      final apiTotal = _priceBreakdown?['total'];
-      if (apiTotal != null) return (apiTotal as num).toDouble();
+  // Reads a numeric field that may appear under multiple key names (preview API vs booking response)
+  double? _bd(List<String> keys) {
+    for (final k in keys) {
+      final v = _priceBreakdown?[k];
+      if (v == null) continue;
+      if (v is num) return v.toDouble();
+      final parsed = double.tryParse(v.toString());
+      if (parsed != null) return parsed;
     }
-    // Fallback client-side: 10% base + 2% service fee + 7.5% VAT on service fee
-    final base = (_baseAmount * 0.10).roundToDouble();
-    final svc = (_baseAmount * 0.02).roundToDouble();
-    final vat = (svc * 0.075).roundToDouble();
-    return base + svc + vat;
+    return null;
   }
 
-  double get _remainingAmount {
-    final apiRemaining = _priceBreakdown?['remaining_amount'];
-    if (apiRemaining != null) return (apiRemaining as num).toDouble();
-    // Fallback: full base minus 10% deposit base
-    return _baseAmount - (_baseAmount * 0.10).roundToDouble();
+  double get _baseAmount =>
+      _bd(['base_price', 'base_amount']) ?? _pricePerNight * widget.nights;
+
+  double get _serviceFee =>
+      _bd(['service_fee', 'platform_fee']) ?? (_baseAmount * 0.10).roundToDouble();
+
+  double get _vatAmount =>
+      _bd(['tax', 'vat_on_fee']) ?? (_serviceFee * 0.075).roundToDouble();
+
+  double get _totalCost =>
+      _bd(['total', 'total_due']) ?? _baseAmount + _serviceFee + _vatAmount;
+
+  double get _depositAmount {
+    if (_selectedPaymentMethod == 'pay_arrival') {
+      return _bd(['total', 'total_due']) ?? (() {
+        final base = (_baseAmount * 0.10).roundToDouble();
+        final svc = (_baseAmount * 0.02).roundToDouble();
+        return base + svc + (svc * 0.075).roundToDouble();
+      })();
+    }
+    return _totalCost;
   }
+
+  double get _remainingAmount =>
+      _bd(['remaining_amount']) ?? _baseAmount - (_baseAmount * 0.10).roundToDouble();
 
   String _fmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
@@ -1416,12 +1451,19 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   Widget _buildPriceSummaryCard() {
     final breakdown = _priceBreakdown;
 
-    // API-provided breakdown fields (all optional — fall back to client calc)
-    final basePrice = breakdown != null ? (breakdown['base_price'] as num?)?.toDouble() : null;
-    final serviceFee = breakdown != null ? (breakdown['service_fee'] as num?)?.toDouble() : null;
-    final cautionFee = breakdown != null ? (breakdown['caution_fee'] as num?)?.toDouble() : null;
-    final tax = breakdown != null ? (breakdown['tax'] as num?)?.toDouble() : null;
-    final discount = breakdown != null ? (breakdown['discount'] as num?)?.toDouble() : null;
+    // API-provided breakdown fields — accept both preview and booking response key names
+    double? pick(List<String> keys) {
+      for (final k in keys) {
+        final v = breakdown?[k];
+        if (v != null) return (v as num).toDouble();
+      }
+      return null;
+    }
+    final basePrice = pick(['base_price', 'base_amount']);
+    final serviceFee = pick(['service_fee', 'platform_fee']);
+    final cautionFee = pick(['caution_fee']);
+    final tax = pick(['tax', 'vat_on_fee']);
+    final discount = pick(['discount']);
 
     final hasApiBreakdown = breakdown != null &&
         (basePrice != null || serviceFee != null || cautionFee != null || tax != null);
@@ -1731,9 +1773,27 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
             _isLoading = false;
           });
 
+          // Fields may arrive as String or num — parse either
+          double? parseAmt(dynamic v) {
+            if (v == null) return null;
+            if (v is num) return v.toDouble();
+            return double.tryParse(v.toString());
+          }
+
+          // Use breakdown from booking response — these are the exact figures Flutterwave charges
+          final bookingBreakdown = data['breakdown'] as Map<String, dynamic>?;
+          final confirmedTotal = bookingBreakdown != null
+              ? parseAmt(bookingBreakdown['total_due'])
+                  ?? parseAmt(bookingBreakdown['charge_now'])
+              : null;
+          final chargeNow = parseAmt(bookingInfo['charge_now'])
+              ?? parseAmt(bookingInfo['guest_total']);
+
+          final actualTotal = confirmedTotal ?? chargeNow ?? _totalCost;
+
           enrichedBookingData['_payment_type'] = _selectedPaymentMethod;
-          enrichedBookingData['_total_cost'] = _totalCost;
-          enrichedBookingData['_deposit_amount'] = _depositAmount;
+          enrichedBookingData['_total_cost'] = actualTotal;
+          enrichedBookingData['_deposit_amount'] = actualTotal;
           enrichedBookingData['_remaining_amount'] = _remainingAmount;
 
           // Show payment webview dialog with enriched booking data

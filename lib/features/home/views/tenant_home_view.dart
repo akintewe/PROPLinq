@@ -1309,7 +1309,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
           ],
         ),
       ),
-      floatingActionButton: const AiChatFab(),
+      // floatingActionButton: const AiChatFab(),
       bottomNavigationBar: _buildCustomBottomNavBar(),
     );
   }

@@ -1181,7 +1181,7 @@ If you don't have the app, the link will open in your browser where you can down
               crossAxisCount: 2,
               crossAxisSpacing: 10,
               mainAxisSpacing: 12,
-              mainAxisExtent: 335,
+              mainAxisExtent: 290,
             ),
             itemCount: _hotelRooms.length,
             itemBuilder: (context, index) {
@@ -1219,7 +1219,9 @@ If you don't have the app, the link will open in your browser where you can down
           ),
         ],
       ),
-      child: Column(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Room image with selection overlay
@@ -1231,13 +1233,13 @@ If you don't have the app, the link will open in your browser where you can down
                   topRight: Radius.circular(12),
                 ),
                 child: room.imageUrl != null && room.imageUrl!.isNotEmpty
-                    ? CachedNetworkImage(imageUrl: 
+                    ? CachedNetworkImage(imageUrl:
                         room.imageUrl!,
-                        height: 175,
+                        height: 140,
                         width: double.infinity,
                         fit: BoxFit.cover,
                         errorWidget: (context, url, error) => Container(
-                          height: 175,
+                          height: 140,
                           color: const Color(0xFFF0F0F0),
                           child: const Center(
                             child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
@@ -1245,7 +1247,7 @@ If you don't have the app, the link will open in your browser where you can down
                         ),
                       )
                     : Container(
-                        height: 175,
+                        height: 140,
                         color: const Color(0xFFF0F0F0),
                         child: const Center(
                           child: Icon(Icons.hotel, size: 32, color: Color(0xFFCCCCCC)),
@@ -1271,7 +1273,7 @@ If you don't have the app, the link will open in your browser where you can down
 
           // Card body
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+            padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1337,32 +1339,6 @@ If you don't have the app, the link will open in your browser where you can down
                     ),
                   ],
                 ),
-
-                // Features
-                if (room.features.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: room.features.take(3).map((feature) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECF0F9),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          FormatUtils.toTitleCase(feature),
-                          style: const TextStyle(
-                            fontSize: 9,
-                            color: Color(0xFF426DC2),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
 
                 const SizedBox(height: 6),
 
@@ -1438,6 +1414,7 @@ If you don't have the app, the link will open in your browser where you can down
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -1539,6 +1516,7 @@ If you don't have the app, the link will open in your browser where you can down
     final property = Map<String, dynamic>.from(widget.propertyData ?? _getDefaultProperty());
     property['selected_room_id'] = _selectedRoom!.id;
     if (_selectedRoom!.uuid != null) property['selected_room_uuid'] = _selectedRoom!.uuid;
+    property['selected_room_price'] = _selectedRoom!.price.toString();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => HotelReservationView(propertyData: property, isGuest: widget.isGuest),
