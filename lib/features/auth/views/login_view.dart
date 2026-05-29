@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -274,10 +275,16 @@ class _LoginViewState extends State<LoginView> {
         return;
       }
 
+      debugPrint('🍎 [Apple] identity_token length: ${identityToken.length}');
+      debugPrint('🍎 [Apple] identity_token FULL: $identityToken');
+
       final fullName = [
         credential.givenName,
         credential.familyName,
       ].where((n) => n != null && n.isNotEmpty).join(' ');
+
+      debugPrint('🍎 [Apple] full_name: "$fullName"');
+      debugPrint('🍎 [Apple] user identifier: ${credential.userIdentifier}');
 
       final response = await _authService.socialLogin(
         provider: 'apple',
@@ -287,24 +294,54 @@ class _LoginViewState extends State<LoginView> {
         },
       );
 
+      debugPrint('🍎 [Apple] Response success: ${response.success}');
+      debugPrint('🍎 [Apple] Response message: ${response.message}');
+      debugPrint('🍎 [Apple] Response statusCode: ${response.statusCode}');
+
       if (response.success && response.data != null) {
         await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
         await _oneSignalService.setUserType(response.data!.user.userType);
         DeepLinkingService().setUserId(response.data!.user.id.toString());
         _navigateToHome(response.data!.user.userType);
       } else {
-        _showErrorMessage(response.message ?? 'Apple sign-in failed. Please try again.');
+        _showAppleError(response.message ?? 'Apple sign-in failed. Please try again.');
       }
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code != AuthorizationErrorCode.canceled) {
-        _showErrorMessage('Apple sign-in failed. Please try again.');
+        _showAppleError('Apple authorization error: ${e.code} — ${e.message}');
       }
     } catch (e) {
       debugPrint('❌ [Apple] Sign-in error: $e');
-      _showErrorMessage('Apple sign-in failed. Please try again.');
+      _showAppleError('Apple sign-in error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showAppleError(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Apple Sign-In Error'),
+        content: SelectableText(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: message));
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Copied to clipboard'), duration: Duration(seconds: 2)),
+              );
+            },
+            child: const Text('Copy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _forgotPassword() {
