@@ -1251,8 +1251,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           _buildAnimatedBanner(),
           _buildFeaturedSection(),
           const SizedBox(height: 32),
-          _buildReceivedBookingsSection(),
-          const SizedBox(height: 32),
           _buildCategoriesSection(),
           const SizedBox(height: 100), // Extra space for bottom nav
         ],

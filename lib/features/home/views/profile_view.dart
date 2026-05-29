@@ -55,6 +55,10 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
   List<Map<String, dynamic>> _agentRatings = [];
   bool _isLoadingRatings = true;
 
+  // Received bookings (guests who booked agent's properties)
+  List<Map<String, dynamic>> _receivedBookings = [];
+  bool _isLoadingReceivedBookings = true;
+
   // KYC Approval Animation
   bool _showKycApprovedAnimation = false;
   AnimationController? _approvalAnimationController;
@@ -81,6 +85,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     if (widget.isAgent) {
       _fetchMyProperties();
       _fetchAgentRatings();
+      _fetchReceivedBookings();
     }
   }
 
@@ -485,6 +490,51 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     }
   }
   
+  Future<void> _fetchReceivedBookings() async {
+    if (!widget.isAgent) return;
+    try {
+      final response = await _apiService.get<dynamic>(
+        ApiConstants.agentBookings,
+        requiresAuth: true,
+        fromJson: (json) => json,
+      );
+      if (!mounted) return;
+      if (response.success && response.data != null) {
+        final data = response.data;
+        List<dynamic> list = [];
+        if (data is List) {
+          list = data;
+        } else if (data is Map && data['data'] is List) {
+          list = data['data'] as List;
+        } else if (data is Map && data['data'] is Map && (data['data'] as Map)['data'] is List) {
+          list = (data['data'] as Map)['data'] as List;
+        }
+        final bookings = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        if (mounted) setState(() { _receivedBookings = bookings; _isLoadingReceivedBookings = false; });
+      } else {
+        if (mounted) setState(() => _isLoadingReceivedBookings = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingReceivedBookings = false);
+    }
+  }
+
+  String _fmtReceivedBookingDate(String? raw) {
+    if (raw == null) return 'N/A';
+    try {
+      final dt = DateTime.parse(raw);
+      const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '${dt.day} ${m[dt.month - 1]} ${dt.year}';
+    } catch (_) { return raw; }
+  }
+
+  String _fmtReceivedBookingAmount(dynamic v) {
+    if (v == null) return 'N/A';
+    final a = v is num ? v.toDouble() : double.tryParse(v.toString());
+    if (a == null) return v.toString();
+    return '₦${a.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (match) => '${match[1]},')}';
+  }
+
   /// Helper method to print JSON in a readable format
   void _printPrettyJson(dynamic data, {int indent = 0}) {
     final indentStr = '  ' * indent;
@@ -753,6 +803,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         
         // Agent-specific sections
         if (widget.isAgent) ...[
+          _buildReceivedBookingsSection(),
+          const SizedBox(height: 32),
           _buildCurrentListingSection(),
           const SizedBox(height: 32),
           _buildVerifyCheckinSection(),
@@ -1535,6 +1587,131 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
         BookingCarouselWidget(
           key: ValueKey('bookings_carousel_${DateTime.now().millisecondsSinceEpoch}'),
         ),
+      ],
+    );
+  }
+
+  Widget _buildReceivedBookingsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Received Bookings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+              if (!_isLoadingReceivedBookings)
+                TextButton(
+                  onPressed: _fetchReceivedBookings,
+                  child: const Text('Refresh', style: TextStyle(color: Color(0xFF426DC2), fontSize: 13)),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_isLoadingReceivedBookings)
+          const Center(child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: CircularProgressIndicator(color: Color(0xFF426DC2), strokeWidth: 2),
+          ))
+        else if (_receivedBookings.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(12)),
+              child: const Center(child: Text('No bookings received yet.', style: TextStyle(color: Color(0xFF868686), fontSize: 14))),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: _receivedBookings.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (_, i) {
+              final b = _receivedBookings[i];
+              final guest = b['guest'] as Map<String, dynamic>? ?? b['user'] as Map<String, dynamic>? ?? {};
+              final guestName = guest['full_name']?.toString() ?? guest['name']?.toString() ?? 'Guest';
+              final status = b['status']?.toString() ?? 'pending';
+              final paymentStatus = b['payment_status']?.toString() ?? '';
+              final checkIn = _fmtReceivedBookingDate(b['check_in']?.toString());
+              final checkOut = _fmtReceivedBookingDate(b['check_out']?.toString());
+              final amount = _fmtReceivedBookingAmount(b['guest_total'] ?? b['amount']);
+              final bookingCode = b['booking_code']?.toString() ?? '';
+              final paymentType = b['payment_type']?.toString() ?? '';
+
+              Color statusColor;
+              Color statusBg;
+              switch (status.toLowerCase()) {
+                case 'confirmed': case 'completed':
+                  statusColor = const Color(0xFF008D5A); statusBg = const Color(0xFFCCFBEA); break;
+                case 'pending':
+                  statusColor = const Color(0xFFF59E0B); statusBg = const Color(0xFFFFF3CD); break;
+                default:
+                  statusColor = const Color(0xFF868686); statusBg = const Color(0xFFF0F0F0);
+              }
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE9ECEF)),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: Text(guestName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black), overflow: TextOverflow.ellipsis)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(20)),
+                          child: Text(status[0].toUpperCase() + status.substring(1), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor)),
+                        ),
+                      ],
+                    ),
+                    if (bookingCode.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('Code: $bookingCode', style: const TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                    ],
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF426DC2)),
+                        const SizedBox(width: 6),
+                        Text('$checkIn → $checkOut', style: const TextStyle(fontSize: 13, color: Color(0xFF444444))),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(children: [
+                          const Icon(Icons.payments_outlined, size: 14, color: Color(0xFF426DC2)),
+                          const SizedBox(width: 6),
+                          Text(amount, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black)),
+                        ]),
+                        if (paymentType.isNotEmpty)
+                          Text(paymentType == 'pay_on_arrival' ? 'Pay on Arrival' : 'Full Payment',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                      ],
+                    ),
+                    if (paymentStatus.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('Payment: $paymentStatus',
+                        style: TextStyle(fontSize: 12, color: paymentStatus.toLowerCase() == 'paid' || paymentStatus.toLowerCase() == 'successful' ? const Color(0xFF008D5A) : const Color(0xFF868686))),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
       ],
     );
   }
