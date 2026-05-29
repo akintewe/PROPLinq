@@ -2,7 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:io';
+import '../../../core/services/storage_service.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_constants.dart';
@@ -492,29 +495,35 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
   
   Future<void> _fetchReceivedBookings() async {
     if (!widget.isAgent) return;
+    if (mounted) setState(() => _isLoadingReceivedBookings = true);
     try {
-      final response = await _apiService.get<dynamic>(
-        ApiConstants.agentBookings,
-        requiresAuth: true,
-        fromJson: (json) => json,
-      );
+      final token = await StorageService().getToken();
+      final uri = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.agentBookings}');
+      final res = await http.get(uri, headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      });
       if (!mounted) return;
-      if (response.success && response.data != null) {
-        final data = response.data;
+      debugPrint('📋 [ReceivedBookings] status: ${res.statusCode}');
+      debugPrint('📋 [ReceivedBookings] body: ${res.body.length > 500 ? res.body.substring(0, 500) : res.body}');
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final body = json.decode(res.body);
         List<dynamic> list = [];
-        if (data is List) {
-          list = data;
-        } else if (data is Map && data['data'] is List) {
-          list = data['data'] as List;
-        } else if (data is Map && data['data'] is Map && (data['data'] as Map)['data'] is List) {
-          list = (data['data'] as Map)['data'] as List;
+        if (body is List) {
+          list = body;
+        } else if (body['data'] is List) {
+          list = body['data'] as List;
+        } else if (body['data'] is Map && (body['data'] as Map)['data'] is List) {
+          list = (body['data'] as Map)['data'] as List;
         }
         final bookings = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
         if (mounted) setState(() { _receivedBookings = bookings; _isLoadingReceivedBookings = false; });
       } else {
         if (mounted) setState(() => _isLoadingReceivedBookings = false);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('📋 [ReceivedBookings] error: $e');
       if (mounted) setState(() => _isLoadingReceivedBookings = false);
     }
   }
@@ -1595,40 +1604,36 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Received Bookings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
-              if (!_isLoadingReceivedBookings)
-                TextButton(
-                  onPressed: _fetchReceivedBookings,
-                  child: const Text('Refresh', style: TextStyle(color: Color(0xFF426DC2), fontSize: 13)),
-                ),
-            ],
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Received Bookings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+            if (!_isLoadingReceivedBookings)
+              TextButton(
+                onPressed: _fetchReceivedBookings,
+                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                child: const Text('Refresh', style: TextStyle(color: Color(0xFF426DC2), fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         if (_isLoadingReceivedBookings)
           const Center(child: Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: CircularProgressIndicator(color: Color(0xFF426DC2), strokeWidth: 2),
           ))
         else if (_receivedBookings.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(12)),
-              child: const Center(child: Text('No bookings received yet.', style: TextStyle(color: Color(0xFF868686), fontSize: 14))),
-            ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(12)),
+            child: const Center(child: Text('No bookings received yet.', style: TextStyle(color: Color(0xFF868686), fontSize: 14))),
           )
         else
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.zero,
             itemCount: _receivedBookings.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (_, i) {
