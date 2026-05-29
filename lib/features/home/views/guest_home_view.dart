@@ -41,7 +41,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
   bool _isLoadingPromotedProperties = true;
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
-  String _selectedCategory = 'Shortlets';
+  String _selectedCategory = 'All';
   List<PropertyModel> _filteredProperties = [];
 
   @override

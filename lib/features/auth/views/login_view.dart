@@ -36,6 +36,7 @@ class _LoginViewState extends State<LoginView> {
   bool _hasError = false;
   String _errorMessage = '';
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _isBiometricAvailable = false;
   bool _isBiometricEnabled = false;
   bool _rememberMe = false;
@@ -209,7 +210,7 @@ class _LoginViewState extends State<LoginView> {
   }
 
   Future<void> _continueWithGoogle() async {
-    setState(() => _isLoading = true);
+    setState(() { _isLoading = true; _isGoogleLoading = true; });
     try {
       // serverClientId tells the SDK to request an id_token whose audience
       // is the web client ID — required by the backend for token verification.
@@ -229,10 +230,16 @@ class _LoginViewState extends State<LoginView> {
         return;
       }
 
+      debugPrint('🔵 [Google] id_token length: ${idToken.length}');
+      debugPrint('🔵 [Google] id_token FULL: $idToken');
+
       final response = await _authService.socialLogin(
         provider: 'google',
         body: {'id_token': idToken},
       );
+      debugPrint('🔵 [Google] Raw response success: ${response.success}');
+      debugPrint('🔵 [Google] Raw response message: ${response.message}');
+      debugPrint('🔵 [Google] Raw response statusCode: ${response.statusCode}');
 
       if (response.success && response.data != null) {
         await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
@@ -246,7 +253,7 @@ class _LoginViewState extends State<LoginView> {
       debugPrint('❌ [Google] Sign-in error: $e');
       _showErrorMessage('Google sign-in failed. Please try again.');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() { _isLoading = false; _isGoogleLoading = false; });
     }
   }
 
@@ -601,7 +608,7 @@ class _LoginViewState extends State<LoginView> {
                 width: double.infinity,
                 height: 46,
                 child: ElevatedButton(
-                  onPressed: _continueWithGoogle,
+                  onPressed: (_isLoading || _isGoogleLoading) ? null : _continueWithGoogle,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFECF0F9),
                     elevation: 0,
@@ -613,7 +620,16 @@ class _LoginViewState extends State<LoginView> {
                       horizontal: 50,
                     ),
                   ),
-                  child: Row(
+                  child: _isGoogleLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
+                          ),
+                        )
+                      : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [

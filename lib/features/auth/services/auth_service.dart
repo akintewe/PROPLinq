@@ -59,11 +59,14 @@ class AuthService {
     required Map<String, dynamic> body,
   }) async {
     debugPrint('🔵 [SocialAuth] Provider: $provider, keys: ${body.keys.toList()}');
+    debugPrint('🔵 [SocialAuth] Endpoint: ${ApiConstants.socialAuth(provider)}');
+    debugPrint('🔵 [SocialAuth] Body values preview: ${body.map((k, v) => MapEntry(k, v.toString().length > 30 ? '${v.toString().substring(0, 30)}...' : v))}');
     final response = await _apiService.post<AuthResponse>(
       ApiConstants.socialAuth(provider),
       body: body,
       fromJson: (json) => AuthResponse.fromJson(json),
     );
+    debugPrint('🔵 [SocialAuth] StatusCode: ${response.statusCode}');
     debugPrint('🔵 [SocialAuth] Success: ${response.success}, message: ${response.message}');
 
     if (response.success && response.data != null) {

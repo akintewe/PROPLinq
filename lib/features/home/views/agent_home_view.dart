@@ -189,7 +189,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   bool _hasShownKycDialog = false;
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
-  String _selectedCategory = 'Shortlets';
+  String _selectedCategory = 'All';
   final ValueNotifier<int> _currentPromoIndex = ValueNotifier(0);
   Timer? _promoTimer;
   Timer? _featuredScrollTimer;
@@ -227,7 +227,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
   // Promotional messages for rotating banner
   final List<String> _promotionalMessages = [
-    "PROMOTE YOUR PROPERTY TODAY",
+    "List your property on Proplinq today. Gain trust from guests by completing your KYC verification to get your account and listings verified.",
   ];
 
   @override

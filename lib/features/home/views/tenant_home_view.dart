@@ -228,7 +228,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   bool _hasShownInitialFilterSheet = false;
   bool _isShowingSearchResults = false;
   String _selectedLocation = '';
-  String _selectedCategory = 'Shortlets';
+  String _selectedCategory = 'All';
   Map<String, dynamic> _activeFilters = {};
   bool _hasActiveFilters = false;
   List<PropertyModel> _filteredProperties = [];

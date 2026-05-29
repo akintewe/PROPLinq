@@ -1106,19 +1106,9 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   double get _totalCost =>
       _bd(['total', 'total_due']) ?? _baseAmount + _serviceFee + _vatAmount;
 
-  double get _depositAmount {
-    if (_selectedPaymentMethod == 'pay_arrival') {
-      return _bd(['total', 'total_due']) ?? (() {
-        final base = (_baseAmount * 0.10).roundToDouble();
-        final svc = (_baseAmount * 0.02).roundToDouble();
-        return base + svc + (svc * 0.075).roundToDouble();
-      })();
-    }
-    return _totalCost;
-  }
-
-  double get _remainingAmount =>
-      _bd(['remaining_amount']) ?? _baseAmount - (_baseAmount * 0.10).roundToDouble();
+  // Deposit for pay_on_arrival: backend charges exactly 10% of base (no extra fees).
+  double get _depositAmount => (_baseAmount * 0.10).roundToDouble();
+  double get _remainingAmount => _baseAmount - _depositAmount;
 
   String _fmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
@@ -1243,7 +1233,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
 
             // Content
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1284,12 +1274,12 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                       false,
                     ),
 
-                    const Spacer(),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
-            
+
             // Bottom button
                     Container(
               padding: const EdgeInsets.all(24),
@@ -1781,19 +1771,18 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
           }
 
           // Use breakdown from booking response — these are the exact figures Flutterwave charges
-          final bookingBreakdown = data['breakdown'] as Map<String, dynamic>?;
-          final confirmedTotal = bookingBreakdown != null
-              ? parseAmt(bookingBreakdown['total_due'])
-                  ?? parseAmt(bookingBreakdown['charge_now'])
-              : null;
+          // charge_now is the exact amount Flutterwave will charge:
+          // - pay_now:    charge_now = full total (e.g. 221500)
+          // - pay_arrival: charge_now = 10% deposit (e.g. 20000)
           final chargeNow = parseAmt(bookingInfo['charge_now'])
-              ?? parseAmt(bookingInfo['guest_total']);
+              ?? parseAmt(bookingInfo['guest_total'])
+              ?? (_selectedPaymentMethod == 'pay_arrival' ? _depositAmount : _totalCost);
 
-          final actualTotal = confirmedTotal ?? chargeNow ?? _totalCost;
+          final fullTotal = parseAmt(bookingInfo['guest_total']) ?? _totalCost;
 
           enrichedBookingData['_payment_type'] = _selectedPaymentMethod;
-          enrichedBookingData['_total_cost'] = actualTotal;
-          enrichedBookingData['_deposit_amount'] = actualTotal;
+          enrichedBookingData['_total_cost'] = fullTotal;
+          enrichedBookingData['_deposit_amount'] = chargeNow;
           enrichedBookingData['_remaining_amount'] = _remainingAmount;
 
           // Show payment webview dialog with enriched booking data
