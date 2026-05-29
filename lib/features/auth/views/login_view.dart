@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -38,6 +37,7 @@ class _LoginViewState extends State<LoginView> {
   String _errorMessage = '';
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
   bool _isBiometricAvailable = false;
   bool _isBiometricEnabled = false;
   bool _rememberMe = false;
@@ -259,7 +259,7 @@ class _LoginViewState extends State<LoginView> {
   }
 
   Future<void> _continueWithApple() async {
-    setState(() => _isLoading = true);
+    setState(() { _isLoading = true; _isAppleLoading = true; });
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [
@@ -271,20 +271,13 @@ class _LoginViewState extends State<LoginView> {
       final identityToken = credential.identityToken;
       if (identityToken == null) {
         _showErrorMessage('Apple sign-in failed. Please try again.');
-        setState(() => _isLoading = false);
         return;
       }
-
-      debugPrint('🍎 [Apple] identity_token length: ${identityToken.length}');
-      debugPrint('🍎 [Apple] identity_token FULL: $identityToken');
 
       final fullName = [
         credential.givenName,
         credential.familyName,
       ].where((n) => n != null && n.isNotEmpty).join(' ');
-
-      debugPrint('🍎 [Apple] full_name: "$fullName"');
-      debugPrint('🍎 [Apple] user identifier: ${credential.userIdentifier}');
 
       final response = await _authService.socialLogin(
         provider: 'apple',
@@ -294,54 +287,24 @@ class _LoginViewState extends State<LoginView> {
         },
       );
 
-      debugPrint('🍎 [Apple] Response success: ${response.success}');
-      debugPrint('🍎 [Apple] Response message: ${response.message}');
-      debugPrint('🍎 [Apple] Response statusCode: ${response.statusCode}');
-
       if (response.success && response.data != null) {
         await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
         await _oneSignalService.setUserType(response.data!.user.userType);
         DeepLinkingService().setUserId(response.data!.user.id.toString());
         _navigateToHome(response.data!.user.userType);
       } else {
-        _showAppleError(response.message ?? 'Apple sign-in failed. Please try again.');
+        _showErrorMessage(response.message ?? 'Apple sign-in failed. Please try again.');
       }
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code != AuthorizationErrorCode.canceled) {
-        _showAppleError('Apple authorization error: ${e.code} — ${e.message}');
+        _showErrorMessage('Apple sign-in failed. Please try again.');
       }
     } catch (e) {
       debugPrint('❌ [Apple] Sign-in error: $e');
-      _showAppleError('Apple sign-in error: $e');
+      _showErrorMessage('Apple sign-in failed. Please try again.');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() { _isLoading = false; _isAppleLoading = false; });
     }
-  }
-
-  void _showAppleError(String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Apple Sign-In Error'),
-        content: SelectableText(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: message));
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Copied to clipboard'), duration: Duration(seconds: 2)),
-              );
-            },
-            child: const Text('Copy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _forgotPassword() {
@@ -716,7 +679,7 @@ class _LoginViewState extends State<LoginView> {
                   width: double.infinity,
                   height: 46,
                   child: ElevatedButton(
-                    onPressed: _continueWithApple,
+                    onPressed: (_isLoading || _isAppleLoading) ? null : _continueWithApple,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFECF0F9),
                       elevation: 0,
@@ -728,7 +691,16 @@ class _LoginViewState extends State<LoginView> {
                         horizontal: 50,
                       ),
                     ),
-                    child: Row(
+                    child: _isAppleLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
+                            ),
+                          )
+                        : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
