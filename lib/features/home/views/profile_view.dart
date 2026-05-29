@@ -509,15 +509,16 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
       debugPrint('📋 [ReceivedBookings] status: ${res.statusCode}');
       debugPrint('📋 [ReceivedBookings] body: ${res.body.length > 500 ? res.body.substring(0, 500) : res.body}');
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        final body = json.decode(res.body);
+        final body = json.decode(res.body) as Map<String, dynamic>;
         List<dynamic> list = [];
-        if (body is List) {
-          list = body;
-        } else if (body['data'] is List) {
-          list = body['data'] as List;
-        } else if (body['data'] is Map && (body['data'] as Map)['data'] is List) {
-          list = (body['data'] as Map)['data'] as List;
+        final d = body['data'];
+        if (d is List) {
+          list = d;
+        } else if (d is Map) {
+          final inner = d['data'];
+          if (inner is List) list = inner;
         }
+        debugPrint('📋 [ReceivedBookings] parsed ${list.length} bookings');
         final bookings = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
         if (mounted) setState(() { _receivedBookings = bookings; _isLoadingReceivedBookings = false; });
       } else {
