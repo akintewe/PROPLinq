@@ -1106,11 +1106,9 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
   double get _totalCost =>
       _bd(['total', 'total_due']) ?? _baseAmount + _serviceFee + _vatAmount;
 
-  // Deposit for pay_on_arrival: 10% of base + 7.5% VAT on that deposit.
-  double get _depositBase => (_baseAmount * 0.10).roundToDouble();
-  double get _depositVat => (_depositBase * 0.075).roundToDouble();
-  double get _depositAmount => _depositBase + _depositVat;
-  double get _remainingAmount => _baseAmount - _depositBase;
+  // Deposit for pay_on_arrival: exactly 10% of base — matches backend's charge_now.
+  double get _depositAmount => (_baseAmount * 0.10).roundToDouble();
+  double get _remainingAmount => _baseAmount - _depositAmount;
 
   String _fmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
@@ -1496,9 +1494,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
               _fmt(_baseAmount),
             ),
             const SizedBox(height: 6),
-            _breakdownRow('Deposit (10%)', _fmt(_depositBase)),
-            const SizedBox(height: 6),
-            _breakdownRow('VAT (7.5%)', _fmt(_depositVat)),
+            _breakdownRow('Deposit (10%)', _fmt(_depositAmount)),
           ] else ...[
             // Pay now: full breakdown
             _breakdownRow(
