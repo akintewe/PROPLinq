@@ -73,6 +73,7 @@ class ApiConstants {
   
   // Booking Endpoints
   static const String bookings = '/bookings';
+  static const String agentBookings = '/agent/bookings';
   static String cancelBooking(String uuid) => '/bookings/$uuid/cancel';
 
   // Room Availability (Public)

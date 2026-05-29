@@ -2,8 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
+import '../../../core/constants/api_constants.dart';
+import '../../../core/services/storage_service.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import '../../../core/animations/animated_list_item.dart';
 import '../../../core/utils/format_utils.dart';
@@ -225,6 +229,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   bool _hasMorePages = false;
   bool _isLoadingMoreProperties = false;
 
+  // Received bookings (guests who booked agent's properties)
+  List<Map<String, dynamic>> _receivedBookings = [];
+  bool _isLoadingReceivedBookings = true;
+
   // Promotional messages for rotating banner
   final List<String> _promotionalMessages = [
     "List your property on Proplinq today. Gain trust from guests by completing your KYC verification to get your account and listings verified.",
@@ -255,6 +263,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       await _initializeLocationBasedDiscovery();
       await _fetchProperties();
       await _fetchPromotedProperties();
+      _fetchReceivedBookings();
       await _showKycDialogIfNeeded();
       await _showCautionFeeNoticeIfNeeded();
       _startFeaturedAutoScroll();
@@ -531,6 +540,172 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         _isLoadingPromotedProperties = false;
       });
     }
+  }
+
+  Future<void> _fetchReceivedBookings() async {
+    try {
+      final token = await StorageService().getToken();
+      final url = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.agentBookings}');
+      final response = await http.get(url, headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      });
+      if (!mounted) return;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = json.decode(response.body);
+        List<dynamic> list = [];
+        if (body['data'] is List) {
+          list = body['data'] as List;
+        } else if (body['data'] is Map && body['data']['data'] is List) {
+          list = body['data']['data'] as List;
+        } else if (body is List) {
+          list = body;
+        }
+        final bookings = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        if (mounted) setState(() { _receivedBookings = bookings; _isLoadingReceivedBookings = false; });
+      } else {
+        if (mounted) setState(() => _isLoadingReceivedBookings = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingReceivedBookings = false);
+    }
+  }
+
+  String _fmtBookingDate(String? raw) {
+    if (raw == null) return 'N/A';
+    try {
+      final dt = DateTime.parse(raw);
+      const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '${dt.day} ${m[dt.month - 1]} ${dt.year}';
+    } catch (_) { return raw; }
+  }
+
+  String _fmtBookingAmount(dynamic v) {
+    if (v == null) return 'N/A';
+    final a = v is num ? v.toDouble() : double.tryParse(v.toString());
+    if (a == null) return v.toString();
+    return '₦${a.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+  }
+
+  Widget _buildReceivedBookingsSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Received Bookings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+              if (_receivedBookings.isNotEmpty)
+                TextButton(
+                  onPressed: _fetchReceivedBookings,
+                  child: const Text('Refresh', style: TextStyle(color: Color(0xFF426DC2), fontSize: 13)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_isLoadingReceivedBookings)
+            const Center(child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: CircularProgressIndicator(color: Color(0xFF426DC2), strokeWidth: 2),
+            ))
+          else if (_receivedBookings.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(12)),
+              child: const Center(child: Text('No bookings received yet.', style: TextStyle(color: Color(0xFF868686), fontSize: 14))),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _receivedBookings.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (_, i) {
+                final b = _receivedBookings[i];
+                final guest = b['guest'] as Map<String, dynamic>? ?? b['user'] as Map<String, dynamic>? ?? {};
+                final guestName = guest['full_name']?.toString() ?? guest['name']?.toString() ?? 'Guest';
+                final status = b['status']?.toString() ?? 'pending';
+                final paymentStatus = b['payment_status']?.toString() ?? '';
+                final checkIn = _fmtBookingDate(b['check_in']?.toString());
+                final checkOut = _fmtBookingDate(b['check_out']?.toString());
+                final amount = _fmtBookingAmount(b['guest_total'] ?? b['amount']);
+                final bookingCode = b['booking_code']?.toString() ?? '';
+                final paymentType = b['payment_type']?.toString() ?? '';
+
+                Color statusColor;
+                Color statusBg;
+                switch (status.toLowerCase()) {
+                  case 'confirmed': case 'completed':
+                    statusColor = const Color(0xFF008D5A); statusBg = const Color(0xFFCCFBEA); break;
+                  case 'pending':
+                    statusColor = const Color(0xFFF59E0B); statusBg = const Color(0xFFFFF3CD); break;
+                  default:
+                    statusColor = const Color(0xFF868686); statusBg = const Color(0xFFF0F0F0);
+                }
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE9ECEF)),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(guestName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black), overflow: TextOverflow.ellipsis)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(20)),
+                            child: Text(status[0].toUpperCase() + status.substring(1), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor)),
+                          ),
+                        ],
+                      ),
+                      if (bookingCode.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text('Code: $bookingCode', style: const TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                      ],
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF426DC2)),
+                          const SizedBox(width: 6),
+                          Text('$checkIn → $checkOut', style: const TextStyle(fontSize: 13, color: Color(0xFF444444))),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(children: [
+                            const Icon(Icons.payments_outlined, size: 14, color: Color(0xFF426DC2)),
+                            const SizedBox(width: 6),
+                            Text(amount, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black)),
+                          ]),
+                          if (paymentType.isNotEmpty)
+                            Text(paymentType == 'pay_on_arrival' ? 'Pay on Arrival' : 'Full Payment',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                        ],
+                      ),
+                      if (paymentStatus.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text('Payment: $paymentStatus', style: TextStyle(fontSize: 12, color: paymentStatus.toLowerCase() == 'paid' || paymentStatus.toLowerCase() == 'successful' ? const Color(0xFF008D5A) : const Color(0xFF868686))),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showCautionFeeNoticeIfNeeded() async {
@@ -1075,6 +1250,8 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
           _buildHeader(),
           _buildAnimatedBanner(),
           _buildFeaturedSection(),
+          const SizedBox(height: 32),
+          _buildReceivedBookingsSection(),
           const SizedBox(height: 32),
           _buildCategoriesSection(),
           const SizedBox(height: 100), // Extra space for bottom nav
