@@ -232,17 +232,22 @@ class HotelService {
   /// POST /api/v1/agent/check-in
   Future<ApiResponse<Map<String, dynamic>>> verifyCheckIn(String code) async {
     try {
-      debugPrint('🏨 [HotelService] Verifying check-in code: $code');
+      debugPrint('🏨 [CheckIn] Sending code: "$code" (length: ${code.length})');
+      debugPrint('🏨 [CheckIn] Endpoint: ${ApiConstants.agentCheckIn}');
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiConstants.agentCheckIn,
         body: {'code': code},
         requiresAuth: true,
         fromJson: (json) => json,
       );
-      debugPrint('🏨 [HotelService] Check-in verification: ${response.success}');
+      debugPrint('🏨 [CheckIn] statusCode: ${response.statusCode}');
+      debugPrint('🏨 [CheckIn] success: ${response.success}');
+      debugPrint('🏨 [CheckIn] message: ${response.message}');
+      debugPrint('🏨 [CheckIn] data: ${response.data}');
+      debugPrint('🏨 [CheckIn] rawJson: ${response.rawJson}');
       return response;
     } catch (e) {
-      debugPrint('🏨 [HotelService] Error verifying check-in: $e');
+      debugPrint('🏨 [CheckIn] Error: $e');
       rethrow;
     }
   }
