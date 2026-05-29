@@ -10,6 +10,7 @@ class RegisterRequest {
   final String? agencyName;
   final String? agentType;
   final String? whatsappNumber;
+  final String? pendingProductId;
 
   RegisterRequest({
     required this.fullName,
@@ -23,6 +24,7 @@ class RegisterRequest {
     this.agencyName,
     this.agentType,
     this.whatsappNumber,
+    this.pendingProductId,
   });
 
   Map<String, dynamic> toJson() {
@@ -38,6 +40,7 @@ class RegisterRequest {
       if (agencyName != null) 'agency_name': agencyName,
       if (agentType != null) 'agent_type': agentType,
       if (whatsappNumber != null) 'whatsapp_number': whatsappNumber,
+      if (pendingProductId != null) 'pending_product_id': pendingProductId,
     };
   }
 } 

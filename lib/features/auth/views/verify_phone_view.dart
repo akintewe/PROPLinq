@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
+import '../../../core/services/deep_link_router.dart';
 import '../../auth/services/auth_service.dart';
 import '../../home/views/tenant_home_view.dart';
 import '../../home/views/agent_home_view.dart';
@@ -9,11 +10,14 @@ import '../../home/views/agent_home_view.dart';
 class VerifyPhoneView extends StatefulWidget {
   final String phoneNumber;
   final bool isHomeSeeker;
-  
+  // UUID of a property to navigate to after verification (deferred deep link)
+  final String? pendingPropertyUuid;
+
   const VerifyPhoneView({
     super.key,
     required this.phoneNumber,
     this.isHomeSeeker = true,
+    this.pendingPropertyUuid,
   });
 
   @override
@@ -154,20 +158,26 @@ class _VerifyPhoneViewState extends State<VerifyPhoneView> {
   }
 
   void _navigateToHome() {
+    final uuid = widget.pendingPropertyUuid;
     if (widget.isHomeSeeker) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const TenantHomeView(),
-        ),
+        MaterialPageRoute(builder: (context) => const TenantHomeView()),
         (route) => false,
       );
     } else {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const AgentHomeView(),
-        ),
+        MaterialPageRoute(builder: (context) => const AgentHomeView()),
         (route) => false,
       );
+    }
+    // After landing on home, navigate to the deferred deep link property
+    if (uuid != null && uuid.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        DeepLinkRouter().navigateToProperty(
+          context: DeepLinkRouter().navigatorKey.currentContext,
+          propertyId: uuid,
+        );
+      });
     }
   }
 

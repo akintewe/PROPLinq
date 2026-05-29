@@ -4,6 +4,8 @@ import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/phone_number_field.dart';
 import '../../../core/widgets/location_autocomplete_field.dart';
+import '../../../core/services/deep_linking_service.dart';
+import '../../../core/services/deep_link_router.dart';
 import '../models/register_request.dart';
 import '../services/auth_service.dart';
 import 'login_view.dart';
@@ -87,6 +89,10 @@ class _SignUpViewState extends State<SignUpView> {
     });
 
     try {
+      // Read pending deep link UUID for deferred deep linking
+      final pendingDeepLink = DeepLinkingService().getPendingDeepLinkData();
+      final pendingProductId = pendingDeepLink?['propertyId']?.toString();
+
       // Create registration request
       final registerRequest = RegisterRequest(
         fullName: _fullNameController.text.trim(),
@@ -98,32 +104,33 @@ class _SignUpViewState extends State<SignUpView> {
         location: _locationController.text.trim(),
         termsAccepted: _agreeToTerms,
         agencyName: !_isHomeSeeker ? _agencyNameController.text.trim() : null,
-        agentType: !_isHomeSeeker && _selectedAgentType != 'Select' 
-            ? _selectedAgentType.toLowerCase().replaceAll(' ', '_') 
+        agentType: !_isHomeSeeker && _selectedAgentType != 'Select'
+            ? _selectedAgentType.toLowerCase().replaceAll(' ', '_')
             : null,
         whatsappNumber: !_isHomeSeeker ? _whatsappNumberController.text.trim() : null,
+        pendingProductId: pendingProductId,
       );
-
-      if (!_isHomeSeeker) {
-      }
 
       // Make API call
       final response = await _authService.register(registerRequest);
 
-      
-      if (response.data != null) {
-      }
-      
-      if (response.errors != null && response.errors!.isNotEmpty) {
-      }
-
       if (response.success && response.data != null) {
-        // Registration successful - navigate to phone verification screen
+        // Clear the pending deep link since it's been consumed
+        DeepLinkingService().clearPendingDeepLinkData();
+
+        // Check if backend returned a redirect_target (deferred deep link property)
+        final redirectTarget = response.rawJson?['redirect_target'];
+        final redirectUuid = redirectTarget is Map
+            ? redirectTarget['uuid']?.toString()
+            : null;
+
+        // Navigate to phone verification, passing the redirect UUID if present
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => VerifyPhoneView(
               phoneNumber: _phoneNumberController.text.trim(),
               isHomeSeeker: _isHomeSeeker,
+              pendingPropertyUuid: redirectUuid,
             ),
           ),
         );

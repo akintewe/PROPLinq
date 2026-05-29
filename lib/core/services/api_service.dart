@@ -11,6 +11,8 @@ class ApiResponse<T> {
   final String? message;
   final List<String>? errors;
   final int? statusCode;
+  // Full raw JSON for cases where extra top-level fields are needed (e.g. redirect_target)
+  final Map<String, dynamic>? rawJson;
 
   ApiResponse({
     required this.success,
@@ -18,14 +20,16 @@ class ApiResponse<T> {
     this.message,
     this.errors,
     this.statusCode,
+    this.rawJson,
   });
 
-  factory ApiResponse.success({T? data, String? message, int? statusCode}) {
+  factory ApiResponse.success({T? data, String? message, int? statusCode, Map<String, dynamic>? rawJson}) {
     return ApiResponse<T>(
       success: true,
       data: data,
       message: message,
       statusCode: statusCode,
+      rawJson: rawJson,
     );
   }
 
@@ -129,6 +133,7 @@ class ApiService {
           data: data,
           message: jsonData['message'] ?? 'Success',
           statusCode: response.statusCode,
+          rawJson: jsonData,
         );
       } else {
         // Error response

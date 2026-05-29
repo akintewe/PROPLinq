@@ -8,6 +8,7 @@ import '../../../core/services/biometric_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/services/onesignal_service.dart';
 import '../../../core/services/deep_linking_service.dart';
+import '../../../core/services/deep_link_router.dart';
 import '../services/auth_service.dart';
 import 'forgot_password_view.dart';
 import 'sign_up_view.dart';
@@ -121,10 +122,10 @@ class _LoginViewState extends State<LoginView> {
           await _oneSignalService.setUserLocation(response.data!.user.location);
         }
         
-        // Set AppsFlyer customer user ID for attribution tracking
         DeepLinkingService().setUserId(response.data!.user.id.toString());
-        
-        _navigateToHome(response.data!.user.userType);
+        final redirectTarget = response.rawJson?['redirect_target'];
+        final redirectUuid = redirectTarget is Map ? redirectTarget['uuid']?.toString() : null;
+        _navigateToHome(response.data!.user.userType, redirectUuid);
       } else {
         // Login failed
         setState(() {
@@ -194,7 +195,7 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  void _navigateToHome([String? userType]) {
+  void _navigateToHome([String? userType, String? redirectUuid]) {
     if (widget.onLoginSuccess != null) {
       widget.onLoginSuccess!(context, userType);
       return;
@@ -207,6 +208,14 @@ class _LoginViewState extends State<LoginView> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const TenantHomeView()),
       );
+    }
+    if (redirectUuid != null && redirectUuid.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        DeepLinkRouter().navigateToProperty(
+          context: DeepLinkRouter().navigatorKey.currentContext,
+          propertyId: redirectUuid,
+        );
+      });
     }
   }
 
@@ -246,7 +255,9 @@ class _LoginViewState extends State<LoginView> {
         await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
         await _oneSignalService.setUserType(response.data!.user.userType);
         DeepLinkingService().setUserId(response.data!.user.id.toString());
-        _navigateToHome(response.data!.user.userType);
+        final googleRedirect = response.rawJson?['redirect_target'];
+        final googleRedirectUuid = googleRedirect is Map ? googleRedirect['uuid']?.toString() : null;
+        _navigateToHome(response.data!.user.userType, googleRedirectUuid);
       } else {
         _showErrorMessage(response.message ?? 'Google sign-in failed. Please try again.');
       }
@@ -291,7 +302,9 @@ class _LoginViewState extends State<LoginView> {
         await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
         await _oneSignalService.setUserType(response.data!.user.userType);
         DeepLinkingService().setUserId(response.data!.user.id.toString());
-        _navigateToHome(response.data!.user.userType);
+        final appleRedirect = response.rawJson?['redirect_target'];
+        final appleRedirectUuid = appleRedirect is Map ? appleRedirect['uuid']?.toString() : null;
+        _navigateToHome(response.data!.user.userType, appleRedirectUuid);
       } else {
         _showErrorMessage(response.message ?? 'Apple sign-in failed. Please try again.');
       }
