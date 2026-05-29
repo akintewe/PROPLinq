@@ -236,7 +236,7 @@ class HotelService {
       debugPrint('🏨 [CheckIn] Endpoint: ${ApiConstants.agentCheckIn}');
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiConstants.agentCheckIn,
-        body: {'code': code},
+        body: {'booking_code': code},
         requiresAuth: true,
         fromJson: (json) => json,
       );

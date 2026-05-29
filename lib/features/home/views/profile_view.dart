@@ -3071,7 +3071,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                     const SizedBox(height: 8),
                     Center(
                       child: Text(
-                        'Enter the 6-character code provided by the guest',
+                        'Enter the 8-character code provided by the guest',
                         style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         textAlign: TextAlign.center,
                       ),
