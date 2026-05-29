@@ -3028,7 +3028,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                     TextField(
                       controller: codeController,
                       textCapitalization: TextCapitalization.characters,
-                      maxLength: 6,
+                      maxLength: 8,
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -3036,7 +3036,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                       ),
                       textAlign: TextAlign.center,
                       decoration: InputDecoration(
-                        hintText: '------',
+                        hintText: '--------',
                         hintStyle: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
@@ -3089,7 +3089,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                                 final code = codeController.text.trim();
                                 if (code.length < 6) {
                                   setSheetState(() {
-                                    resultMessage = 'Please enter the full 6-character code.';
+                                    resultMessage = 'Please enter the full check-in code.';
                                     resultSuccess = false;
                                   });
                                   return;
