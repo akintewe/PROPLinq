@@ -28,6 +28,7 @@ import '../services/hotel_service.dart';
 import '../models/property_model.dart';
 import '../widgets/booking_carousel_widget.dart';
 import 'bookings_list_view.dart';
+import 'booking_details_view.dart';
 
 class ProfileView extends StatefulWidget {
   final bool isAgent;
@@ -1659,7 +1660,15 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                   statusColor = const Color(0xFF868686); statusBg = const Color(0xFFF0F0F0);
               }
 
-              return Container(
+              final propertyData = b['property'] is Map
+                  ? Map<String, dynamic>.from(b['property'] as Map)
+                  : <String, dynamic>{};
+
+              return GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => BookingDetailsView(bookingData: b, propertyData: propertyData),
+                )),
+                child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -1714,6 +1723,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                     ],
                   ],
                 ),
+              ),
               );
             },
           ),
