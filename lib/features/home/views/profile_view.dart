@@ -28,7 +28,6 @@ import '../services/hotel_service.dart';
 import '../models/property_model.dart';
 import '../widgets/booking_carousel_widget.dart';
 import 'bookings_list_view.dart';
-import 'booking_details_view.dart';
 
 class ProfileView extends StatefulWidget {
   final bool isAgent;
@@ -1602,6 +1601,147 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     );
   }
 
+  void _showHostBookingDetails(BuildContext context, Map<String, dynamic> b) {
+    final guest = b['guest'] as Map<String, dynamic>? ?? {};
+    final room = b['room'] is Map ? Map<String, dynamic>.from(b['room'] as Map) : <String, dynamic>{};
+    final property = b['property'] is Map ? Map<String, dynamic>.from(b['property'] as Map) : <String, dynamic>{};
+
+    final guestName = guest['name']?.toString() ?? guest['full_name']?.toString() ?? 'Guest';
+    final roomName = b['room_name']?.toString() ?? room['name']?.toString() ?? 'N/A';
+    final roomType = b['room_type']?.toString() ?? room['type']?.toString() ?? 'N/A';
+    final roomNumber = room['room_number']?.toString();
+    final bedType = room['bed_type']?.toString();
+    final floor = room['floor']?.toString();
+    final capacity = room['capacity']?.toString();
+    final bookingCode = b['booking_code']?.toString() ?? 'N/A';
+    final status = b['status']?.toString() ?? 'pending';
+    final paymentStatus = b['payment_status']?.toString() ?? 'N/A';
+    final paymentType = b['payment_type']?.toString() ?? '';
+    final checkIn = _fmtReceivedBookingDate(b['check_in']?.toString());
+    final checkOut = _fmtReceivedBookingDate(b['check_out']?.toString());
+    final amountPaid = _fmtReceivedBookingAmount(b['amount_paid'] ?? b['guest_total'] ?? b['amount']);
+    final checkinConfirmed = b['checkin_confirmed'] == true;
+    final propertyTitle = property['title']?.toString();
+
+    // Extract property image
+    String? propertyImageUrl;
+    final propImages = property['images'];
+    if (propImages is List && propImages.isNotEmpty) {
+      final first = propImages[0];
+      if (first is Map) {
+        propertyImageUrl = first['full_url']?.toString()
+            ?? first['url']?.toString()
+            ?? first['image_url']?.toString();
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        builder: (_, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE0E0E0), borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            if (propertyImageUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: propertyImageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Container(
+                    height: 180,
+                    color: const Color(0xFFF0F4FF),
+                    child: const Icon(Icons.hotel, size: 48, color: Color(0xFF426DC2)),
+                  ),
+                ),
+              ),
+            if (propertyImageUrl != null) const SizedBox(height: 12),
+            const Text('Booking Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 20),
+
+            // Guest
+            _hostDetailSection('Guest', [
+              _hostDetailRow('Name', guestName),
+            ]),
+
+            // Room
+            _hostDetailSection('Room', [
+              _hostDetailRow('Room Name', roomName),
+              _hostDetailRow('Room Type', '${roomType[0].toUpperCase()}${roomType.substring(1)}'),
+              if (roomNumber != null) _hostDetailRow('Room Number', roomNumber),
+              if (bedType != null) _hostDetailRow('Bed Type', '${bedType[0].toUpperCase()}${bedType.substring(1)}'),
+              if (floor != null) _hostDetailRow('Floor', floor),
+              if (capacity != null) _hostDetailRow('Capacity', '$capacity guest${capacity == "1" ? "" : "s"}'),
+            ]),
+
+            // Booking
+            _hostDetailSection('Booking', [
+              _hostDetailRow('Booking Code', bookingCode),
+              if (propertyTitle != null) _hostDetailRow('Property', propertyTitle),
+              _hostDetailRow('Check-in', checkIn),
+              _hostDetailRow('Check-out', checkOut),
+              _hostDetailRow('Status', '${status[0].toUpperCase()}${status.substring(1)}',
+                  valueColor: status.toLowerCase() == 'confirmed' || status.toLowerCase() == 'completed'
+                      ? const Color(0xFF008D5A) : const Color(0xFFF59E0B)),
+              _hostDetailRow('Check-in Confirmed', checkinConfirmed ? 'Yes' : 'No',
+                  valueColor: checkinConfirmed ? const Color(0xFF008D5A) : const Color(0xFF868686)),
+            ]),
+
+            // Payment
+            _hostDetailSection('Payment', [
+              _hostDetailRow('Amount Paid', amountPaid),
+              _hostDetailRow('Payment Type', paymentType == 'pay_on_arrival' ? 'Pay on Arrival' : 'Full Payment'),
+              _hostDetailRow('Payment Status', '${paymentStatus[0].toUpperCase()}${paymentStatus.substring(1)}',
+                  valueColor: paymentStatus.toLowerCase() == 'paid' || paymentStatus.toLowerCase() == 'successful'
+                      ? const Color(0xFF008D5A) : const Color(0xFF868686)),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _hostDetailSection(String title, List<Widget> rows) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(10)),
+          child: Column(children: rows),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _hostDetailRow(String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF868686))),
+          Flexible(child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: valueColor ?? Colors.black), textAlign: TextAlign.end)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReceivedBookingsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1649,6 +1789,11 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
               final amount = _fmtReceivedBookingAmount(b['guest_total'] ?? b['amount']);
               final bookingCode = b['booking_code']?.toString() ?? '';
               final paymentType = b['payment_type']?.toString() ?? '';
+              final roomName = b['room_name']?.toString()
+                  ?? (b['room'] is Map ? (b['room'] as Map)['name']?.toString() : null);
+              final roomType = b['room_type']?.toString()
+                  ?? (b['room'] is Map ? (b['room'] as Map)['type']?.toString() : null);
+              final roomNumber = b['room'] is Map ? (b['room'] as Map)['room_number']?.toString() : null;
 
               Color statusColor;
               Color statusBg;
@@ -1661,14 +1806,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                   statusColor = const Color(0xFF868686); statusBg = const Color(0xFFF0F0F0);
               }
 
-              final propertyData = b['property'] is Map
-                  ? Map<String, dynamic>.from(b['property'] as Map)
-                  : <String, dynamic>{};
-
               return GestureDetector(
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => BookingDetailsView(bookingData: b, propertyData: propertyData),
-                )),
+                onTap: () => _showHostBookingDetails(context, b),
                 child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1694,6 +1833,26 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                     if (bookingCode.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text('Code: $bookingCode', style: const TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                    ],
+                    if (roomName != null || roomType != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.hotel_outlined, size: 14, color: Color(0xFF426DC2)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              [
+                                if (roomName != null) roomName,
+                                if (roomType != null) '(${roomType[0].toUpperCase()}${roomType.substring(1)})',
+                                if (roomNumber != null) '· Room $roomNumber',
+                              ].join(' '),
+                              style: const TextStyle(fontSize: 13, color: Color(0xFF444444)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                     const SizedBox(height: 10),
                     Row(

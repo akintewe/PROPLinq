@@ -382,7 +382,7 @@ class _HelpSupportViewState extends State<HelpSupportView> with SingleTickerProv
   }
 
   Widget _buildTicketCard(Map<String, dynamic> ticket) {
-    final id = ticket['id']?.toString() ?? '';
+    final id = ticket['uuid']?.toString() ?? ticket['id']?.toString() ?? '';
     final subject = ticket['subject']?.toString() ?? 'No subject';
     final status = ticket['status']?.toString() ?? 'open';
     final createdAt = ticket['created_at']?.toString() ?? '';
@@ -727,12 +727,16 @@ class _TicketDetailViewState extends State<TicketDetailView> {
               ...replies.map((r) {
                 final reply = Map<String, dynamic>.from(r as Map);
                 final message = reply['message']?.toString() ?? reply['body']?.toString() ?? '';
-                final isAdmin = (reply['is_admin'] == true) || (reply['sender_type']?.toString() == 'admin');
+                final senderType = reply['sender_type']?.toString() ?? '';
+                // sender_type "user" = sent by the user (right/blue)
+                // sender_type "agent", "admin", "support", "staff" = received (left/grey)
+                final isMe = senderType == 'user' || (reply['is_admin'] != true && senderType.isEmpty);
+                final isSupport = !isMe;
                 return _buildBubble(
                   message: message,
-                  isMe: !isAdmin,
+                  isMe: isMe,
                   dateStr: reply['created_at']?.toString() ?? '',
-                  senderLabel: isAdmin ? 'Support Team' : null,
+                  senderLabel: isSupport ? 'Support Team' : null,
                 );
               }),
             ],

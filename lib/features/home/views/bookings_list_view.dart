@@ -69,7 +69,11 @@ class _BookingsListViewState extends State<BookingsListView> {
 
         debugPrint('📋 [Bookings] Parsed list length: ${list.length}');
         if (list.isNotEmpty) {
-          debugPrint('📋 [Bookings] First item keys: ${(list[0] as Map).keys.toList()}');
+          final first = list[0] as Map;
+          debugPrint('📋 [Bookings] First item keys: ${first.keys.toList()}');
+          debugPrint('📋 [Bookings] booking_code: ${first['booking_code']}');
+          debugPrint('📋 [Bookings] checkin_code: ${first['checkin_code']}');
+          debugPrint('📋 [Bookings] status: ${first['status']}');
         }
 
         final all = list

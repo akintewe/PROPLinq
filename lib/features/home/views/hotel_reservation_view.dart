@@ -1070,6 +1070,7 @@ class HotelPaymentView extends StatefulWidget {
 
 class _HotelPaymentViewState extends State<HotelPaymentView> {
   String _selectedPaymentMethod = 'pay_now';
+  String _selectedGateway = 'paystack';
   bool _isLoading = false;
   bool _isLoadingBreakdown = true;
   Map<String, dynamic>? _priceBreakdown;
@@ -1098,18 +1099,16 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
       _bd(['base_price', 'base_amount']) ?? _pricePerNight * widget.nights;
 
   double get _serviceFee =>
-      _bd(['service_fee', 'platform_fee']) ?? (_baseAmount * 0.10).roundToDouble();
-
+      _bd(['service_fee', 'platform_fee']) ?? (_baseAmount * 0.02).roundToDouble();
   double get _vatAmount =>
       _bd(['tax', 'vat_on_fee']) ?? (_serviceFee * 0.075).roundToDouble();
-
   double get _totalCost =>
       _bd(['total', 'total_due']) ?? _baseAmount + _serviceFee + _vatAmount;
 
-  // Deposit for pay_on_arrival: 10% of base + 7.5% VAT on that deposit — matches backend's charge_now.
+  // Pay on arrival: 10% of base + full service fee + full VAT
+  // e.g. ₦200k → deposit ₦20k + service fee ₦4k + VAT ₦300 = ₦24,300
   double get _depositBase => (_baseAmount * 0.10).roundToDouble();
-  double get _depositVat => (_depositBase * 0.075).roundToDouble();
-  double get _depositAmount => _depositBase + _depositVat;
+  double get _depositAmount => _depositBase + _serviceFee + _vatAmount;
   double get _remainingAmount => _baseAmount - _depositBase;
 
   String _fmt(double amount) => '₦${amount.toStringAsFixed(0).replaceAllMapped(
@@ -1274,6 +1273,19 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
                       'Pay on Arrival',
                       'Pay a secure deposit of ${_fmt(_depositAmount)} now to lock in your booking dates. The remaining balance of ${_fmt(_remainingAmount)} will be paid directly to the host when you arrive.',
                       false,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Gateway selection
+                    const Text('Payment Gateway', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black)),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: _buildGatewayOption('paystack', 'Paystack')),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildGatewayOption('flutterwave', 'Flutterwave')),
+                      ],
                     ),
 
                     const SizedBox(height: 16),
@@ -1498,7 +1510,9 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
             const SizedBox(height: 6),
             _breakdownRow('Deposit (10%)', _fmt(_depositBase)),
             const SizedBox(height: 6),
-            _breakdownRow('VAT (7.5%)', _fmt(_depositVat)),
+            _breakdownRow('Service fee (2%)', _fmt(_serviceFee)),
+            const SizedBox(height: 6),
+            _breakdownRow('VAT (7.5%)', _fmt(_vatAmount)),
           ] else ...[
             // Pay now: full breakdown
             _breakdownRow(
@@ -1659,6 +1673,34 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
     );
   }
 
+  Widget _buildGatewayOption(String value, String label) {
+    final isSelected = _selectedGateway == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedGateway = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF426DC2) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF426DC2) : const Color(0xFFE9ECEF),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.white : Colors.black,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _processBooking() async {
     if (_isLoading) return;
 
@@ -1712,6 +1754,7 @@ class _HotelPaymentViewState extends State<HotelPaymentView> {
         'guests': widget.guests,
         'adults': widget.adults,
         'payment_type': _selectedPaymentMethod == 'pay_arrival' ? 'pay_on_arrival' : 'full',
+        'gateway': _selectedGateway,
         if (selectedRoomId != null && selectedRoomId.isNotEmpty) 'room_id': selectedRoomId,
       };
 

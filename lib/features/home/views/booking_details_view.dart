@@ -203,70 +203,72 @@ class BookingDetailsView extends StatelessWidget {
                   
                   const SizedBox(height: 32),
                   
-                  // Check-in Code Section
-                  if (bookingData['booking_code'] != null)
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF426DC2),
-                            const Color(0xFF426DC2).withValues(alpha: 0.8),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF426DC2).withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Check-in Code',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                bookingData['booking_code'],
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                  letterSpacing: 2.0,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              IconButton(
-                                icon: const Icon(Icons.copy, color: Colors.white, size: 20),
-                                onPressed: () {
-                                  Clipboard.setData(
-                                    ClipboardData(text: bookingData['booking_code']),
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Check-in code copied!'),
-                                      backgroundColor: Colors.green,
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                },
-                              ),
+                  // Check-in Code Section — show checkin_code (used by agent to verify)
+                  if (bookingData['checkin_code'] != null || bookingData['booking_code'] != null)
+                    (() {
+                      final checkinCode = (bookingData['checkin_code']?.toString()
+                          ?? bookingData['booking_code']?.toString())!;
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF426DC2),
+                              const Color(0xFF426DC2).withValues(alpha: 0.8),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF426DC2).withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Check-in Code',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  checkinCode,
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    letterSpacing: 2.0,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                IconButton(
+                                  icon: const Icon(Icons.copy, color: Colors.white, size: 20),
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: checkinCode));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Check-in code copied!'),
+                                        backgroundColor: Colors.green,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    })(),
                   
                   const SizedBox(height: 32),
                   
@@ -282,7 +284,53 @@ class BookingDetailsView extends StatelessWidget {
                   
                   if (bookingData['user'] != null)
                     const SizedBox(height: 24),
-                  
+
+                  // Room Details
+                  if (bookingData['room'] != null || bookingData['room_name'] != null) ...[
+                    const Text('Room Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!, width: 1),
+                      ),
+                      child: Column(
+                        children: [
+                          if (bookingData['room_name'] != null)
+                            _buildDetailRow('Room Name', bookingData['room_name'].toString()),
+                          if (bookingData['room_type'] != null) ...[
+                            const SizedBox(height: 10),
+                            _buildDetailRow('Room Type', bookingData['room_type'].toString()),
+                          ],
+                          if (bookingData['room'] is Map) ...() {
+                            final room = bookingData['room'] as Map;
+                            return [
+                              if (room['room_number'] != null) ...[
+                                const SizedBox(height: 10),
+                                _buildDetailRow('Room Number', room['room_number'].toString()),
+                              ],
+                              if (room['bed_type'] != null) ...[
+                                const SizedBox(height: 10),
+                                _buildDetailRow('Bed Type', room['bed_type'].toString()),
+                              ],
+                              if (room['floor'] != null) ...[
+                                const SizedBox(height: 10),
+                                _buildDetailRow('Floor', room['floor'].toString()),
+                              ],
+                              if (room['capacity'] != null) ...[
+                                const SizedBox(height: 10),
+                                _buildDetailRow('Capacity', '${room['capacity']} guest${room['capacity'].toString() == "1" ? "" : "s"}'),
+                              ],
+                            ];
+                          }(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
                   // Dates Section
                   const Text(
                     'Stay Details',
@@ -391,6 +439,27 @@ class BookingDetailsView extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (bookingData['platform_fee'] != null) ...[
+                          const SizedBox(height: 12),
+                          Divider(height: 1, color: Colors.grey[300]),
+                          const SizedBox(height: 12),
+                          _buildDetailRow('Service Fee', _formatPrice(bookingData['platform_fee']?.toString())),
+                        ],
+                        if (bookingData['vat_on_fee'] != null) ...[
+                          const SizedBox(height: 10),
+                          _buildDetailRow('VAT', _formatPrice(bookingData['vat_on_fee']?.toString())),
+                        ],
+                        if (bookingData['guest_total'] != null) ...[
+                          const SizedBox(height: 10),
+                          _buildDetailRow('Total (incl. fees)', _formatPrice(bookingData['guest_total']?.toString())),
+                        ],
+                        if (bookingData['payment_type'] != null) ...[
+                          const SizedBox(height: 12),
+                          Divider(height: 1, color: Colors.grey[300]),
+                          const SizedBox(height: 12),
+                          _buildDetailRow('Payment Type',
+                            bookingData['payment_type'].toString() == 'pay_on_arrival' ? 'Pay on Arrival' : 'Full Payment'),
+                        ],
                         if (bookingData['payment_status'] != null) ...[
                           const SizedBox(height: 12),
                           Divider(height: 1, color: Colors.grey[300]),
@@ -398,34 +467,16 @@ class BookingDetailsView extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Payment Status',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                              Text('Payment Status', style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: _getStatusColor(
-                                    bookingData['payment_status'] as String?,
-                                  ),
+                                  color: _getStatusColor(bookingData['payment_status'] as String?),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  (bookingData['payment_status'] as String? ?? 'Pending')
-                                      .toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
+                                  (bookingData['payment_status'] as String? ?? 'Pending').toUpperCase(),
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5),
                                 ),
                               ),
                             ],
@@ -442,6 +493,16 @@ class BookingDetailsView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+        Flexible(child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black), textAlign: TextAlign.end)),
+      ],
     );
   }
 
