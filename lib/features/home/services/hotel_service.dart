@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/storage_service.dart';
 import '../models/room_model.dart';
 
 class HotelService {
@@ -232,20 +235,25 @@ class HotelService {
   /// POST /api/v1/agent/check-in
   Future<ApiResponse<Map<String, dynamic>>> verifyCheckIn(String code) async {
     try {
-      debugPrint('🏨 [CheckIn] Sending code: "$code" (length: ${code.length})');
-      debugPrint('🏨 [CheckIn] Endpoint: ${ApiConstants.agentCheckIn}');
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiConstants.agentCheckIn,
-        body: {'booking_code': code},
-        requiresAuth: true,
-        fromJson: (json) => json,
+      final token = await StorageService().getToken();
+      final uri = Uri.parse('${ApiConstants.apiBaseUrl}${ApiConstants.agentCheckIn}');
+      debugPrint('🏨 [CheckIn] POST $uri');
+      debugPrint('🏨 [CheckIn] body: ${json.encode({'code': code})}');
+      final res = await http.post(uri,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'code': code}),
       );
-      debugPrint('🏨 [CheckIn] statusCode: ${response.statusCode}');
-      debugPrint('🏨 [CheckIn] success: ${response.success}');
-      debugPrint('🏨 [CheckIn] message: ${response.message}');
-      debugPrint('🏨 [CheckIn] data: ${response.data}');
-      debugPrint('🏨 [CheckIn] rawJson: ${response.rawJson}');
-      return response;
+      debugPrint('🏨 [CheckIn] statusCode: ${res.statusCode}');
+      debugPrint('🏨 [CheckIn] body: ${res.body}');
+      final body = json.decode(res.body) as Map<String, dynamic>;
+      final success = res.statusCode >= 200 && res.statusCode < 300 && (body['success'] == true || body['status'] == true);
+      return success
+          ? ApiResponse.success(data: body, message: body['message']?.toString(), rawJson: body)
+          : ApiResponse.error(message: body['message']?.toString() ?? 'Verification failed.', statusCode: res.statusCode);
     } catch (e) {
       debugPrint('🏨 [CheckIn] Error: $e');
       rethrow;
