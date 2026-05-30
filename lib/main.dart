@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_strings.dart';
 import 'core/services/onesignal_service.dart';
@@ -12,7 +13,13 @@ import 'features/splash/views/second_splash_view.dart';
 void main() async {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Lock to portrait on all devices (phone layout, not yet iPad-adapted)
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   // Initialize OneSignal
   await OneSignalService().initialize();
 

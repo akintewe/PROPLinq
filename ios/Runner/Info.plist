@@ -31,6 +31,7 @@
 	<key>UIDeviceFamily</key>
 	<array>
 		<integer>1</integer>
+		<integer>2</integer>
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
@@ -75,8 +76,6 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
