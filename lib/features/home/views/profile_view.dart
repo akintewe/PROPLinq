@@ -800,17 +800,13 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                 
                 // KYC Info Message (only for agents)
                 if (widget.isAgent) _buildKycInfoMessage(),
-                
+
                 // Tenant KYC Section (only for tenants)
                 if (!widget.isAgent) _buildTenantKycSection(context),
-                
-        const SizedBox(height: 40),
-        
+
+        const SizedBox(height: 16),
+
         // Bookings Section (for both agents and home seekers)
-        _buildBookingsSection(),
-        
-        const SizedBox(height: 40),
-        
         // Agent-specific sections
         if (widget.isAgent) ...[
           _buildReceivedBookingsSection(),
@@ -820,6 +816,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
           _buildVerifyCheckinSection(),
           const SizedBox(height: 32),
           _buildCalendarSection(),
+          const SizedBox(height: 32),
+          _buildBookingsSection(),
           // Subscription disabled — moved to website (Apple IAP policy)
           // if (_isSubscriptionEligible()) ...[
           //   const SizedBox(height: 32),
@@ -827,6 +825,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
           // ],
           const SizedBox(height: 32),
           _buildReviewSection(),
+        ] else ...[
+          _buildBookingsSection(),
         ],
         
         const SizedBox(height: 24),
@@ -1300,7 +1300,7 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
     }
     
     return Container(
-      margin: const EdgeInsets.only(top: 16, bottom: 32),
+      margin: const EdgeInsets.only(top: 16, bottom: 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: backgroundColor,

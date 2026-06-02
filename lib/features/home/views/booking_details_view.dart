@@ -202,12 +202,11 @@ class BookingDetailsView extends StatelessWidget {
                     ),
                   
                   const SizedBox(height: 32),
-                  
-                  // Check-in Code Section — show checkin_code (used by agent to verify)
-                  if (bookingData['checkin_code'] != null || bookingData['booking_code'] != null)
+
+                  // Check-in Code
+                  if (bookingData['checkin_code'] != null) ...[
                     (() {
-                      final checkinCode = (bookingData['checkin_code']?.toString()
-                          ?? bookingData['booking_code']?.toString())!;
+                      final checkinCode = bookingData['checkin_code'].toString();
                       return Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -269,9 +268,10 @@ class BookingDetailsView extends StatelessWidget {
                         ),
                       );
                     })(),
-                  
+                  ],
+
                   const SizedBox(height: 32),
-                  
+
                   // Client Info (if available)
                   if (bookingData['user'] != null)
                     _buildInfoSection(
@@ -286,7 +286,7 @@ class BookingDetailsView extends StatelessWidget {
                     const SizedBox(height: 24),
 
                   // Room Details
-                  if (bookingData['room'] != null || bookingData['room_name'] != null) ...[
+                  if (bookingData['room'] != null || bookingData['room_name'] != null || bookingData['booking_code'] != null) ...[
                     const Text('Room Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
                     const SizedBox(height: 16),
                     Container(
@@ -298,8 +298,12 @@ class BookingDetailsView extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          if (bookingData['room_name'] != null)
+                          if (bookingData['booking_code'] != null)
+                            _buildDetailRow('Booking Code', bookingData['booking_code'].toString()),
+                          if (bookingData['room_name'] != null) ...[
+                            const SizedBox(height: 10),
                             _buildDetailRow('Room Name', bookingData['room_name'].toString()),
+                          ],
                           if (bookingData['room_type'] != null) ...[
                             const SizedBox(height: 10),
                             _buildDetailRow('Room Type', bookingData['room_type'].toString()),

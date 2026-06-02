@@ -22,7 +22,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
   late TextEditingController _locationController;
   late TextEditingController _bedroomsController;
   late TextEditingController _bathroomsController;
-  String _selectedStatus = 'available';
+  bool _isActive = true;
   bool _gated = false;
   bool _parking = false;
   List<String> _features = [];
@@ -32,12 +32,27 @@ class _EditPropertyViewState extends State<EditPropertyView> {
     super.initState();
     _titleController = TextEditingController(text: widget.property.title);
     _descriptionController = TextEditingController(text: widget.property.description);
-    _priceController = TextEditingController(text: widget.property.price);
+    _priceController = TextEditingController(text: widget.property.price.replaceAll(RegExp(r'[^\d]'), ''));
     _locationController = TextEditingController(text: widget.property.location);
     _bedroomsController = TextEditingController(text: widget.property.bedrooms?.toString() ?? '');
     _bathroomsController = TextEditingController(text: widget.property.bathrooms?.toString() ?? '');
     _features = List.from(widget.property.features ?? []);
-    _selectedStatus = 'available'; // Default status since PropertyModel doesn't have this field
+
+    // Pre-load gated/parking from existing features
+    final featureLower = _features.map((f) => f.toLowerCase()).toList();
+    _gated = featureLower.any((f) => f.contains('gated'));
+    _parking = featureLower.any((f) => f.contains('parking'));
+
+    // Pre-load is_active from rawJson if available
+    final raw = widget.property.rawJson;
+    if (raw != null) {
+      final activeVal = raw['is_active'];
+      _isActive = activeVal == true || activeVal == 1 || activeVal == '1';
+      final gatedVal = raw['gated'];
+      _gated = gatedVal == true || gatedVal == 1 || gatedVal == '1';
+      final parkingVal = raw['parking'];
+      _parking = parkingVal == true || parkingVal == 1 || parkingVal == '1';
+    }
   }
 
   @override
@@ -176,21 +191,13 @@ class _EditPropertyViewState extends State<EditPropertyView> {
             
             const SizedBox(height: 16),
             
-            // Status Dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedStatus,
-              decoration: const InputDecoration(
-                labelText: 'Status',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'available', child: Text('Available')),
-                DropdownMenuItem(value: 'rented', child: Text('Rented')),
-                DropdownMenuItem(value: 'sold', child: Text('Sold')),
-              ],
+            // Active toggle
+            SwitchListTile(
+              title: const Text('Active (visible to tenants)'),
+              value: _isActive,
               onChanged: (value) {
                 setState(() {
-                  _selectedStatus = value!;
+                  _isActive = value;
                 });
               },
             ),
@@ -287,7 +294,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
         
         // Call the API
         final success = await propertyService.updateProperty(
-          propertyId: widget.property.id,
+          propertyUuid: widget.property.uuid ?? widget.property.id.toString(),
           title: _titleController.text,
           description: _descriptionController.text,
           price: _priceController.text,
@@ -297,7 +304,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
           gated: _gated,
           parking: _parking,
           features: _features,
-          status: _selectedStatus,
+          isActive: _isActive,
         );
 
         // Close loading indicator

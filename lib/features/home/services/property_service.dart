@@ -872,7 +872,7 @@ class PropertyService {
 
   /// Update an existing property
   Future<bool> updateProperty({
-    required int propertyId,
+    required String propertyUuid,
     required String title,
     required String description,
     required String price,
@@ -882,11 +882,9 @@ class PropertyService {
     required bool gated,
     required bool parking,
     required List<String> features,
-    required String status,
+    required bool isActive,
   }) async {
     try {
-
-      // Prepare request body
       final Map<String, dynamic> body = {
         'title': title,
         'description': description,
@@ -897,23 +895,17 @@ class PropertyService {
         'gated': gated,
         'parking': parking,
         'features': features,
-        'status': status,
+        'is_active': isActive,
       };
 
-
       final response = await _apiService.put(
-        '/properties/$propertyId',
+        '/properties/$propertyUuid',
         body: body,
         requiresAuth: true,
       );
 
-      
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (e, stackTrace) {
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
       return false;
     }
   }

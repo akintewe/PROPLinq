@@ -219,15 +219,19 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
     if (_bookings.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 32),
-        child: const Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
           children: [
-            Icon(Icons.calendar_today_outlined, size: 48, color: Color(0xFFDDDDDD)),
-            SizedBox(height: 12),
-            Text('No pending bookings', textAlign: TextAlign.center, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black)),
-            SizedBox(height: 4),
-            Text('Your upcoming bookings will appear here', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Color(0xFF868686))),
+            Icon(Icons.calendar_today_outlined, size: 20, color: Color(0xFFBBBBBB)),
+            SizedBox(width: 12),
+            Text(
+              'No upcoming bookings yet',
+              style: TextStyle(fontSize: 14, color: Color(0xFF868686)),
+            ),
           ],
         ),
       );
@@ -357,6 +361,20 @@ class _BookingCarouselWidgetState extends State<BookingCarouselWidget> {
                       ),
                     ],
                   ),
+                  if (booking['booking_code'] != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.confirmation_number_outlined, size: 12, color: Color(0xFF868686)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Code: ${booking['booking_code']}',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF868686), fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   const SizedBox(height: 6),
 
                   // Price + nights + cancel

@@ -24,33 +24,24 @@ class CurrencyInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    if (newValue.text.isEmpty) {
-      return newValue.copyWith(text: '');
-    }
+    // Strip everything except digits
+    final digits = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
 
-    // Remove all non-digits
-    String digits = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
-    
     if (digits.isEmpty) {
       return newValue.copyWith(text: '');
     }
 
-    // Format with commas
-    String formatted = _addCommas(digits);
-    
-    // Add naira symbol
-    String finalText = '₦$formatted';
-
+    final formatted = _addCommas(digits);
     return newValue.copyWith(
-      text: finalText,
-      selection: TextSelection.collapsed(offset: finalText.length),
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 
   String _addCommas(String value) {
     String result = '';
     int counter = 0;
-    
+
     for (int i = value.length - 1; i >= 0; i--) {
       if (counter == 3) {
         result = ',$result';
@@ -59,7 +50,7 @@ class CurrencyInputFormatter extends TextInputFormatter {
       result = value[i] + result;
       counter++;
     }
-    
+
     return result;
   }
 }
@@ -585,10 +576,11 @@ class _PropertyListingViewState extends State<PropertyListingView> {
           label: _isHotelType
               ? 'Minimum Room Rate (per night)'
               : _isShortletType ? 'Price per night' : 'Price',
-          hintText: (_isHotelType || _isShortletType) ? 'Enter property price' : 'Enter property price',
+          hintText: 'Enter property price',
           controller: _priceController,
           keyboardType: TextInputType.number,
           inputFormatters: [CurrencyInputFormatter()],
+          prefixText: '₦ ',
         ),
         
         const SizedBox(height: 24),

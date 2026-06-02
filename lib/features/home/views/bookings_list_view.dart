@@ -482,6 +482,20 @@ class _BookingsListViewState extends State<BookingsListView> {
                     ],
                   ),
 
+                  if (booking['booking_code'] != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.confirmation_number_outlined, size: 12, color: Color(0xFF868686)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Code: ${booking['booking_code']}',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF868686), fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   const SizedBox(height: 6),
 
                   // Price + nights + cancel

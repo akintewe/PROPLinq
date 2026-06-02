@@ -20,6 +20,7 @@ class CustomTextField extends StatefulWidget {
   final int maxLines;
   final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
+  final String? prefixText;
 
   const CustomTextField({
     super.key,
@@ -40,6 +41,7 @@ class CustomTextField extends StatefulWidget {
     this.maxLines = 1,
     this.maxLength,
     this.inputFormatters,
+    this.prefixText,
   });
 
   @override
@@ -130,6 +132,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   )
                 : widget.suffixIcon,
             prefixIcon: widget.prefixIcon,
+            prefixText: widget.prefixText,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
