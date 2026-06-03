@@ -56,27 +56,88 @@ class _HotelReservationViewState extends State<HotelReservationView> {
   }
 
   void _loadAvailabilityFromRooms() {
-    // Prefer the specific room the user tapped "Book Room" on
+    final rooms = widget.propertyData['rooms'];
+    final roomList = rooms is List ? rooms : <dynamic>[];
+
+    // Find the selected room (or cheapest as fallback)
+    Map<String, dynamic>? targetRoom;
     final selectedRoomId = widget.propertyData['selected_room_uuid']?.toString()
         ?? widget.propertyData['selected_room_id']?.toString();
-    if (selectedRoomId != null && selectedRoomId.isNotEmpty) {
-      _loadAvailability(selectedRoomId);
-      return;
+
+    if (selectedRoomId != null && selectedRoomId.isNotEmpty && roomList.isNotEmpty) {
+      for (final r in roomList) {
+        if (r is Map &&
+            (r['uuid']?.toString() == selectedRoomId ||
+             r['id']?.toString() == selectedRoomId)) {
+          targetRoom = Map<String, dynamic>.from(r);
+          break;
+        }
+      }
     }
 
-    // Fallback: pick the cheapest room
-    final rooms = widget.propertyData['rooms'];
-    if (rooms == null || rooms is! List || rooms.isEmpty) return;
-    final sortedRooms = List<dynamic>.from(rooms);
-    sortedRooms.sort((a, b) {
-      final pa = double.tryParse(a['price']?.toString() ?? '0') ?? 0;
-      final pb = double.tryParse(b['price']?.toString() ?? '0') ?? 0;
-      return pa.compareTo(pb);
-    });
-    final firstRoom = sortedRooms.first;
-    final roomUuid = firstRoom['uuid']?.toString() ?? firstRoom['id']?.toString();
-    if (roomUuid == null) return;
-    _loadAvailability(roomUuid);
+    if (targetRoom == null && roomList.isNotEmpty) {
+      final sorted = List<dynamic>.from(roomList)
+        ..sort((a, b) {
+          final pa = double.tryParse(a['price']?.toString() ?? '0') ?? 0;
+          final pb = double.tryParse(b['price']?.toString() ?? '0') ?? 0;
+          return pa.compareTo(pb);
+        });
+      targetRoom = Map<String, dynamic>.from(sorted.first as Map);
+    }
+
+    // Use available_dates from the room directly if present and non-empty.
+    // Empty list means the agent hasn't set availability — show all dates open.
+    if (targetRoom != null) {
+      final roomAvailableDates = targetRoom['available_dates'];
+      if (roomAvailableDates is List && roomAvailableDates.isNotEmpty) {
+        _computeBlockedFromAvailableDates(roomAvailableDates);
+        // Also try the API in parallel to get more up-to-date data
+        final roomUuid = targetRoom['uuid']?.toString() ?? targetRoom['id']?.toString();
+        if (roomUuid != null) _loadAvailability(roomUuid);
+        return;
+      }
+    }
+
+    // No available_dates on room — fall back to API only
+    if (targetRoom != null) {
+      final roomUuid = targetRoom['uuid']?.toString() ?? targetRoom['id']?.toString();
+      if (roomUuid != null) _loadAvailability(roomUuid);
+    }
+  }
+
+  /// Builds _blockedDates from a property-level available_dates list.
+  /// Every date from today up to 12 months ahead that is NOT in the
+  /// available list is marked as blocked.
+  void _computeBlockedFromAvailableDates(List<dynamic> availableDates) {
+    final available = <String>{};
+    for (final entry in availableDates) {
+      // Each entry may be a plain "YYYY-MM-DD" string or a map with a 'date' key
+      if (entry is String) {
+        available.add(entry);
+      } else if (entry is Map) {
+        final d = entry['date']?.toString();
+        if (d != null) available.add(d);
+      }
+    }
+
+    final blocked = <String>{};
+    final today = DateTime.now();
+    final limit = DateTime(today.year, today.month + 12, today.day);
+    for (DateTime d = DateTime(today.year, today.month, today.day);
+        d.isBefore(limit);
+        d = d.add(const Duration(days: 1))) {
+      final key =
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      if (!available.contains(key)) {
+        blocked.add(key);
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _blockedDates = blocked;
+      });
+    }
   }
 
   Future<void> _loadAvailability(String roomUuid) async {
@@ -111,10 +172,15 @@ class _HotelReservationViewState extends State<HotelReservationView> {
             booked.add(date);
           }
         }
-        setState(() {
-          _blockedDates = blocked;
-          _bookedDates = booked;
-        });
+        debugPrint('🗓️ [Calendar] agent calendar: ${response.data!.length} entries → blocked=${blocked.length}, booked=${booked.length}');
+        if (response.data!.isNotEmpty) debugPrint('🗓️ [Calendar] sample entry: ${response.data!.first}');
+        // Only override room-level data if the API actually returned useful entries
+        if (response.data!.isNotEmpty) {
+          setState(() {
+            _blockedDates = blocked;
+            _bookedDates = booked;
+          });
+        }
       } else {
         // Fallback to public availability endpoint if agent calendar fails (e.g. not logged in)
         await _loadAvailabilityPublic(roomUuid, start, end);
@@ -149,10 +215,14 @@ class _HotelReservationViewState extends State<HotelReservationView> {
             booked.add(date);
           }
         }
-        setState(() {
-          _blockedDates = blocked;
-          _bookedDates = booked;
-        });
+        debugPrint('🗓️ [Calendar] public availability: ${response.data!.length} entries → blocked=${blocked.length}, booked=${booked.length}');
+        if (response.data!.isNotEmpty) debugPrint('🗓️ [Calendar] sample entry: ${response.data!.first}');
+        if (response.data!.isNotEmpty) {
+          setState(() {
+            _blockedDates = blocked;
+            _bookedDates = booked;
+          });
+        }
       }
     } catch (_) {
       // Non-critical — calendar still works without availability data
