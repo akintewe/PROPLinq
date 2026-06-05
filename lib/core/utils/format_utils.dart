@@ -2,6 +2,29 @@
 class FormatUtils {
   FormatUtils._();
 
+  /// Returns a summary string for hotel/shortlet room info on property cards.
+  /// e.g. "5 room types • From ₦50,000/night"
+  /// Returns null for non-hotel/shortlet or when no rooms data is present.
+  static String? roomsUnitsSummary(Map<String, dynamic>? rawJson, String type) {
+    final t = type.toLowerCase();
+    if (t != 'hotel' && t != 'shortlet') return null;
+    final rooms = rawJson?['rooms'];
+    if (rooms is! List || rooms.isEmpty) return null;
+    final count = rooms.length;
+    final label = t == 'shortlet'
+        ? (count == 1 ? 'unit type' : 'unit types')
+        : (count == 1 ? 'room type' : 'room types');
+    double? minPrice;
+    for (final r in rooms) {
+      if (r is Map) {
+        final p = double.tryParse(r['price']?.toString() ?? '');
+        if (p != null && (minPrice == null || p < minPrice)) minPrice = p;
+      }
+    }
+    final fromStr = minPrice != null ? ' • From ${formatPrice(minPrice.toStringAsFixed(0))}/night' : '';
+    return '$count $label$fromStr';
+  }
+
   /// Capitalises the first letter of each word
   /// Example: "individual_agent" -> "Individual_agent", "standard room" -> "Standard Room"
   static String toTitleCase(String s) => s

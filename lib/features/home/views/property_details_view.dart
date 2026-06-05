@@ -1111,23 +1111,32 @@ If you don't have the app, the link will open in your browser where you can down
     }
   }
 
-  /// Check if property is a hotel
+  /// Check if property should show a room/unit picker.
+  /// True for hotels always, and for shortlets with more than one room unit.
   bool _isHotelProperty(Map<String, dynamic> property) {
     final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
-    return propertyType == 'hotel';
+    if (propertyType == 'hotel') return true;
+    if (propertyType == 'shortlet' && _hotelRooms.length > 1) return true;
+    return false;
   }
 
-  /// Build hotel rooms section
+  bool _isMultiUnitShortlet(Map<String, dynamic> property) {
+    final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
+    return propertyType == 'shortlet' && _hotelRooms.length > 1;
+  }
+
+  /// Build hotel rooms / shortlet units section
   Widget _buildHotelRoomsSection(Map<String, dynamic> property) {
+    final sectionTitle = _isMultiUnitShortlet(property) ? 'Available Units' : 'Available Rooms';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section Header
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Text(
-            'Available Rooms',
-            style: TextStyle(
+            sectionTitle,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: Colors.black,
@@ -3180,8 +3189,8 @@ If you don't have the app, the link will open in your browser where you can down
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        isHotel
-                            ? (_selectedRoom != null ? 'Selected Room' : 'From')
+                        (isHotel || _isMultiUnitShortlet(property))
+                            ? (_selectedRoom != null ? (isHotel ? 'Selected Room' : 'Selected Unit') : 'From')
                             : _getPriceLabel(propertyType, isForSale),
                         style: const TextStyle(
                           fontSize: 14,
@@ -3190,10 +3199,10 @@ If you don't have the app, the link will open in your browser where you can down
                       ),
                       Text(
                         () {
-                          if (isHotel && _selectedRoom != null) {
+                          if (_selectedRoom != null) {
                             return _formatPrice(_selectedRoom!.price.toStringAsFixed(0));
                           }
-                          if (isHotel && _hotelRooms.isNotEmpty) {
+                          if (_hotelRooms.isNotEmpty) {
                             final minPrice = _hotelRooms.map((r) => r.price).reduce((a, b) => a < b ? a : b);
                             return _formatPrice(minPrice.toStringAsFixed(0));
                           }
@@ -3222,7 +3231,7 @@ If you don't have the app, the link will open in your browser where you can down
                     child: Container(
                       height: 50,
                       decoration: BoxDecoration(
-                        gradient: (isHotel && _selectedRoom == null)
+                        gradient: ((isHotel || _isMultiUnitShortlet(property)) && _selectedRoom == null)
                             ? null
                             : const LinearGradient(
                                 begin: Alignment(-1.0, 0.0),
@@ -3234,7 +3243,7 @@ If you don't have the app, the link will open in your browser where you can down
                                   Color.fromRGBO(51, 204, 153, 0.8),
                                 ],
                               ),
-                        color: (isHotel && _selectedRoom == null) ? const Color(0xFFE0E0E0) : null,
+                        color: ((isHotel || _isMultiUnitShortlet(property)) && _selectedRoom == null) ? const Color(0xFFE0E0E0) : null,
                         borderRadius: BorderRadius.circular(25),
                       ),
                       child: ElevatedButton(
@@ -3250,11 +3259,20 @@ If you don't have the app, the link will open in your browser where you can down
                             _proceedWithSelectedRoom();
                             return;
                           } else if (isShortlet) {
-                            // Navigate to reservation screen for shortlets — guests allowed, login prompt on Pay
+                            // Multi-unit shortlet: require a unit selection first
+                            if (_hotelRooms.length > 1 && _selectedRoom == null) return;
+                            // Pass selected unit data so calendar loads correct availability
+                            final enriched = Map<String, dynamic>.from(property);
+                            if (_selectedRoom != null) {
+                              enriched['selected_room_id'] = _selectedRoom!.id;
+                              if (_selectedRoom!.uuid != null) enriched['selected_room_uuid'] = _selectedRoom!.uuid;
+                              enriched['selected_room_price'] = _selectedRoom!.price.toString();
+                            }
+                            // Navigate to reservation screen — guests allowed, login prompt on Pay
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) => HotelReservationView(
-                                  propertyData: property,
+                                  propertyData: enriched,
                                   isGuest: widget.isGuest,
                                 ),
                               ),
@@ -3302,7 +3320,7 @@ If you don't have the app, the link will open in your browser where you can down
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: (isHotel && _selectedRoom == null) ? const Color(0xFF999999) : Colors.white,
+                            color: ((isHotel || _isMultiUnitShortlet(property)) && _selectedRoom == null) ? const Color(0xFF999999) : Colors.white,
                           ),
                         ),
                       ),

@@ -1682,6 +1682,22 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     ],
                   ),
                   const SizedBox(height: 12),
+                  () {
+                    final summary = FormatUtils.roomsUnitsSummary(property.rawJson, property.type);
+                    if (summary != null) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.meeting_room_outlined, size: 14, color: Color(0xFF426DC2)),
+                            const SizedBox(width: 4),
+                            Text(summary, style: const TextStyle(fontSize: 12, color: Color(0xFF426DC2), fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }(),
                   Row(
                     children: [
                       Text(
@@ -2794,6 +2810,22 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       ],
                     ),
                     const SizedBox(height: 12),
+                    () {
+                      final summary = FormatUtils.roomsUnitsSummary(property.rawJson, property.type);
+                      if (summary != null) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.meeting_room_outlined, size: 14, color: Color(0xFF426DC2)),
+                              const SizedBox(width: 4),
+                              Text(summary, style: const TextStyle(fontSize: 12, color: Color(0xFF426DC2), fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }(),
                     if ((property.bedrooms != null && property.bedrooms! > 0) ||
                         (property.bathrooms != null && property.bathrooms! > 0)) ...[
                       Row(
@@ -3613,6 +3645,22 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                     ],
                   ),
                   const SizedBox(height: 12),
+                  () {
+                    final summary = FormatUtils.roomsUnitsSummary(property.rawJson, property.type);
+                    if (summary != null) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.meeting_room_outlined, size: 14, color: Color(0xFF426DC2)),
+                            const SizedBox(width: 4),
+                            Text(summary, style: const TextStyle(fontSize: 12, color: Color(0xFF426DC2), fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }(),
                   Row(
                     children: [
                       Text(

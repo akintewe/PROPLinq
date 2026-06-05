@@ -1239,26 +1239,34 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       FormatUtils.formatPrice(property.price),
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF426DC2)),
                     ),
-                    if (property.bedrooms != null && property.bedrooms! > 0)
-                      Row(
-                        children: [
-                          const Icon(Icons.bed_outlined, size: 16, color: Color(0xFF868686)),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${property.bedrooms} bed',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF868686)),
-                          ),
-                          if (property.bathrooms != null && property.bathrooms! > 0) ...[
-                            const SizedBox(width: 12),
-                            const Icon(Icons.bathtub_outlined, size: 16, color: Color(0xFF868686)),
+                    () {
+                      final summary = FormatUtils.roomsUnitsSummary(property.rawJson, property.type);
+                      if (summary != null) {
+                        return Row(
+                          children: [
+                            const Icon(Icons.meeting_room_outlined, size: 14, color: Color(0xFF426DC2)),
                             const SizedBox(width: 4),
-                            Text(
-                              '${property.bathrooms} bath',
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF868686)),
-                            ),
+                            Text(summary, style: const TextStyle(fontSize: 12, color: Color(0xFF426DC2), fontWeight: FontWeight.w500)),
                           ],
-                        ],
-                      ),
+                        );
+                      }
+                      if (property.bedrooms != null && property.bedrooms! > 0) {
+                        return Row(
+                          children: [
+                            const Icon(Icons.bed_outlined, size: 16, color: Color(0xFF868686)),
+                            const SizedBox(width: 4),
+                            Text('${property.bedrooms} bed', style: const TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                            if (property.bathrooms != null && property.bathrooms! > 0) ...[
+                              const SizedBox(width: 12),
+                              const Icon(Icons.bathtub_outlined, size: 16, color: Color(0xFF868686)),
+                              const SizedBox(width: 4),
+                              Text('${property.bathrooms} bath', style: const TextStyle(fontSize: 12, color: Color(0xFF868686))),
+                            ],
+                          ],
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }(),
                   ],
                 ),
               ],
@@ -2851,6 +2859,22 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                       ],
                     ),
                     const SizedBox(height: 12),
+                    () {
+                      final summary = FormatUtils.roomsUnitsSummary(property.rawJson, property.type);
+                      if (summary != null) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.meeting_room_outlined, size: 14, color: Color(0xFF426DC2)),
+                              const SizedBox(width: 4),
+                              Text(summary, style: const TextStyle(fontSize: 12, color: Color(0xFF426DC2), fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }(),
                     if ((property.bedrooms != null && property.bedrooms! > 0) ||
                         (property.bathrooms != null && property.bathrooms! > 0)) ...[
                       Row(
