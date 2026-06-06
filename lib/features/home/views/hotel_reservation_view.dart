@@ -686,6 +686,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
               _calendarLegendDot(const Color(0xFFFFCDD2), 'Booked'),
               _calendarLegendDot(const Color(0xFF426DC2), 'Check-in/out'),
               _calendarLegendDot(const Color(0xFFD6E4F7), 'Range'),
+              _calendarLegendToday(),
             ],
           ),
         ],
@@ -706,6 +707,24 @@ class _HotelReservationViewState extends State<HotelReservationView> {
         ),
         const SizedBox(width: 4),
         Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6C757D))),
+      ],
+    );
+  }
+
+  Widget _calendarLegendToday() {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: const Color(0xFF426DC2), width: 2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        const Text('Today', style: TextStyle(fontSize: 11, color: Color(0xFF6C757D))),
       ],
     );
   }
@@ -802,16 +821,33 @@ class _HotelReservationViewState extends State<HotelReservationView> {
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(8),
+              border: isToday && !isCheckIn && !isCheckOut
+                  ? Border.all(color: const Color(0xFF426DC2), width: 2)
+                  : null,
             ),
             child: Center(
-              child: Text(
-                day.toString(),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: textColor,
-                  decoration: isUnavailable ? TextDecoration.lineThrough : null,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    day.toString(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                      color: textColor,
+                      decoration: isUnavailable ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  if (isToday)
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: (isCheckIn || isCheckOut) ? Colors.white : const Color(0xFF426DC2),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

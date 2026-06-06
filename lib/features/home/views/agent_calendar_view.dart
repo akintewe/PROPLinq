@@ -303,6 +303,8 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
       cells.add(const SizedBox());
     }
 
+    final now = DateTime.now();
+
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(_currentMonth.year, _currentMonth.month, day);
       final dateKey = _fmt(date);
@@ -312,6 +314,9 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
       final entry = _calendarEntries[dateKey];
       final status = entry?['status'] as String?;
       final isBooked = status == 'booked';
+      final isToday = date.year == now.year &&
+                      date.month == now.month &&
+                      date.day == now.day;
 
       cells.add(
         GestureDetector(
@@ -321,16 +326,33 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(8),
+              border: isToday
+                  ? Border.all(color: const Color(0xFF426DC2), width: 2)
+                  : null,
             ),
             child: Center(
-              child: Text(
-                day.toString(),
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: isBooked ? Colors.grey.shade400 : textColor,
-                  decoration: isBooked ? TextDecoration.lineThrough : null,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    day.toString(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                      color: isBooked ? Colors.grey.shade400 : textColor,
+                      decoration: isBooked ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  if (isToday)
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF426DC2),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -381,13 +403,14 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Legend
-                  Row(
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
                       _legendDot(const Color(0xFFFFE0B2), 'Blocked'),
-                      const SizedBox(width: 16),
                       _legendDot(const Color(0xFFFFCDD2), 'Booked'),
-                      const SizedBox(width: 16),
                       _legendDot(const Color(0xFFBBDEFB), 'Selected'),
+                      _legendToday(),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -458,6 +481,24 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
         Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
         const SizedBox(width: 4),
         Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF555555))),
+      ],
+    );
+  }
+
+  Widget _legendToday() {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: const Color(0xFF426DC2), width: 2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        const Text('Today', style: TextStyle(fontSize: 12, color: Color(0xFF555555))),
       ],
     );
   }
