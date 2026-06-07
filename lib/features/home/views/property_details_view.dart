@@ -105,7 +105,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     // Pre-load rooms from navigation data if available
     final property = widget.propertyData ?? _getDefaultProperty();
     final propertyType = property['type']?.toString().toLowerCase() ?? '';
-    if (propertyType == 'hotel') {
+    if (propertyType == 'hotel' || propertyType == 'shortlet') {
       final embeddedRooms = property['rooms'];
       debugPrint('🏨 [PropertyDetailsView] Navigation rooms data: $embeddedRooms');
       if (embeddedRooms != null && embeddedRooms is List && embeddedRooms.isNotEmpty) {
@@ -156,9 +156,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
           });
         }
 
-        // If property is a hotel, load rooms
+        // If property is a hotel or multi-unit shortlet, load rooms
         final propertyType = property['type']?.toString().toLowerCase() ?? '';
-        if (propertyType == 'hotel') {
+        if (propertyType == 'hotel' || propertyType == 'shortlet') {
           // Try to use rooms embedded in the refreshed property response first
           final embeddedRooms = updatedProperty?.rawJson?['rooms'];
           debugPrint('🏨 [PropertyDetailsView] Embedded rooms from refresh: $embeddedRooms');
@@ -177,8 +177,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
               });
               debugPrint('🏨 [PropertyDetailsView] Loaded ${_hotelRooms.length} rooms from property response');
             }
-          } else {
-            // Fall back to dedicated rooms endpoint
+          } else if (propertyType == 'hotel') {
+            // Fall back to dedicated rooms endpoint (hotel only)
             final numericId = property['id'];
             if (numericId != null) _fetchHotelRooms(numericId is int ? numericId : int.tryParse(numericId.toString()) ?? 0);
           }
