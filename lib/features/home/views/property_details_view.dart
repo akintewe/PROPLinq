@@ -1527,7 +1527,11 @@ If you don't have the app, the link will open in your browser where you can down
 
   void _proceedWithSelectedRoom() {
     if (_selectedRoom == null) return;
-    final property = Map<String, dynamic>.from(widget.propertyData ?? _getDefaultProperty());
+    final property = Map<String, dynamic>.from(_currentPropertyData ?? widget.propertyData ?? _getDefaultProperty());
+    // Use the fully loaded rooms list so calendar has all rooms with correct available_dates
+    if (_hotelRooms.isNotEmpty) {
+      property['rooms'] = _hotelRooms.map((r) => r.toJson()..['uuid'] = r.uuid).toList();
+    }
     property['selected_room_id'] = _selectedRoom!.id;
     if (_selectedRoom!.uuid != null) property['selected_room_uuid'] = _selectedRoom!.uuid;
     property['selected_room_price'] = _selectedRoom!.price.toString();
@@ -3266,8 +3270,12 @@ If you don't have the app, the link will open in your browser where you can down
                           } else if (isShortlet) {
                             // Multi-unit shortlet: require a unit selection first
                             if (_isMultiUnitShortlet(property) && _selectedRoom == null) return;
-                            // Pass selected unit data so calendar loads correct availability
-                            final enriched = Map<String, dynamic>.from(property);
+                            // Pass selected unit data + full rooms list so calendar loads correct availability
+                            final enriched = Map<String, dynamic>.from(_currentPropertyData ?? property);
+                            // Override rooms with the fully loaded list (detail endpoint has all units)
+                            if (_hotelRooms.isNotEmpty) {
+                              enriched['rooms'] = _hotelRooms.map((r) => r.toJson()..['uuid'] = r.uuid).toList();
+                            }
                             if (_selectedRoom != null) {
                               enriched['selected_room_id'] = _selectedRoom!.id;
                               if (_selectedRoom!.uuid != null) enriched['selected_room_uuid'] = _selectedRoom!.uuid;
