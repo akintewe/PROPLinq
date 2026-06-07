@@ -1670,9 +1670,11 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         'category': property.category,
         'period': property.category,
         'features': property.features,
-        'image': imageUrls.first, // First image for backward compatibility
-        'images': imageUrls, // All images for carousel
-        'user': property.user?.toJson(), // Include full user data with KYC info
+        'image': imageUrls.first,
+        'images': imageUrls,
+        'rooms': property.rawJson?['rooms'],
+        'has_units': property.rawJson?['has_units'],
+        'user': property.user?.toJson(),
         'agent': {
           'name': property.user?.fullName ?? 'Agent',
           'title': 'Agent',
@@ -3004,6 +3006,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
             'id': property['id'],
+            'uuid': property['uuid'],
             'badges': [property['badges']?.first ?? 'Unverified'],
             'title': property['title'],
             'location': property['location'],
@@ -3013,13 +3016,15 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
             'type': property['type'],
             'category': property['category'],
             'period': property['period'],
-            'features': property['features'], // Pass features from API
-            'imageUrl': property['image'], // Pass image URL from search data
-            'images': property['image'] != null ? [{'full_url': property['image']}] : null, // Pass image in API format
+            'features': property['features'],
+            'imageUrl': property['image'],
+            'images': property['image'] != null ? [{'full_url': property['image']}] : null,
+            'rooms': property['rooms'],
+            'has_units': property['has_units'],
             'description': property['type'] == 'Hotel'
                 ? 'Step into luxury with this fully furnished hotel room located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.'
-                : 'Step into luxury with this fully furnished ${property['type'].toLowerCase()} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
-            'user': property['user'], // Pass full user data with KYC info
+                : 'Step into luxury with this fully furnished ${(property['type'] as String?)?.toLowerCase() ?? 'property'} located in the heart of ${property['location']}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
+            'user': property['user'],
             'agent': {
               'name': property['agent']?['name'] ?? 'Agent',
               'title': property['agent']?['title'] ?? 'Agent',
