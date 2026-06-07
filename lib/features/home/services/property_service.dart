@@ -653,7 +653,7 @@ class PropertyService {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         '${ApiConstants.properties}/$uuid',
-        requiresAuth: true,
+        requiresAuth: false,
         fromJson: (json) => json,
       );
 
