@@ -2114,9 +2114,11 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
                 'features': property.features,
                 'is_promoted': property.rawJson?['is_promoted'] as bool? ?? false, // Pass is_promoted from rawJson
                 'imageUrl': property.imageUrl, // Pass actual image URL from API
-                'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null), // Pass all images
-                'property360_images': property.property360Images, // Pass 360 images
-                'video_url': property.videoUrl, // Pass video URL
+                'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null),
+                'property360_images': property.property360Images,
+                'video_url': property.videoUrl,
+                'rooms': property.rawJson?['rooms'],
+                'has_units': property.rawJson?['has_units'],
                 'user': property.user?.toJson() ?? {
                   'id': _currentUser?.id,
                   'full_name': _currentUser?.fullName ?? 'Agent',

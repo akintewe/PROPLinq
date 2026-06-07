@@ -807,6 +807,8 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
             'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null),
             'property360_images': property.property360Images,
             'video_url': property.videoUrl,
+            'rooms': property.rawJson?['rooms'],
+            'has_units': property.rawJson?['has_units'],
             'user': property.user?.toJson() ?? {
               'id': widget.currentUser?.id,
               'full_name': widget.currentUser?.fullName ?? 'Agent',
