@@ -3119,7 +3119,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                     Row(
                       children: [
                         Text(
-                          property['rating'] as String,
+                          property['rating']?.toString() ?? '0.0',
                           style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFF868686),
