@@ -495,6 +495,7 @@ class _SavedViewState extends State<SavedView> {
         await Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
             'id': property.id,
+            'uuid': property.uuid,
             'badges': [property.user?.verificationStatus ?? 'Unverified'],
             'title': property.title,
             'location': property.location,

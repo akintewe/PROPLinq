@@ -317,6 +317,7 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
             builder: (context) => PropertyDetailsView(
               propertyData: {
                 'id': property.id,
+                'uuid': property.uuid,
                 'badges': [property.user?.verificationStatus ?? 'Unverified'],
                 'title': property.title,
                 'location': property.location,

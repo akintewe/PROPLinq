@@ -2101,7 +2101,8 @@ class _ProfileViewState extends State<ProfileView> with SingleTickerProviderStat
           MaterialPageRoute(
             builder: (context) => PropertyDetailsView(
               propertyData: {
-                'id': property.id, // Pass property ID
+                'id': property.id,
+                'uuid': property.uuid,
                 'badges': ['Verified Agent'],
                 'title': property.title,
                 'location': property.location,

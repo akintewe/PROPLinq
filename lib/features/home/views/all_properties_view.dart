@@ -793,6 +793,7 @@ class _AllPropertiesViewState extends State<AllPropertiesView> {
         builder: (context) => PropertyDetailsView(
           propertyData: {
             'id': property.id,
+            'uuid': property.uuid,
             'badges': ['Verified Agent'],
             'title': property.title,
             'location': property.location,
