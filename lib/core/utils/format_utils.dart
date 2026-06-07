@@ -11,8 +11,13 @@ class FormatUtils {
     final rooms = rawJson?['rooms'];
     if (rooms is! List || rooms.isEmpty) return null;
     final count = rooms.length;
-    // For shortlets, only show unit info if there are multiple units
-    if (t == 'shortlet' && count < 2) return null;
+    // For shortlets: only show unit summary when has_units is true (multi-unit)
+    // Fall back to count > 1 if has_units not present
+    if (t == 'shortlet') {
+      final hasUnits = rawJson?['has_units'];
+      final isMultiUnit = hasUnits == true || hasUnits == 1 || hasUnits == '1';
+      if (!isMultiUnit && count < 2) return null;
+    }
     final label = t == 'shortlet'
         ? (count == 1 ? 'unit type' : 'unit types')
         : (count == 1 ? 'room type' : 'room types');

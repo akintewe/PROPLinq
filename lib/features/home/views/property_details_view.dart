@@ -1112,17 +1112,22 @@ If you don't have the app, the link will open in your browser where you can down
   }
 
   /// Check if property should show a room/unit picker.
-  /// True for hotels always, and for shortlets with more than one room unit.
+  /// True for hotels always, and for shortlets with has_units: true.
   bool _isHotelProperty(Map<String, dynamic> property) {
     final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
     if (propertyType == 'hotel') return true;
-    if (propertyType == 'shortlet' && _hotelRooms.length > 1) return true;
+    if (propertyType == 'shortlet' && _isMultiUnitShortlet(property)) return true;
     return false;
   }
 
   bool _isMultiUnitShortlet(Map<String, dynamic> property) {
     final propertyType = (property['type'] as String?)?.toLowerCase() ?? '';
-    return propertyType == 'shortlet' && _hotelRooms.length > 1;
+    if (propertyType != 'shortlet') return false;
+    // has_units is the authoritative flag from the backend
+    final hasUnits = property['has_units'];
+    if (hasUnits == true || hasUnits == 1 || hasUnits == '1') return true;
+    // Fallback: if has_units not present, use room count > 1
+    return _hotelRooms.length > 1;
   }
 
   /// Build hotel rooms / shortlet units section
@@ -3260,7 +3265,7 @@ If you don't have the app, the link will open in your browser where you can down
                             return;
                           } else if (isShortlet) {
                             // Multi-unit shortlet: require a unit selection first
-                            if (_hotelRooms.length > 1 && _selectedRoom == null) return;
+                            if (_isMultiUnitShortlet(property) && _selectedRoom == null) return;
                             // Pass selected unit data so calendar loads correct availability
                             final enriched = Map<String, dynamic>.from(property);
                             if (_selectedRoom != null) {
