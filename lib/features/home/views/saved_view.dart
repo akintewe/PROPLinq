@@ -507,6 +507,8 @@ class _SavedViewState extends State<SavedView> {
             'features': property.features,
             'imageUrl': property.imageUrl,
             'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null,
+            'rooms': property.rawJson?['rooms'],
+            'has_units': property.rawJson?['has_units'],
             'user': property.user?.toJson(),
             'agent': {
               'name': property.user?.fullName ?? 'Agent',

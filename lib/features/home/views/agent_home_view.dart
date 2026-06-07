@@ -1454,6 +1454,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                           : 'Step into luxury with this fully furnished ${property.type.toLowerCase()} located in the heart of ${property.location}. With modern finishes, spacious rooms, a fitted kitchen, and round-the-clock security, it\'s perfect for professionals, small families, or remote workers seeking comfort and convenience.',
                       'user': property.user?.toJson(), // Pass actual user data with KYC info
                       'rooms': property.rawJson?['rooms'],
+                      'has_units': property.rawJson?['has_units'],
                       'agent': {
                         'name': property.user?.fullName ?? 'Agent',
                         'title': 'Agent',
@@ -2104,6 +2105,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                                 'video_url': property.videoUrl,
                                 'user': property.user?.toJson(),
                                 'rooms': property.rawJson?['rooms'],
+                      'has_units': property.rawJson?['has_units'],
                                 'agent': {
                                   'name': property.user?.fullName ?? 'Agent',
                                   'title': 'Agent',
@@ -3452,6 +3454,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
                       'video_url': property.videoUrl, // Pass video URL from API
                                 'user': property.user?.toJson(), // Pass actual user data from API
                                 'rooms': property.rawJson?['rooms'],
+                      'has_units': property.rawJson?['has_units'],
                                 'agent': {
                                   'name': property.user?.fullName ?? 'Agent',
                                   'title': 'Agent',

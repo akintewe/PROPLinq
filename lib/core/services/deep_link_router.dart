@@ -223,7 +223,9 @@ class DeepLinkRouter {
       'area': property.area,
       'features': property.features,
       'isLiked': property.isFavorite,
-      'rating': '(5.0)', // Default rating - PropertyModel doesn't have rating field yet
+      'rating': '(5.0)',
+      'rooms': property.rawJson?['rooms'],
+      'has_units': property.rawJson?['has_units'],
       'user': userMap,
       'badges': property.user != null && property.user!.isVerified
           ? ['Verified Agent']

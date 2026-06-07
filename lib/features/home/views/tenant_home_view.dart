@@ -1079,6 +1079,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                                 'video_url': property.videoUrl,
                                 'user': property.user?.toJson(),
                                 'rooms': property.rawJson?['rooms'],
+                      'has_units': property.rawJson?['has_units'],
                                 'agent': {
                                   'name': property.user?.fullName ?? 'Agent',
                                   'title': 'Agent',
