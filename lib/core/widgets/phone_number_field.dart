@@ -75,8 +75,8 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
 
   void _onChanged() {
     final local = _displayController.text.replaceAll(RegExp(r'[^\d]'), '');
-    final countryDigits = _countryCodes[_selectedIndex]['digits']!;
-    widget.controller.text = local.isEmpty ? '' : '$countryDigits$local';
+    final code = _countryCodes[_selectedIndex]['code']!; // e.g. '+234'
+    widget.controller.text = local.isEmpty ? '' : '$code$local';
   }
 
   void _selectCountry() async {
