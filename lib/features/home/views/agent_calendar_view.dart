@@ -50,7 +50,11 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
     if (roomUuid == null) return;
     setState(() => _isLoading = true);
 
-    final startOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final now = DateTime.now();
+    final isCurrentMonth = _currentMonth.year == now.year && _currentMonth.month == now.month;
+    final startOfMonth = isCurrentMonth
+        ? DateTime(now.year, now.month, now.day)
+        : DateTime(_currentMonth.year, _currentMonth.month, 1);
     final endOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
 
     try {

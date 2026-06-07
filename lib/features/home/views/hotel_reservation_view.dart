@@ -142,7 +142,7 @@ class _HotelReservationViewState extends State<HotelReservationView> {
 
   Future<void> _loadAvailability(String roomUuid) async {
     final now = DateTime.now();
-    final start = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
+    final start = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final end3Months = DateTime(now.year, now.month + 3, 0);
     final end = '${end3Months.year}-${end3Months.month.toString().padLeft(2, '0')}-${end3Months.day.toString().padLeft(2, '0')}';
     try {
