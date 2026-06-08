@@ -270,6 +270,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
     _featuredScrollController = ScrollController();
     _homeScrollController = ScrollController();
+    _homeScrollController.addListener(_onHomeScroll);
 
     // Wire up global message notification service
     MessageNotificationService().badgeCountNotifier.addListener(_onUnreadCountChanged);
@@ -303,6 +304,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     MessageNotificationService().badgeCountNotifier.removeListener(_onUnreadCountChanged);
     _animationController.dispose();
     _featuredScrollController.dispose();
+    _homeScrollController.removeListener(_onHomeScroll);
     _homeScrollController.dispose();
     super.dispose();
   }
@@ -409,6 +411,37 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
   }
 
+  void _onHomeScroll() {
+    if (!_homeScrollController.hasClients) return;
+    final pos = _homeScrollController.position;
+    // Load more when within 400px of the bottom
+    if (pos.pixels >= pos.maxScrollExtent - 400 &&
+        !_isLoadingMoreProperties &&
+        _hasMorePages) {
+      _fetchMoreProperties();
+    }
+  }
+
+  Future<void> _fetchMoreProperties() async {
+    if (_isLoadingMoreProperties || !_hasMorePages) return;
+    setState(() => _isLoadingMoreProperties = true);
+    try {
+      final nextPage = _currentPage + 1;
+      final response = await _propertyService.fetchPropertiesPaginated(page: nextPage);
+      final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+      if (mounted) {
+        setState(() {
+          _properties.addAll(properties);
+          _currentPage = nextPage;
+          _hasMorePages = properties.length >= 12;
+          _isLoadingMoreProperties = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMoreProperties = false);
+    }
+  }
+
   Future<void> _fetchProperties({bool isRefresh = false}) async {
     try {
       setState(() {
@@ -416,95 +449,43 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         if (isRefresh) {
           _currentPage = 1;
           _properties = [];
+          _hasMorePages = false;
         }
       });
 
-      // Fetch ALL pages at once
-      // Note: API has a bug where lastPage is always 1 and total is always 0
-      // So we fetch pages until we get less than 12 items (empty or partial page).
-      // Hard cap at 20 pages to guard against the API returning the same data forever.
-      List<PropertyModel> allProperties = [];
-      int currentPage = 1;
-      bool hasMorePages = true;
-      const int maxPages = 20;
+      // Fetch page 1 and display immediately
+      final response = await _propertyService.fetchPropertiesPaginated(page: 1);
+      final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
-      while (hasMorePages && currentPage <= maxPages) {
-        print('🟢🟢🟢 [TenantHomeView] ========================================');
-        print('🟢 [TenantHomeView] Requesting page: $currentPage');
-
-        final response = await _propertyService.fetchPropertiesPaginated(page: currentPage);
-
-        print('🟢 [TenantHomeView] Response received:');
-        print('   - currentPage: ${response.currentPage}');
-        print('   - lastPage: ${response.lastPage}');
-        print('   - total: ${response.total}');
-        print('   - perPage: ${response.perPage}');
-        print('   - hasMorePages: ${response.hasMorePages}');
-        print('   - properties in response: ${response.properties.length}');
-        print('   - nextPageUrl: ${response.nextPageUrl}');
-        print('🟢 [TenantHomeView] Full response: $response');
-
-        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
-
-        // If no properties returned, stop fetching
-        if (properties.isEmpty) {
-          print('🟢 [TenantHomeView] No more properties, stopping at page $currentPage');
-          break;
-        }
-
-        allProperties.addAll(properties);
-
-        print('🟢 [TenantHomeView] Fetched page $currentPage with ${properties.length} properties');
-        print('🟢 [TenantHomeView] Total accumulated so far: ${allProperties.length}');
-
-        // Check if we should continue fetching
-        // If we got a full page (12 items), there might be more
-        if (properties.length < 12) {
-          print('🟢 [TenantHomeView] Received partial page (${properties.length} < 12), no more pages');
-          hasMorePages = false;
-        } else {
-          print('🟢 [TenantHomeView] Received full page (${properties.length}), checking next page');
-          currentPage++;
-        }
-      }
-
-      print('🟢 [TenantHomeView] Total properties fetched: ${allProperties.length}');
-      print('🟢 [TenantHomeView] Featured properties count: ${allProperties.where((p) => p.isFeatured).length}');
-
-      // Always update featured properties from main list
-      final featuredFromMain = allProperties.where((p) => p.isFeatured).toList();
+      // Update featured from first page
+      final featuredFromMain = properties.where((p) => p.isFeatured).toList();
       if (featuredFromMain.isNotEmpty) {
+        if (mounted) setState(() => _promotedProperties = featuredFromMain);
+      } else if (isRefresh && mounted) {
+        setState(() => _promotedProperties = []);
+      }
+
+      if (mounted) {
         setState(() {
-          _promotedProperties = featuredFromMain;
-        });
-      } else if (_promotedProperties.isNotEmpty && isRefresh) {
-        // If no featured properties found but we had some before, clear them on refresh
-        setState(() {
-          _promotedProperties = [];
+          _properties = properties;
+          _currentPage = 1;
+          _hasMorePages = properties.length >= 12;
+          _isLoadingProperties = false;
         });
       }
 
-      if (allProperties.isNotEmpty) {
-        allProperties.shuffle();
-      }
-
-      setState(() {
-        _properties = allProperties;
-        _currentPage = currentPage;
-        _lastPage = currentPage;
-        _hasMorePages = false;
-        _isLoadingProperties = false;
-      });
-
-      // Start auto-scrolling after properties are loaded
       _startFeaturedAutoScroll();
       _maybeShowInitialBottomSheet();
+
+      // Background: fetch remaining pages and append silently
+      if (_hasMorePages) {
+        _fetchRemainingPagesInBackground(startPage: 2);
+      }
     } catch (e) {
       setState(() {
         _isLoadingProperties = false;
       });
 
-      // Show error message to user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -517,6 +498,32 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
   }
 
+
+  /// Silently fetches remaining pages in the background and appends to the list.
+  Future<void> _fetchRemainingPagesInBackground({required int startPage}) async {
+    int page = startPage;
+    const int maxPages = 20;
+    while (page <= maxPages) {
+      if (!mounted) return;
+      try {
+        final response = await _propertyService.fetchPropertiesPaginated(page: page);
+        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+        if (properties.isEmpty) break;
+        if (mounted) {
+          setState(() {
+            _properties.addAll(properties);
+            _currentPage = page;
+            _hasMorePages = properties.length >= 12;
+          });
+        }
+        if (properties.length < 12) break;
+        page++;
+      } catch (_) {
+        break;
+      }
+    }
+    if (mounted) setState(() => _hasMorePages = false);
+  }
 
   Future<void> _fetchPromotedProperties() async {
     try {
@@ -2119,15 +2126,31 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
                 )
             : () {
                 final filteredProperties = _getFilteredProperties();
-                return filteredProperties.isEmpty
-                    ? _buildNoPropertiesFound()
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filteredProperties.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 16),
-                        itemBuilder: (context, index) => AnimatedListItem(index: index, child: _buildPropertyListItem(index, filteredProperties)),
-                      );
+                if (filteredProperties.isEmpty) return _buildNoPropertiesFound();
+                return Column(
+                  children: [
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: filteredProperties.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      itemBuilder: (_, index) => AnimatedListItem(
+                        index: index,
+                        child: _buildPropertyListItem(index, filteredProperties),
+                      ),
+                    ),
+                    if (_isLoadingMoreProperties)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF426DC2),
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
               }(),
         ],
       ),

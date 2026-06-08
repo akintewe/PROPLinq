@@ -389,94 +389,38 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         if (isRefresh) {
           _currentPage = 1;
           _properties = [];
+          _hasMorePages = false;
         }
       });
 
-      // Fetch ALL pages at once
-      // Note: API has a bug where lastPage is always 1 and total is always 0
-      // So we fetch pages until we get less than 12 items (empty or partial page).
-      // Hard cap at 20 pages to guard against the API returning the same data forever.
-      List<PropertyModel> allProperties = [];
-      int currentPage = 1;
-      bool hasMorePages = true;
-      const int maxPages = 20;
+      // Fetch page 1 and display immediately
+      final response = await _propertyService.fetchPropertiesPaginated(page: 1);
+      final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
-      while (hasMorePages && currentPage <= maxPages) {
-        print('🟡🟡🟡 [AgentHomeView] ========================================');
-        print('🟡 [AgentHomeView] Requesting page: $currentPage');
-
-        final response = await _propertyService.fetchPropertiesPaginated(page: currentPage);
-
-        print('🟡 [AgentHomeView] Response received:');
-        print('   - currentPage: ${response.currentPage}');
-        print('   - lastPage: ${response.lastPage}');
-        print('   - total: ${response.total}');
-        print('   - perPage: ${response.perPage}');
-        print('   - hasMorePages: ${response.hasMorePages}');
-        print('   - properties in response: ${response.properties.length}');
-        print('   - nextPageUrl: ${response.nextPageUrl}');
-        print('🟡 [AgentHomeView] Full response: $response');
-
-        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
-
-        // If no properties returned, stop fetching
-        if (properties.isEmpty) {
-          print('🟡 [AgentHomeView] No more properties, stopping at page $currentPage');
-          break;
-        }
-
-        allProperties.addAll(properties);
-
-        print('🟡 [AgentHomeView] Fetched page $currentPage with ${properties.length} properties');
-        print('🟡 [AgentHomeView] Total accumulated so far: ${allProperties.length}');
-
-        // Check if we should continue fetching
-        // If we got a full page (12 items), there might be more
-        if (properties.length < 12) {
-          print('🟡 [AgentHomeView] Received partial page (${properties.length} < 12), no more pages');
-          hasMorePages = false;
-        } else {
-          print('🟡 [AgentHomeView] Received full page (${properties.length}), checking next page');
-          currentPage++;
-        }
-      }
-
-      print('🟡 [AgentHomeView] Total properties fetched: ${allProperties.length}');
-      print('🟡 [AgentHomeView] Featured properties count: ${allProperties.where((p) => p.isFeatured).length}');
-
-      // Always update featured properties from main list
-      final featuredFromMain = allProperties.where((p) => p.isFeatured).toList();
+      final featuredFromMain = properties.where((p) => p.isFeatured).toList();
       if (featuredFromMain.isNotEmpty) {
+        if (mounted) setState(() => _promotedProperties = featuredFromMain);
+      } else if (isRefresh && mounted) {
+        setState(() => _promotedProperties = []);
+      }
+
+      if (mounted) {
         setState(() {
-          _promotedProperties = featuredFromMain;
-        });
-      } else if (_promotedProperties.isNotEmpty && isRefresh) {
-        // If no featured properties found but we had some before, clear them on refresh
-        setState(() {
-          _promotedProperties = [];
+          _properties = properties;
+          _currentPage = 1;
+          _hasMorePages = properties.length >= 12;
+          _isLoadingProperties = false;
         });
       }
 
-      if (allProperties.isNotEmpty) {
-        allProperties.shuffle();
-      }
-
-      setState(() {
-        _properties = allProperties;
-        _currentPage = currentPage;
-        _lastPage = currentPage;
-        _hasMorePages = false;
-        _isLoadingProperties = false;
-      });
-
-      // Start auto-scrolling after properties are loaded
       _startFeaturedAutoScroll();
-    } catch (e) {
-      setState(() {
-        _isLoadingProperties = false;
-      });
 
-      // Show error message to user
+      // Background: fetch remaining pages silently
+      if (_hasMorePages) {
+        _fetchRemainingPagesInBackground(startPage: 2);
+      }
+    } catch (e) {
+      setState(() => _isLoadingProperties = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -487,6 +431,31 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         );
       }
     }
+  }
+
+  Future<void> _fetchRemainingPagesInBackground({required int startPage}) async {
+    int page = startPage;
+    const int maxPages = 20;
+    while (page <= maxPages) {
+      if (!mounted) return;
+      try {
+        final response = await _propertyService.fetchPropertiesPaginated(page: page);
+        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+        if (properties.isEmpty) break;
+        if (mounted) {
+          setState(() {
+            _properties.addAll(properties);
+            _currentPage = page;
+            _hasMorePages = properties.length >= 12;
+          });
+        }
+        if (properties.length < 12) break;
+        page++;
+      } catch (_) {
+        break;
+      }
+    }
+    if (mounted) setState(() => _hasMorePages = false);
   }
 
 
