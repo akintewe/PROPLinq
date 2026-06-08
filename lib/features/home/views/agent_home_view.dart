@@ -31,8 +31,6 @@ import '../../finance/views/complete_kyc_view.dart';
 import '../services/property_service.dart';
 import '../services/favorite_service.dart';
 import '../models/property_model.dart';
-import '../models/paginated_properties_response.dart';
-import '../../../core/widgets/ai_chat_fab.dart';
 import '../../../core/services/message_notification_service.dart';
 
 // Image carousel widget for agent property cards
@@ -248,6 +246,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
 
     _featuredScrollController = ScrollController();
     _homeScrollController = ScrollController();
+    _homeScrollController.addListener(_onHomeScroll);
 
     // Start promotional message rotation
     _startPromoMessageRotation();
@@ -382,6 +381,36 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     }
   }
 
+  void _onHomeScroll() {
+    if (!_homeScrollController.hasClients) return;
+    final pos = _homeScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 400 &&
+        !_isLoadingMoreProperties &&
+        _hasMorePages) {
+      _fetchMoreProperties();
+    }
+  }
+
+  Future<void> _fetchMoreProperties() async {
+    if (_isLoadingMoreProperties || !_hasMorePages) return;
+    setState(() => _isLoadingMoreProperties = true);
+    try {
+      final nextPage = _currentPage + 1;
+      final response = await _propertyService.fetchPropertiesPaginated(page: nextPage);
+      final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+      if (mounted) {
+        setState(() {
+          _properties.addAll(properties);
+          _currentPage = nextPage;
+          _hasMorePages = properties.length >= 12;
+          _isLoadingMoreProperties = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMoreProperties = false);
+    }
+  }
+
   Future<void> _fetchProperties({bool isRefresh = false}) async {
     try {
       setState(() {
@@ -393,7 +422,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         }
       });
 
-      // Fetch page 1 and display immediately
       final response = await _propertyService.fetchPropertiesPaginated(page: 1);
       final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
@@ -414,11 +442,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
       }
 
       _startFeaturedAutoScroll();
-
-      // Background: fetch remaining pages silently
-      if (_hasMorePages) {
-        _fetchRemainingPagesInBackground(startPage: 2);
-      }
     } catch (e) {
       setState(() => _isLoadingProperties = false);
       if (mounted) {
@@ -431,31 +454,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         );
       }
     }
-  }
-
-  Future<void> _fetchRemainingPagesInBackground({required int startPage}) async {
-    int page = startPage;
-    const int maxPages = 20;
-    while (page <= maxPages) {
-      if (!mounted) return;
-      try {
-        final response = await _propertyService.fetchPropertiesPaginated(page: page);
-        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
-        if (properties.isEmpty) break;
-        if (mounted) {
-          setState(() {
-            _properties.addAll(properties);
-            _currentPage = page;
-            _hasMorePages = properties.length >= 12;
-          });
-        }
-        if (properties.length < 12) break;
-        page++;
-      } catch (_) {
-        break;
-      }
-    }
-    if (mounted) setState(() => _hasMorePages = false);
   }
 
 
@@ -2141,15 +2139,28 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
               )
             : () {
                 final filteredProperties = _getFilteredProperties();
-                return filteredProperties.isEmpty
-                    ? _buildNoPropertiesFound()
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filteredProperties.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 16),
-                        itemBuilder: (context, index) => AnimatedListItem(index: index, child: _buildPropertyListItem(index, filteredProperties)),
-                      );
+                if (filteredProperties.isEmpty) return _buildNoPropertiesFound();
+                return Column(
+                  children: [
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: filteredProperties.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) => AnimatedListItem(index: index, child: _buildPropertyListItem(index, filteredProperties)),
+                    ),
+                    if (_isLoadingMoreProperties)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF426DC2),
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
               }(),
         ],
       ),

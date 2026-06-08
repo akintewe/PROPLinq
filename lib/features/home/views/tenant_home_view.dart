@@ -24,9 +24,7 @@ import '../../finance/views/agent_kyc_view.dart';
 import '../services/property_service.dart';
 import '../services/favorite_service.dart';
 import '../models/property_model.dart';
-import '../models/paginated_properties_response.dart';
 import 'property_details_view.dart';
-import '../../../core/widgets/ai_chat_fab.dart';
 import '../../../core/services/message_notification_service.dart';
 
 // Image carousel widget for property cards
@@ -477,10 +475,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       _startFeaturedAutoScroll();
       _maybeShowInitialBottomSheet();
 
-      // Background: fetch remaining pages and append silently
-      if (_hasMorePages) {
-        _fetchRemainingPagesInBackground(startPage: 2);
-      }
     } catch (e) {
       setState(() {
         _isLoadingProperties = false;
@@ -496,33 +490,6 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         );
       }
     }
-  }
-
-
-  /// Silently fetches remaining pages in the background and appends to the list.
-  Future<void> _fetchRemainingPagesInBackground({required int startPage}) async {
-    int page = startPage;
-    const int maxPages = 20;
-    while (page <= maxPages) {
-      if (!mounted) return;
-      try {
-        final response = await _propertyService.fetchPropertiesPaginated(page: page);
-        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
-        if (properties.isEmpty) break;
-        if (mounted) {
-          setState(() {
-            _properties.addAll(properties);
-            _currentPage = page;
-            _hasMorePages = properties.length >= 12;
-          });
-        }
-        if (properties.length < 12) break;
-        page++;
-      } catch (_) {
-        break;
-      }
-    }
-    if (mounted) setState(() => _hasMorePages = false);
   }
 
   Future<void> _fetchPromotedProperties() async {

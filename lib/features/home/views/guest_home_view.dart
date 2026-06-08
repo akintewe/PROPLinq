@@ -40,6 +40,9 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
   bool _isLoadingProperties = true;
   bool _isLoadingPromotedProperties = true;
   bool _isShowingSearchResults = false;
+  int _currentPage = 1;
+  bool _hasMorePages = false;
+  bool _isLoadingMoreProperties = false;
   String _selectedLocation = '';
   String _selectedCategory = 'All';
   List<PropertyModel> _filteredProperties = [];
@@ -53,6 +56,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     )..repeat();
 
     _homeScrollController = ScrollController();
+    _homeScrollController.addListener(_onHomeScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initializeLocationBasedDiscovery();
@@ -96,38 +100,58 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     }
   }
 
+  void _onHomeScroll() {
+    if (!_homeScrollController.hasClients) return;
+    final pos = _homeScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 400 &&
+        !_isLoadingMoreProperties &&
+        _hasMorePages) {
+      _fetchMoreProperties();
+    }
+  }
+
+  Future<void> _fetchMoreProperties() async {
+    if (_isLoadingMoreProperties || !_hasMorePages) return;
+    setState(() => _isLoadingMoreProperties = true);
+    try {
+      final nextPage = _currentPage + 1;
+      final response = await _propertyService.fetchPropertiesPaginatedPublic(page: nextPage);
+      final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+      if (mounted) {
+        setState(() {
+          _properties.addAll(properties);
+          _currentPage = nextPage;
+          _hasMorePages = properties.length >= 12;
+          _isLoadingMoreProperties = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMoreProperties = false);
+    }
+  }
+
   Future<void> _fetchProperties({bool isRefresh = false}) async {
     try {
       setState(() {
         _isLoadingProperties = true;
-        if (isRefresh) _properties = [];
+        if (isRefresh) {
+          _properties = [];
+          _currentPage = 1;
+          _hasMorePages = false;
+        }
       });
 
-      List<PropertyModel> allProperties = [];
-      int currentPage = 1;
-      bool hasMorePages = true;
-      const int maxPages = 50; // safety cap
+      final response = await _propertyService.fetchPropertiesPaginatedPublic(page: 1);
+      final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
-      while (hasMorePages && currentPage <= maxPages) {
-        final response = await _propertyService.fetchPropertiesPaginatedPublic(page: currentPage);
-        final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
-        if (properties.isEmpty) break;
-        allProperties.addAll(properties);
-        if (properties.length < 12) {
-          hasMorePages = false;
-        } else {
-          currentPage++;
-        }
-      }
-
-      if (allProperties.isNotEmpty) allProperties.shuffle();
-
-      final featured = allProperties.where((p) => p.isFeatured).toList();
+      final featured = properties.where((p) => p.isFeatured).toList();
 
       if (mounted) {
         setState(() {
-          _properties = allProperties;
+          _properties = properties;
           if (featured.isNotEmpty) _promotedProperties = featured;
+          _currentPage = 1;
+          _hasMorePages = properties.length >= 12;
           _isLoadingProperties = false;
         });
       }
@@ -983,8 +1007,23 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
             ...List.generate(3, (_) => _buildShimmerPropertyCard())
           else if (filteredProperties.isEmpty)
             _buildNoPropertiesFound()
-          else
+          else ...[
             ...filteredProperties.asMap().entries.map((e) => _buildPropertyCard(e.key, filteredProperties)),
+            if (_isLoadingMoreProperties)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF426DC2)),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );
@@ -1237,59 +1276,6 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCompactPropertyCard(PropertyModel property) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 180,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(property.imageUrl ?? 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop&crop=center'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(property.title,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const Icon(Icons.location_on, size: 14, color: Color(0xFF666666)),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(property.location,
-                          style: const TextStyle(fontSize: 13, color: Color(0xFF666666)),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                  ]),
-                  const SizedBox(height: 8),
-                  Text(FormatUtils.formatPrice(property.price),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF426DC2))),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
