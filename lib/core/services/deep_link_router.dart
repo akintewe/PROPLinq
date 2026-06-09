@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:proplinq/features/home/services/property_service.dart';
 import 'package:proplinq/features/home/models/property_model.dart';
 import 'package:proplinq/features/home/views/property_details_view.dart';
+import 'package:proplinq/core/services/storage_service.dart';
 
 /// Router for handling deep link navigation
 class DeepLinkRouter {
@@ -10,6 +11,7 @@ class DeepLinkRouter {
   DeepLinkRouter._internal();
 
   final PropertyService _propertyService = PropertyService();
+  final StorageService _storageService = StorageService();
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   /// Navigate to property details from deep link
@@ -91,28 +93,30 @@ class DeepLinkRouter {
       // Convert PropertyModel to Map for PropertyDetailsView
       final propertyData = _propertyModelToMap(propertyModel);
 
+      final isLoggedIn = await _storageService.isLoggedIn();
+      final isGuest = !isLoggedIn;
+
       // Navigate to property details - use root navigator to ensure it works from any screen
       final navContext = context ?? navigatorKey.currentContext;
       if (navContext != null && navContext.mounted) {
         try {
-          // Use rootNavigator and pushReplacement if we're coming from deep link
-          // This ensures we can navigate even if there's no valid context on current screen
           Navigator.of(navContext, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) => PropertyDetailsView(
                 propertyData: propertyData,
-                isHomeSeeker: true, // Default to home seeker view
+                isHomeSeeker: true,
+                isGuest: isGuest,
               ),
             ),
           );
-        } catch (e, stackTrace) {
-          // Try with regular navigator as fallback
+        } catch (e) {
           try {
             Navigator.of(navContext).push(
               MaterialPageRoute(
                 builder: (context) => PropertyDetailsView(
                   propertyData: propertyData,
                   isHomeSeeker: true,
+                  isGuest: isGuest,
                 ),
               ),
             );
@@ -121,7 +125,6 @@ class DeepLinkRouter {
           }
         }
       } else {
-        // Try to use navigatorKey directly
         if (navigatorKey.currentContext != null && navigatorKey.currentContext!.mounted) {
           try {
             Navigator.of(navigatorKey.currentContext!, rootNavigator: true).push(
@@ -129,6 +132,7 @@ class DeepLinkRouter {
                 builder: (context) => PropertyDetailsView(
                   propertyData: propertyData,
                   isHomeSeeker: true,
+                  isGuest: isGuest,
                 ),
               ),
             );
@@ -139,7 +143,7 @@ class DeepLinkRouter {
           _showError(context, 'Unable to navigate. Please restart the app.');
         }
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       
       // Dismiss loading indicator if still showing
       if (context != null && context.mounted) {

@@ -106,6 +106,13 @@ class _SecondSplashViewState extends State<SecondSplashView> {
   }
 
   void _navigateToLogin() {
+    // If there's a pending deep link, go to guest home first so the property
+    // opens immediately — the user can log in later from the guest dashboard.
+    final pending = DeepLinkingService().getPendingDeepLinkData();
+    if (pending != null) {
+      _navigateToGuestHome();
+      return;
+    }
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
@@ -119,6 +126,12 @@ class _SecondSplashViewState extends State<SecondSplashView> {
   }
 
   void _navigateToBiometricLogin() {
+    // Same as login — if a deep link is pending, open it on guest home first.
+    final pending = DeepLinkingService().getPendingDeepLinkData();
+    if (pending != null) {
+      _navigateToGuestHome();
+      return;
+    }
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
