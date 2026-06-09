@@ -1209,7 +1209,7 @@ If you don't have the app, the link will open in your browser where you can down
   /// Build individual room card (compact grid card)
   Widget _buildRoomCard(RoomModel room) {
     final isSelected = _selectedRoom?.id == room.id;
-    final isAvailable = room.count > 0;
+    final isAvailable = room.availableCount > 0;
     return GestureDetector(
       onTap: isAvailable && !_isOwner ? () => setState(() => _selectedRoom = isSelected ? null : room) : null,
       child: _buildRoomCardContent(room, isSelected, isAvailable),
@@ -1311,11 +1311,11 @@ If you don't have the app, the link will open in your browser where you can down
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: room.count > 0 ? const Color(0xFF10B981) : Colors.red,
+                        color: room.availableCount > 0 ? const Color(0xFF10B981) : Colors.red,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        room.count > 0 ? '${room.count} left' : 'Sold out',
+                        room.availableCount > 0 ? '${room.availableCount} left' : 'Sold out',
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -1407,7 +1407,9 @@ If you don't have the app, the link will open in your browser where you can down
                             room: room,
                             propertyData: property,
                           ),
-                        ));
+                        )).then((_) {
+                          if (mounted) _refreshPropertyData();
+                        });
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF426DC2),

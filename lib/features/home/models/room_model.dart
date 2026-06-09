@@ -14,6 +14,7 @@ class RoomModel {
   final double price;
   final int capacity;
   final int count;
+  final int availableCount;
   final List<String> features;
   final String? imageUrl;
   // Local files picked by the user (not yet uploaded)
@@ -27,10 +28,11 @@ class RoomModel {
     required this.price,
     required this.capacity,
     required this.count,
+    int? availableCount,
     required this.features,
     this.imageUrl,
     this.localImages = const [],
-  });
+  }) : availableCount = availableCount ?? count;
 
   factory RoomModel.fromJson(Map<String, dynamic> json) {
     double parsePrice(dynamic v) {
@@ -54,6 +56,9 @@ class RoomModel {
       price: parsePrice(json['price']),
       capacity: parseInt(json['capacity']),
       count: parseInt(json['count']),
+      availableCount: json['available_count'] != null
+          ? parseInt(json['available_count'])
+          : parseInt(json['count']),
       features: json['features'] is List
           ? (json['features'] as List).map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList()
           : [],
@@ -75,6 +80,7 @@ class RoomModel {
       'price': price,
       'capacity': capacity,
       'count': count,
+      'available_count': availableCount,
       'features': features,
       if (imageUrl != null) 'image_url': imageUrl,
     };
