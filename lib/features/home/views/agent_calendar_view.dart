@@ -36,10 +36,12 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
   ];
   String _selectedReason = 'Maintenance';
   int _blockQuantity = 1;
+  late int _availableCount;
 
   @override
   void initState() {
     super.initState();
+    _availableCount = widget.room.availableCount;
     _loadCalendar();
   }
 
@@ -192,7 +194,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
                   }
                 },
               ),
-              if (widget.room.count > 1) ...[
+              if (_availableCount > 1) ...[
                 const SizedBox(height: 16),
                 const Text('Quantity to block', style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
@@ -213,7 +215,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.add_circle_outline, color: Color(0xFF426DC2)),
-                      onPressed: _blockQuantity < widget.room.count
+                      onPressed: _blockQuantity < _availableCount
                           ? () {
                               setSheetState(() => _blockQuantity++);
                               setState(() {});
@@ -221,7 +223,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
                           : null,
                     ),
                     Text(
-                      'of ${widget.room.count} rooms',
+                      'of $_availableCount available',
                       style: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
                     ),
                   ],
@@ -274,7 +276,13 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
           content: Text(response.success ? 'Dates blocked successfully' : (response.message ?? 'Failed to block dates')),
           backgroundColor: response.success ? const Color(0xFF10B981) : Colors.red,
         ));
-        if (response.success) _loadCalendar();
+        if (response.success) {
+          setState(() {
+            _availableCount = (_availableCount - _blockQuantity).clamp(0, widget.room.count);
+            _blockQuantity = 1;
+          });
+          _loadCalendar();
+        }
       }
     } catch (_) {
       if (mounted) {
@@ -320,7 +328,12 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
           content: Text(response.success ? 'Dates unblocked' : (response.message ?? 'Failed to unblock')),
           backgroundColor: response.success ? const Color(0xFF10B981) : Colors.red,
         ));
-        if (response.success) _loadCalendar();
+        if (response.success) {
+          setState(() {
+            _availableCount = (_availableCount + 1).clamp(0, widget.room.count);
+          });
+          _loadCalendar();
+        }
       }
     } catch (_) {
       if (mounted) {
