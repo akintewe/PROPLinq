@@ -2988,11 +2988,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
 
   Widget _buildSearchPropertyCard(Map<String, dynamic> property) {
     return GestureDetector(
-      onTap: () async {
-        // Test property details endpoint first
-        await _testPropertyDetails(property['id']);
-        
-        // Then navigate to property details
+      onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => PropertyDetailsView(propertyData: {
             'id': property['id'],
