@@ -87,26 +87,23 @@ class _LoginViewState extends State<LoginView> {
 
     try {
       
+      // Read pending deep link BEFORE login — cleared after successful login
+      final pendingDeepLink = DeepLinkingService().getPendingDeepLinkData();
+      final pendingPropertyId = pendingDeepLink?['propertyId']?.toString();
+
       // Make API call
       final response = await _authService.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      
-      if (response.data != null) {
-      }
-      
-      if (response.errors != null && response.errors!.isNotEmpty) {
-      }
-
       if (response.success && response.data != null) {
         // Login successful
         _showSuccessMessage('Login successful! Welcome back, ${response.data!.user.fullName}!');
-        
+
         // Save remember me preference
         await _storageService.setRememberMe(_rememberMe);
-        
+
         // Enable biometric authentication if available
         if (_isBiometricAvailable) {
           await _storageService.setBiometricEnabled(true);
@@ -114,17 +111,25 @@ class _LoginViewState extends State<LoginView> {
             _isBiometricEnabled = true;
           });
         }
-        
+
         // Set OneSignal user ID and tags
         await _oneSignalService.setExternalUserId(response.data!.user.id.toString());
         await _oneSignalService.setUserType(response.data!.user.userType);
         if (response.data!.user.location.isNotEmpty) {
           await _oneSignalService.setUserLocation(response.data!.user.location);
         }
-        
+
         DeepLinkingService().setUserId(response.data!.user.id.toString());
+
+        // Use backend redirect_target if available, otherwise fall back to the
+        // locally-captured pending deep link (covers deferred install deep links
+        // where the backend doesn't return redirect_target yet).
         final redirectTarget = response.rawJson?['redirect_target'];
-        final redirectUuid = redirectTarget is Map ? redirectTarget['uuid']?.toString() : null;
+        final redirectUuid = (redirectTarget is Map ? redirectTarget['uuid']?.toString() : null)
+            ?? pendingPropertyId;
+
+        if (pendingPropertyId != null) DeepLinkingService().clearPendingDeepLinkData();
+
         _navigateToHome(response.data!.user.userType, redirectUuid);
       } else {
         // Login failed

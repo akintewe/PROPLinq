@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/deep_linking_service.dart';
+import '../../../core/services/deep_link_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../services/auth_service.dart';
 import 'login_view.dart';
@@ -74,26 +76,30 @@ class _BiometricLoginViewState extends State<BiometricLoginView> {
   }
 
   Future<void> _navigateToHome() async {
-    // Get user type to determine which home screen to show
     final userType = await _storageService.getUserType();
-    
+
+    // Consume any pending deep link before navigating
+    final pendingDeepLink = DeepLinkingService().getPendingDeepLinkData();
+    final pendingPropertyId = pendingDeepLink?['propertyId']?.toString();
+    if (pendingPropertyId != null) DeepLinkingService().clearPendingDeepLinkData();
+
     if (mounted) {
-      // Navigate based on user type
-      if (userType != null && userType != 'home_seeker') {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const AgentHomeView(),
-          ),
-          (route) => false,
-        );
-      } else {
-        // Default to tenant home for 'home_seeker' or any other type
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const TenantHomeView(),
-          ),
-          (route) => false,
-        );
+      final homeWidget = (userType != null && userType != 'home_seeker')
+          ? const AgentHomeView()
+          : const TenantHomeView();
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => homeWidget),
+        (route) => false,
+      );
+
+      if (pendingPropertyId != null && pendingPropertyId.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          DeepLinkRouter().navigateToProperty(
+            context: DeepLinkRouter().navigatorKey.currentContext,
+            propertyId: pendingPropertyId,
+          );
+        });
       }
     }
   }

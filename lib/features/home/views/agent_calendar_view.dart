@@ -35,6 +35,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
     'Offline Bookings',
   ];
   String _selectedReason = 'Maintenance';
+  int _blockQuantity = 1;
 
   @override
   void initState() {
@@ -112,12 +113,14 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
       debugPrint('📅 [Calendar] Blocked entry for $dateKey: $entry');
       final metadata = entry?['metadata'];
       final metaMap = metadata is Map ? metadata : null;
-      final uuid = metaMap?['uuid']?.toString() ??
-          entry?['uuid']?.toString() ??
-          entry?['block_uuid']?.toString() ??
-          entry?['block_id']?.toString() ??
-          entry?['id']?.toString();
-      debugPrint('📅 [Calendar] Resolved uuid: $uuid');
+      final uuid = entry?['block_uuid']?.toString() ??
+          metaMap?['uuid']?.toString() ??
+          entry?['uuid']?.toString();
+      if (uuid == null) {
+        debugPrint('⚠️ [Calendar] Cannot unblock $dateKey — no block_uuid in entry: $entry');
+      } else {
+        debugPrint('📅 [Calendar] Resolved block_uuid: $uuid');
+      }
       _showUnblockDialog(dateKey, uuid);
       return;
     }
@@ -189,6 +192,41 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
                   }
                 },
               ),
+              if (widget.room.count > 1) ...[
+                const SizedBox(height: 16),
+                const Text('Quantity to block', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF426DC2)),
+                      onPressed: _blockQuantity > 1
+                          ? () {
+                              setSheetState(() => _blockQuantity--);
+                              setState(() {});
+                            }
+                          : null,
+                    ),
+                    Text(
+                      '$_blockQuantity',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline, color: Color(0xFF426DC2)),
+                      onPressed: _blockQuantity < widget.room.count
+                          ? () {
+                              setSheetState(() => _blockQuantity++);
+                              setState(() {});
+                            }
+                          : null,
+                    ),
+                    Text(
+                      'of ${widget.room.count} rooms',
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -214,6 +252,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
       setState(() {
         _rangeStart = null;
         _rangeEnd = null;
+        _blockQuantity = 1;
       });
     });
   }
@@ -228,6 +267,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
         startDate: _fmt(_rangeStart!),
         endDate: _fmt(_rangeEnd ?? _rangeStart!),
         reason: _selectedReason,
+        quantity: _blockQuantity,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

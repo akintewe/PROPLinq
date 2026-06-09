@@ -198,12 +198,13 @@ class HotelService {
     required String startDate,
     required String endDate,
     required String reason,
+    int quantity = 1,
   }) async {
     try {
-      debugPrint('🏨 [HotelService] Blocking dates for room $roomUuid: $startDate → $endDate ($reason)');
+      debugPrint('🏨 [HotelService] Blocking dates for room $roomUuid: $startDate → $endDate ($reason, qty: $quantity)');
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiConstants.agentBlockRoom(roomUuid),
-        body: {'start_date': startDate, 'end_date': endDate, 'reason': reason},
+        body: {'start_date': startDate, 'end_date': endDate, 'reason': reason, 'quantity': quantity},
         requiresAuth: true,
         fromJson: (json) => json,
       );
