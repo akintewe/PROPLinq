@@ -21,7 +21,6 @@ import '../services/recently_viewed_service.dart';
 import '../services/property_service.dart';
 import '../services/hotel_service.dart';
 import '../services/favorite_service.dart';
-import '../../../core/services/wishlist_notifier.dart';
 import '../models/room_model.dart';
 import '../../../core/utils/format_utils.dart';
 
@@ -263,21 +262,17 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
     if (propertyId == null) return;
 
     setState(() => _isTogglingFavorite = true);
-    final success = await _favoriteService.toggleFavorite(propertyId, _isFavorite);
+    final error = await _favoriteService.toggleFavorite(propertyId, _isFavorite);
     if (mounted) {
       setState(() {
-        if (success) {
-          _isFavorite = !_isFavorite;
-          WishlistNotifier().notify();
-        }
+        if (error == null) _isFavorite = !_isFavorite;
         _isTogglingFavorite = false;
       });
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isFavorite ? 'Added to wishlist' : 'Removed from wishlist'),
-          duration: const Duration(seconds: 2),
-        ));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(error ?? (_isFavorite ? 'Added to wishlist' : 'Removed from wishlist')),
+        backgroundColor: error != null ? Colors.red : null,
+        duration: const Duration(seconds: 2),
+      ));
     }
   }
 

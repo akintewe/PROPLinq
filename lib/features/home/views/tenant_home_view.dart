@@ -812,47 +812,28 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   }
 
     Future<void> _toggleFavorite(PropertyModel property) async {
-    try {
-      final success = await _favoriteService.toggleFavorite(property.id, property.isFavorite);
-      if (success) {
-        setState(() {
-          // Update the property's favorite status in the list
-          final index = _properties.indexWhere((p) => p.id == property.id);
-          if (index != -1) {
-            _properties[index] = _properties[index].copyWith(isFavorite: !property.isFavorite);
-          }
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(property.isFavorite 
-                ? 'Property removed from favorites' 
-                : 'Property added to favorites'),
-              backgroundColor: Colors.green,
-            ),
-          );
+    final error = await _favoriteService.toggleFavorite(property.id, property.isFavorite);
+    if (!mounted) return;
+    if (error == null) {
+      setState(() {
+        final index = _properties.indexWhere((p) => p.id == property.id);
+        if (index != -1) {
+          _properties[index] = _properties[index].copyWith(isFavorite: !property.isFavorite);
         }
-      } else {
-        // Show error message for authentication failure
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please log in to save favorites'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to update favorite status'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(property.isFavorite ? 'Removed from wishlist' : 'Added to wishlist'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

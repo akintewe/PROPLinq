@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:proplinq/core/constants/api_constants.dart';
 import 'package:proplinq/core/services/api_service.dart';
 import 'package:proplinq/core/services/wishlist_notifier.dart';
@@ -13,8 +14,7 @@ class FavoriteService {
         ApiConstants.getFavourites,
         requiresAuth: true,
       );
-      
-      
+
       if (response.success && response.data != null) {
         final raw = response.data!['data'] ?? response.data;
         if (raw is List) {
@@ -31,43 +31,53 @@ class FavoriteService {
               .toList();
         }
       }
-      
+
       return [];
     } catch (e) {
       return [];
     }
   }
 
-  /// Add property to favorites
-  Future<bool> addToFavorites(int propertyId) async {
+  /// Add property to favorites — returns error message on failure, null on success
+  Future<String?> addToFavorites(int propertyId) async {
     try {
       final response = await _apiService.post(
         '${ApiConstants.addFavourite}/$propertyId',
         requiresAuth: true,
       );
-      if (response.success) WishlistNotifier().notify();
-      return response.success;
+      debugPrint('❤️ [FavoriteService] add $propertyId → success=${response.success} status=${response.statusCode} msg=${response.message}');
+      if (response.success) {
+        WishlistNotifier().notify();
+        return null;
+      }
+      return response.message ?? 'Failed to add to favourites';
     } catch (e) {
-      return false;
+      debugPrint('❤️ [FavoriteService] add error: $e');
+      return e.toString();
     }
   }
 
-  /// Remove property from favorites
-  Future<bool> removeFromFavorites(int propertyId) async {
+  /// Remove property from favorites — returns error message on failure, null on success
+  Future<String?> removeFromFavorites(int propertyId) async {
     try {
       final response = await _apiService.delete(
         '${ApiConstants.deleteFavourite}/$propertyId',
         requiresAuth: true,
       );
-      if (response.success) WishlistNotifier().notify();
-      return response.success;
+      debugPrint('❤️ [FavoriteService] remove $propertyId → success=${response.success} status=${response.statusCode} msg=${response.message}');
+      if (response.success) {
+        WishlistNotifier().notify();
+        return null;
+      }
+      return response.message ?? 'Failed to remove from favourites';
     } catch (e) {
-      return false;
+      debugPrint('❤️ [FavoriteService] remove error: $e');
+      return e.toString();
     }
   }
 
-  /// Toggle favorite status
-  Future<bool> toggleFavorite(int propertyId, bool isCurrentlyFavorite) async {
+  /// Toggle favorite status — returns error message on failure, null on success
+  Future<String?> toggleFavorite(int propertyId, bool isCurrentlyFavorite) async {
     if (isCurrentlyFavorite) {
       return await removeFromFavorites(propertyId);
     } else {
