@@ -181,31 +181,25 @@ class _SavedViewState extends State<SavedView> {
   }
 
   Future<void> _removeFromFavorites(PropertyModel property) async {
-    try {
-      final success = await _favoriteService.removeFromFavorites(property.id);
-      if (success) {
-        setState(() {
-          _savedProperties.removeWhere((p) => p.id == property.id);
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Property removed from favorites'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to remove from favorites'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    final error = await _favoriteService.removeFromFavorites(property.id);
+    if (!mounted) return;
+    if (error == null) {
+      setState(() {
+        _savedProperties.removeWhere((p) => p.id == property.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Removed from wishlist'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
