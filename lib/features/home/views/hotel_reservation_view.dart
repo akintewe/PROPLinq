@@ -159,16 +159,17 @@ class _HotelReservationViewState extends State<HotelReservationView> {
         for (final entry in response.data!) {
           final date = entry['date'] as String?;
           if (date == null) continue;
-          final isBlocked = entry['is_blocked'] == true;
           final status = entry['status'] as String?;
           final isBooked = entry['is_booked'] == true;
           final availableCount = (entry['available_count'] as num?)?.toInt()
               ?? (entry['metadata'] is Map ? (entry['metadata']['available_count'] as num?)?.toInt() : null)
               ?? 1;
 
-          if (isBlocked || status == 'blocked' || status == 'unavailable') {
-            blocked.add(date);
-          } else if (isBooked || status == 'booked' || availableCount <= 0) {
+          // A date is only unavailable to guests when ALL inventory is gone (availableCount == 0).
+          // Partial agent blocks (some rooms blocked but others still free) leave the date bookable.
+          if (availableCount == 0) {
+            booked.add(date);
+          } else if (isBooked || status == 'booked') {
             booked.add(date);
           }
         }
@@ -203,15 +204,13 @@ class _HotelReservationViewState extends State<HotelReservationView> {
         for (final entry in response.data!) {
           final date = entry['date'] as String?;
           if (date == null) continue;
-          final isBlocked = entry['is_blocked'] == true;
           final status = entry['status'] as String?;
           final metadata = entry['metadata'];
           final availableCount = metadata is Map
               ? (metadata['available_count'] as num?)?.toInt() ?? 1
               : 1;
-          if (isBlocked || status == 'blocked' || availableCount <= 0) {
-            blocked.add(date);
-          } else if (status == 'booked') {
+          // Only block the date for guests when all inventory is exhausted.
+          if (availableCount == 0 || status == 'booked') {
             booked.add(date);
           }
         }
