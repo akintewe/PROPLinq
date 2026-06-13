@@ -68,21 +68,24 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
       );
       if (response.success && response.data != null && mounted) {
         final map = <String, Map<String, dynamic>>{};
-        int? minAvailable;
+        // Find today's available_count from the calendar response — this is the most
+        // accurate figure after blocks/bookings, as the room object may be stale.
+        final todayKey = _fmt(DateTime.now());
+        int? todayAvailable;
         for (final entry in response.data!) {
           final date = entry['date'] as String?;
           if (date != null) map[date] = entry;
-          // Track the lowest available_count across all dates to reflect worst-case capacity
-          final metadata = entry['metadata'];
-          final ac = metadata is Map ? (metadata['available_count'] as num?)?.toInt() : null;
-          if (ac != null && (minAvailable == null || ac < minAvailable)) {
-            minAvailable = ac;
+          if (date == todayKey) {
+            final metadata = entry['metadata'];
+            todayAvailable = metadata is Map
+                ? (metadata['available_count'] as num?)?.toInt()
+                : null;
           }
         }
         setState(() {
           _calendarEntries = map;
-          // Refresh available count from backend data so the stepper stays accurate
-          if (minAvailable != null) _availableCount = minAvailable;
+          // Use today's available_count if present; fall back to room's availableCount
+          _availableCount = todayAvailable ?? widget.room.availableCount;
         });
       }
     } catch (_) {
@@ -462,6 +465,28 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Room availability summary
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F4FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.bed_outlined, size: 18, color: Color(0xFF426DC2)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${widget.room.name}  •  $_availableCount of ${widget.room.count} rooms available',
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF426DC2), fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
                   // Legend
                   Wrap(
                     spacing: 16,
