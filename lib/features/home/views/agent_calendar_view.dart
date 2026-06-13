@@ -68,11 +68,22 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
       );
       if (response.success && response.data != null && mounted) {
         final map = <String, Map<String, dynamic>>{};
+        int? minAvailable;
         for (final entry in response.data!) {
           final date = entry['date'] as String?;
           if (date != null) map[date] = entry;
+          // Track the lowest available_count across all dates to reflect worst-case capacity
+          final metadata = entry['metadata'];
+          final ac = metadata is Map ? (metadata['available_count'] as num?)?.toInt() : null;
+          if (ac != null && (minAvailable == null || ac < minAvailable)) {
+            minAvailable = ac;
+          }
         }
-        setState(() => _calendarEntries = map);
+        setState(() {
+          _calendarEntries = map;
+          // Refresh available count from backend data so the stepper stays accurate
+          if (minAvailable != null) _availableCount = minAvailable;
+        });
       }
     } catch (_) {
       // Non-critical — show empty calendar
@@ -277,10 +288,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
           backgroundColor: response.success ? const Color(0xFF10B981) : Colors.red,
         ));
         if (response.success) {
-          setState(() {
-            _availableCount = (_availableCount - _blockQuantity).clamp(0, widget.room.count);
-            _blockQuantity = 1;
-          });
+          setState(() => _blockQuantity = 1);
           _loadCalendar();
         }
       }
@@ -328,12 +336,7 @@ class _AgentCalendarViewState extends State<AgentCalendarView> {
           content: Text(response.success ? 'Dates unblocked' : (response.message ?? 'Failed to unblock')),
           backgroundColor: response.success ? const Color(0xFF10B981) : Colors.red,
         ));
-        if (response.success) {
-          setState(() {
-            _availableCount = (_availableCount + 1).clamp(0, widget.room.count);
-          });
-          _loadCalendar();
-        }
+        if (response.success) _loadCalendar();
       }
     } catch (_) {
       if (mounted) {
