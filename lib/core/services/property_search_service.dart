@@ -157,7 +157,7 @@ class PropertySearchService {
         
         if (categoryFilter == 'hotels') {
           return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
-        } else if (categoryFilter == 'real estate') {
+        } else if (categoryFilter == 'apartment' || categoryFilter == 'real estate') {
           return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
         } else if (categoryFilter == 'shortlets') {
           return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');

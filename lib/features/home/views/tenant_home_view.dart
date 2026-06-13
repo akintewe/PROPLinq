@@ -425,7 +425,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     setState(() => _isLoadingMoreProperties = true);
     try {
       final nextPage = _currentPage + 1;
-      final response = await _propertyService.fetchPropertiesPaginated(page: nextPage);
+      final response = await _propertyService.fetchPropertiesPaginated(
+        page: nextPage,
+        type: _categoryToApiType(_selectedCategory),
+      );
       final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
       if (mounted) {
         setState(() {
@@ -440,7 +443,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     }
   }
 
-  Future<void> _fetchProperties({bool isRefresh = false}) async {
+  Future<void> _fetchProperties({bool isRefresh = false, String? categoryType}) async {
     try {
       setState(() {
         _isLoadingProperties = true;
@@ -452,7 +455,10 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
       });
 
       // Fetch page 1 and display immediately
-      final response = await _propertyService.fetchPropertiesPaginated(page: 1);
+      final response = await _propertyService.fetchPropertiesPaginated(
+        page: 1,
+        type: categoryType ?? _categoryToApiType(_selectedCategory),
+      );
       final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
       // Update featured from first page
@@ -877,13 +883,37 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
   void _openFilterBottomSheet() {
     FilterBottomSheet.show(
       context,
-      onFiltersApplied: (filters) {
-        setState(() {
-          _activeFilters = filters;
-          _hasActiveFilters = _checkHasActiveFilters(filters);
-          _filteredProperties = _applyFilters(filters);
-          _isShowingFilterResults = true;
-        });
+      onFiltersApplied: (filters) async {
+        // If a property type filter is set, fetch all matching properties from backend
+        final typeFilter = filters['category']?.toString();
+        String? apiType;
+        if (typeFilter == 'Apartment') {
+          apiType = 'apartment';
+        } else if (typeFilter == 'Hotels') {
+          apiType = 'hotel';
+        } else if (typeFilter == 'Shortlets') {
+          apiType = 'shortlet';
+        }
+
+        if (apiType != null) {
+          final response = await _propertyService.fetchPropertiesPaginated(page: 1, type: apiType);
+          final fetched = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+          if (mounted) {
+            setState(() {
+              _activeFilters = filters;
+              _hasActiveFilters = _checkHasActiveFilters(filters);
+              _filteredProperties = fetched;
+              _isShowingFilterResults = true;
+            });
+          }
+        } else {
+          setState(() {
+            _activeFilters = filters;
+            _hasActiveFilters = _checkHasActiveFilters(filters);
+            _filteredProperties = _applyFilters(filters);
+            _isShowingFilterResults = true;
+          });
+        }
         Future.delayed(const Duration(milliseconds: 300), () {
           _showFilteredResultsBottomSheet();
         });
@@ -910,7 +940,7 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
         final propertyCategory = property.category.toLowerCase();
         if (categoryFilter == 'hotels') {
           return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
-        } else if (categoryFilter == 'real estate') {
+        } else if (categoryFilter == 'apartment' || categoryFilter == 'real estate') {
           return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
         } else if (categoryFilter == 'shortlets') {
           return propertyType == 'shortlet' || propertyCategory == 'shortlet' || propertyCategory.contains('shortlet');
@@ -2499,12 +2529,27 @@ class _TenantHomeViewState extends State<TenantHomeView> with TickerProviderStat
     );
   }
 
+  String? _categoryToApiType(String category) {
+    switch (category) {
+      case 'Hotels': return 'hotel';
+      case 'Shortlets': return 'shortlet';
+      case 'Real Estate': return 'apartment';
+      default: return null; // 'All' — no filter
+    }
+  }
+
   Widget _buildCategoryButton(String title, bool isSelected) {
     return GestureDetector(
       onTap: () {
+        if (_selectedCategory == title) return;
         setState(() {
           _selectedCategory = title;
+          _properties = [];
+          _currentPage = 1;
+          _hasMorePages = false;
+          _isLoadingProperties = true;
         });
+        _fetchProperties(categoryType: _categoryToApiType(title));
       },
       child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

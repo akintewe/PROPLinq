@@ -110,12 +110,24 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     }
   }
 
+  String? _categoryToApiType(String category) {
+    switch (category) {
+      case 'Hotels': return 'hotel';
+      case 'Shortlets': return 'shortlet';
+      case 'Real Estate': return 'apartment';
+      default: return null;
+    }
+  }
+
   Future<void> _fetchMoreProperties() async {
     if (_isLoadingMoreProperties || !_hasMorePages) return;
     setState(() => _isLoadingMoreProperties = true);
     try {
       final nextPage = _currentPage + 1;
-      final response = await _propertyService.fetchPropertiesPaginatedPublic(page: nextPage);
+      final response = await _propertyService.fetchPropertiesPaginatedPublic(
+        page: nextPage,
+        type: _categoryToApiType(_selectedCategory),
+      );
       final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
       if (mounted) {
         setState(() {
@@ -130,7 +142,7 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
     }
   }
 
-  Future<void> _fetchProperties({bool isRefresh = false}) async {
+  Future<void> _fetchProperties({bool isRefresh = false, String? categoryType}) async {
     try {
       setState(() {
         _isLoadingProperties = true;
@@ -141,7 +153,10 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
         }
       });
 
-      final response = await _propertyService.fetchPropertiesPaginatedPublic(page: 1);
+      final response = await _propertyService.fetchPropertiesPaginatedPublic(
+        page: 1,
+        type: categoryType ?? _categoryToApiType(_selectedCategory),
+      );
       final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
       final featured = properties.where((p) => p.isFeatured).toList();
@@ -1032,7 +1047,17 @@ class _GuestHomeViewState extends State<GuestHomeView> with TickerProviderStateM
   Widget _buildCategoryButton(String title) {
     final isSelected = _selectedCategory == title;
     return GestureDetector(
-      onTap: () => setState(() => _selectedCategory = title),
+      onTap: () {
+        if (_selectedCategory == title) return;
+        setState(() {
+          _selectedCategory = title;
+          _properties = [];
+          _currentPage = 1;
+          _hasMorePages = false;
+          _isLoadingProperties = true;
+        });
+        _fetchProperties(categoryType: _categoryToApiType(title));
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(

@@ -391,12 +391,24 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     }
   }
 
+  String? _categoryToApiType(String category) {
+    switch (category) {
+      case 'Hotels': return 'hotel';
+      case 'Shortlets': return 'shortlet';
+      case 'Real Estate': return 'apartment';
+      default: return null;
+    }
+  }
+
   Future<void> _fetchMoreProperties() async {
     if (_isLoadingMoreProperties || !_hasMorePages) return;
     setState(() => _isLoadingMoreProperties = true);
     try {
       final nextPage = _currentPage + 1;
-      final response = await _propertyService.fetchPropertiesPaginated(page: nextPage);
+      final response = await _propertyService.fetchPropertiesPaginated(
+        page: nextPage,
+        type: _categoryToApiType(_selectedCategory),
+      );
       final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
       if (mounted) {
         setState(() {
@@ -411,7 +423,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
     }
   }
 
-  Future<void> _fetchProperties({bool isRefresh = false}) async {
+  Future<void> _fetchProperties({bool isRefresh = false, String? categoryType}) async {
     try {
       setState(() {
         _isLoadingProperties = true;
@@ -422,7 +434,10 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         }
       });
 
-      final response = await _propertyService.fetchPropertiesPaginated(page: 1);
+      final response = await _propertyService.fetchPropertiesPaginated(
+        page: 1,
+        type: categoryType ?? _categoryToApiType(_selectedCategory),
+      );
       final properties = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
 
       final featuredFromMain = properties.where((p) => p.isFeatured).toList();
@@ -989,18 +1004,38 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   void _openFilterBottomSheet() {
     FilterBottomSheet.show(
       context,
-      onFiltersApplied: (filters) {
-        setState(() {
-          _activeFilters = filters;
-          _hasActiveFilters = _checkHasActiveFilters(filters);
-          _filteredProperties = _applyFilters(filters);
-          _isShowingFilterResults = true;
-        });
-        
-        
-        // Add a small delay to ensure the filter bottom sheet is fully closed
+      onFiltersApplied: (filters) async {
+        final typeFilter = filters['category']?.toString();
+        String? apiType;
+        if (typeFilter == 'Apartment') {
+          apiType = 'apartment';
+        } else if (typeFilter == 'Hotels') {
+          apiType = 'hotel';
+        } else if (typeFilter == 'Shortlets') {
+          apiType = 'shortlet';
+        }
+
+        if (apiType != null) {
+          final response = await _propertyService.fetchPropertiesPaginated(page: 1, type: apiType);
+          final fetched = response.getPropertiesAs<PropertyModel>(PropertyModel.fromJson);
+          if (mounted) {
+            setState(() {
+              _activeFilters = filters;
+              _hasActiveFilters = _checkHasActiveFilters(filters);
+              _filteredProperties = fetched;
+              _isShowingFilterResults = true;
+            });
+          }
+        } else {
+          setState(() {
+            _activeFilters = filters;
+            _hasActiveFilters = _checkHasActiveFilters(filters);
+            _filteredProperties = _applyFilters(filters);
+            _isShowingFilterResults = true;
+          });
+        }
         Future.delayed(const Duration(milliseconds: 300), () {
-          _showSimpleBottomSheet(); // Test with a simple version first
+          _showSimpleBottomSheet();
         });
       },
     );
@@ -1078,8 +1113,7 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
         if (categoryFilter == 'hotels') {
           // Match by type or category
           return propertyType == 'hotel' || propertyCategory == 'hotel' || propertyCategory.contains('hotel');
-        } else if (categoryFilter == 'real estate') {
-          // Match apartments and other real estate
+        } else if (categoryFilter == 'apartment' || categoryFilter == 'real estate') {
           return propertyType == 'apartment' || propertyCategory == 'for_rent' || propertyCategory == 'for_sale';
         } else if (categoryFilter == 'shortlets') {
           // Match shortlets
@@ -2487,9 +2521,15 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   Widget _buildCategoryButton(String title, bool isSelected) {
     return GestureDetector(
       onTap: () {
+        if (_selectedCategory == title) return;
         setState(() {
           _selectedCategory = title;
+          _properties = [];
+          _currentPage = 1;
+          _hasMorePages = false;
+          _isLoadingProperties = true;
         });
+        _fetchProperties(categoryType: _categoryToApiType(title));
       },
       child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
