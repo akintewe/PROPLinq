@@ -210,6 +210,23 @@ class DeepLinkingService {
           } else if (host == 'hotel') {
             propertyType = 'hotel';
           }
+        } else if (deepLinkValue.toString().startsWith('http://') ||
+                   deepLinkValue.toString().startsWith('https://')) {
+          // Full web URL — parse path segments: /property/{type}/{uuid}
+          final uri = Uri.tryParse(deepLinkValue.toString());
+          if (uri != null) {
+            final segments = uri.pathSegments;
+            // Expected: ['property', 'shortlet', '<uuid>']
+            if (segments.length >= 3 && segments[0] == 'property') {
+              propertyType = segments[1];
+              propertyId = segments[2];
+            } else if (segments.length >= 2) {
+              propertyType = segments[segments.length - 2];
+              propertyId = segments[segments.length - 1];
+            } else if (segments.isNotEmpty) {
+              propertyId = segments.last;
+            }
+          }
         } else {
           // Assume it's just a property ID
           propertyId = deepLinkValue.toString();
