@@ -228,8 +228,21 @@ class DeepLinkingService {
             }
           }
         } else {
-          // Assume it's just a property ID
-          propertyId = deepLinkValue.toString();
+          // May be a bare path like "property/shortlet/<uuid>" or just a UUID
+          final value = deepLinkValue.toString();
+          final segments = value.split('/').where((s) => s.isNotEmpty).toList();
+          if (segments.length >= 3 && segments[0] == 'property') {
+            // property/{type}/{uuid}
+            propertyType = segments[1];
+            propertyId = segments[2];
+          } else if (segments.length >= 2) {
+            // {type}/{uuid}
+            propertyType = segments[segments.length - 2];
+            propertyId = segments[segments.length - 1];
+          } else {
+            // Plain UUID
+            propertyId = value;
+          }
         }
       }
       
