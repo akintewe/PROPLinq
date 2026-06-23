@@ -35,14 +35,14 @@ void main() async {
   await deepLinkingService.initialize(
     isDebug: kDebugMode,
     onDeepLinkReceived: (deepLinkData) {
-      // App already running (foreground link) — navigate immediately if context ready,
-      // otherwise stash for splash to pick up.
+      // If the navigator is ready (app already running in foreground), navigate now.
+      // Otherwise the data is already stored in _pendingDeepLinkData inside
+      // DeepLinkingService — SecondSplashView will pick it up after routing.
       final context = deepLinkRouter.navigatorKey.currentContext;
       if (context != null && context.mounted) {
         deepLinkRouter.handleDeepLink(context, deepLinkData);
-      } else {
-        deepLinkingService.storePendingDeepLink(deepLinkData);
       }
+      // No else needed — _pendingDeepLinkData is kept alive by the service.
     },
   );
   

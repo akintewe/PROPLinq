@@ -272,11 +272,13 @@ class DeepLinkingService {
           'customPayload': customPayload,
         };
 
-        // Trigger navigation if callback is set, then clear so it never replays
+        // Fire the callback if set. Do NOT clear _pendingDeepLinkData here —
+        // the callback in main.dart runs before the navigator context exists,
+        // so it re-stores via storePendingDeepLink. Keeping the data alive
+        // means SecondSplashView can always find it via getPendingDeepLinkData().
         if (_onDeepLinkReceived != null) {
           _onDeepLinkReceived!(_pendingDeepLinkData!);
         }
-        _pendingDeepLinkData = null;
       } else {
       }
     } catch (e) {
