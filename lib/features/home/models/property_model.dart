@@ -157,7 +157,11 @@ class PropertyModel {
           .whereType<Map>()
           .map((img) {
             final m = Map<String, dynamic>.from(img);
-            final rawUrl = m['full_url']?.toString();
+            // API changed field from full_url → url; normalise to full_url for all downstream consumers
+            final rawUrl = (m['full_url']?.toString().isNotEmpty == true
+                    ? m['full_url']
+                    : m['url'])
+                ?.toString();
             if (rawUrl != null && rawUrl.isNotEmpty) {
               m['full_url'] = normaliseUrl(rawUrl);
             }
