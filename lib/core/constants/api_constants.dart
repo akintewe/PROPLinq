@@ -127,7 +127,7 @@ class ApiConstants {
   static String supportChatClose(int id) => '/support/chats/$id/close';
   
   // AppsFlyer OneLink base — handles both installed and non-installed (deferred) cases
-  static const String _oneLinkBase = 'https://proplinq.onelink.me/my_first_link';
+  static const String _oneLinkBase = 'https://proplinq.onelink.me/fOvE/ob0squjw';
 
   // Fallback web URL used as the desktop redirect inside the OneLink
   static const String shareLinkBaseUrl = 'https://www.proplinq.com/property';
