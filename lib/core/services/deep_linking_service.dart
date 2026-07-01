@@ -63,12 +63,14 @@ class DeepLinkingService {
 
       // Set up deep link listener for when app is already installed
       _appsflyerSdk?.onDeepLinking((DeepLinkResult result) {
-        
-        // Handle AppsFlyer OneLinks (FOUND status)
+        print('🔗 [DeepLinkingService] onDeepLinking fired');
+        print('🔗 [DeepLinkingService] status: ${result.status}');
+        print('🔗 [DeepLinkingService] deepLink: ${result.deepLink?.clickEvent}');
+        print('🔗 [DeepLinkingService] error: ${result.error}');
+
         if (result.deepLink != null && result.status == Status.FOUND) {
           final clickEvent = result.deepLink!.clickEvent;
           _handleDeepLinkData(clickEvent);
-        } else {
         }
       });
 
@@ -137,6 +139,22 @@ class DeepLinkingService {
         propertyId = segments.isNotEmpty ? segments.first : null;
         if (host == 'hotel' || host == 'shortlet' || host == 'apartment') {
           propertyType = host;
+        }
+      } else if (uri.scheme == 'https' && uri.host == 'proplinq.onelink.me') {
+        // AppsFlyer OneLink — extract deep_link_value query param
+        // Format: deep_link_value=property/shortlet/UUID
+        final deepLinkValue = uri.queryParameters['deep_link_value'];
+        if (deepLinkValue != null && deepLinkValue.isNotEmpty) {
+          final segments = deepLinkValue.split('/').where((s) => s.isNotEmpty).toList();
+          if (segments.length >= 3 && segments[0] == 'property') {
+            propertyType = segments[1];
+            propertyId = segments[2];
+          } else if (segments.length >= 2) {
+            propertyType = segments[segments.length - 2];
+            propertyId = segments[segments.length - 1];
+          } else if (segments.isNotEmpty) {
+            propertyId = segments.last;
+          }
         }
       } else if (uri.scheme == 'https' &&
           (uri.host == 'www.proplinq.com' || uri.host == 'proplinq.com') &&
