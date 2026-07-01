@@ -126,19 +126,23 @@ class ApiConstants {
   static String supportChatRespond(int id) => '/support/chats/$id/respond';
   static String supportChatClose(int id) => '/support/chats/$id/close';
   
-  // Share link base URL — web URL that deep-links back into the app
+  // AppsFlyer OneLink base — handles both installed and non-installed (deferred) cases
+  static const String _oneLinkBase = 'https://proplinq.onelink.me/my_first_link';
+
+  // Fallback web URL used as the desktop redirect inside the OneLink
   static const String shareLinkBaseUrl = 'https://www.proplinq.com/property';
 
-  /// Generate a shareable web URL for a property.
-  /// Format: https://www.proplinq.com/property/{type}/{id}
-  /// On mobile: tapping opens the app (Universal Link / App Link).
-  /// On desktop: opens the web property page.
+  /// Generate a shareable OneLink URL for a property.
+  /// deep_link_value encodes the property path so the app can route directly to it.
+  /// af_web_dp is the fallback for desktop browsers.
   static String generateShareLink({
     required String propertyId,
     String? propertyType,
   }) {
     final type = _normalisePropertyType(propertyType);
-    return '$shareLinkBaseUrl/$type/$propertyId';
+    final deepLinkValue = Uri.encodeComponent('property/$type/$propertyId');
+    final webFallback = Uri.encodeComponent('$shareLinkBaseUrl/$type/$propertyId');
+    return '$_oneLinkBase?pid=proplinq_app&deep_link_value=$deepLinkValue&af_web_dp=$webFallback';
   }
 
   /// Normalise property type to the canonical slug used in deep links.
