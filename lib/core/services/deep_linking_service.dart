@@ -78,7 +78,7 @@ class DeepLinkingService {
       print('🔵 [DeepLinkingService] Calling initSdk...');
       await _appsflyerSdk?.initSdk(
         registerConversionDataCallback: true,
-        registerOnAppOpenAttributionCallback: true,
+        registerOnAppOpenAttributionCallback: false,
         registerOnDeepLinkingCallback: true,
       );
       print('✅ [DeepLinkingService] AppsFlyer SDK initialized successfully');
@@ -129,6 +129,7 @@ class DeepLinkingService {
   ///   https://proplinq.com/property/{property_type}/{property_id}
   void _handleDeepLink(String url) {
     try {
+      print('🔗 [DeepLinkingService] _handleDeepLink called with: $url');
       final uri = Uri.parse(url);
       String? propertyId;
       String propertyType = 'apartment';
