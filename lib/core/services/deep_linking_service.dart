@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:appsflyer_sdk/appsflyer_sdk.dart';
 import 'package:app_links/app_links.dart';
 
@@ -8,6 +9,20 @@ class DeepLinkingService {
   static final DeepLinkingService _instance = DeepLinkingService._internal();
   factory DeepLinkingService() => _instance;
   DeepLinkingService._internal();
+
+  // ── On-screen debug log ─────────────────────────────────────────────
+  // Visible overlay so deep-link flow can be inspected without a cable.
+  // Remove once the flow is confirmed working.
+  static final ValueNotifier<List<String>> debugLog =
+      ValueNotifier<List<String>>(<String>[]);
+
+  static void _dbg(String msg) {
+    final ts = DateTime.now().toIso8601String().substring(11, 23);
+    final line = '$ts  $msg';
+    debugLog.value = [...debugLog.value, line];
+    // ignore: avoid_print
+    print('🔗 $line');
+  }
 
   AppsflyerSdk? _appsflyerSdk;
   StreamSubscription? _subscription;
@@ -52,21 +67,19 @@ class DeepLinkingService {
       
       // Set up deep link listener
       _appsflyerSdk?.onInstallConversionData((data) {
-        
-        // Check if this is a deferred deep link (user installed after clicking link)
         final status = data['status'];
+        _dbg('onInstallConversionData: status=$status first=${data['is_first_launch']}');
+        // Check if this is a deferred deep link (user installed after clicking link)
         if (status == 'NON_ORGANIC' && data['is_first_launch'] == true) {
           _handleDeepLinkData(data);
-        } else if (status == 'ORGANIC') {
         }
       });
 
       // Set up deep link listener for when app is already installed
       _appsflyerSdk?.onDeepLinking((DeepLinkResult result) {
-        print('🔗 [DeepLinkingService] onDeepLinking fired');
-        print('🔗 [DeepLinkingService] status: ${result.status}');
-        print('🔗 [DeepLinkingService] deepLink: ${result.deepLink?.clickEvent}');
-        print('🔗 [DeepLinkingService] error: ${result.error}');
+        _dbg('onDeepLinking fired: status=${result.status}');
+        _dbg('  clickEvent=${result.deepLink?.clickEvent}');
+        if (result.error != null) _dbg('  error=${result.error}');
 
         if (result.deepLink != null && result.status == Status.FOUND) {
           final clickEvent = result.deepLink!.clickEvent;
@@ -103,18 +116,23 @@ class DeepLinkingService {
       try {
         final initialLink = await _appLinks.getInitialLink();
         if (initialLink != null) {
+          _dbg('app_links initialLink: $initialLink');
           _handleDeepLink(initialLink.toString());
         } else {
+          _dbg('app_links initialLink: none');
         }
       } catch (e) {
+        _dbg('app_links initialLink error: $e');
       }
 
       // Listen for incoming links when app is already running
       _uriLinkSubscription = _appLinks.uriLinkStream.listen(
         (Uri uri) {
-            _handleDeepLink(uri.toString());
+          _dbg('app_links stream: $uri');
+          _handleDeepLink(uri.toString());
         },
         onError: (err) {
+          _dbg('app_links stream error: $err');
         },
         cancelOnError: false,
       );
@@ -129,7 +147,7 @@ class DeepLinkingService {
   ///   https://proplinq.com/property/{property_type}/{property_id}
   void _handleDeepLink(String url) {
     try {
-      print('🔗 [DeepLinkingService] _handleDeepLink called with: $url');
+      _dbg('_handleDeepLink: $url');
       final uri = Uri.parse(url);
       String? propertyId;
       String propertyType = 'apartment';
@@ -164,10 +182,16 @@ class DeepLinkingService {
         propertyType = uri.pathSegments[1];
         propertyId = uri.pathSegments[2];
       } else {
+        _dbg('_handleDeepLink: no matching host/scheme, ignored');
         return;
       }
 
-      if (propertyId == null || propertyId.isEmpty) return;
+      if (propertyId == null || propertyId.isEmpty) {
+        _dbg('_handleDeepLink: parsed but no propertyId');
+        return;
+      }
+
+      _dbg('_handleDeepLink: parsed type=$propertyType id=$propertyId');
 
       final data = {
         'propertyId': propertyId,
@@ -176,19 +200,21 @@ class DeepLinkingService {
       };
 
       if (_onDeepLinkReceived != null) {
+        _dbg('_handleDeepLink: firing callback (navigator ready path)');
         _onDeepLinkReceived!(data);
       } else {
-        // Callback not yet wired (cold start) — store so splash can consume it
+        _dbg('_handleDeepLink: stored pending (cold start path)');
         _pendingDeepLinkData = data;
       }
     } catch (e) {
+      _dbg('_handleDeepLink error: $e');
     }
   }
 
   /// Handle AppsFlyer deep link data
   void _handleDeepLinkData(Map<String, dynamic> data) {
     try {
-      
+      _dbg('_handleDeepLinkData: dlv=${data['deep_link_value']} sub1=${data['deep_link_sub1']}');
       // Extract deep link value from AppsFlyer data
       final deepLinkValue = data['deep_link_value'];
       final deepLinkSub1 = data['deep_link_sub1'];

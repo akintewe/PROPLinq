@@ -8,6 +8,7 @@ import 'core/services/message_notification_service.dart';
 import 'core/services/deep_linking_service.dart';
 import 'core/services/deep_link_router.dart';
 import 'core/animations/app_transitions.dart';
+import 'core/widgets/deep_link_debug_overlay.dart';
 import 'features/splash/views/second_splash_view.dart';
 
 void main() async {
@@ -69,6 +70,15 @@ class PropLinqApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: deepLinkRouter.navigatorKey,
       home: const SecondSplashView(),
+      builder: (context, child) {
+        // Global deep-link debug overlay (temporary, self-hides until an event fires)
+        return Stack(
+          children: [
+            if (child != null) child,
+            const DeepLinkDebugOverlay(),
+          ],
+        );
+      },
       theme: AppTheme.lightTheme.copyWith(
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: <TargetPlatform, PageTransitionsBuilder>{
