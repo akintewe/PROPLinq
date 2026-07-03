@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import GoogleMaps
+import AppsFlyerLib
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -14,32 +15,29 @@ import GoogleMaps
        let apiKey = plist["GMSApiKey"] as? String {
       GMSServices.provideAPIKey(apiKey)
     }
-    
+
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
-  
-  // Handle deep links when app is opened via URL
+
+  // Handle URI scheme deep links
   override func application(
     _ app: UIApplication,
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
-    // Let Flutter plugins (including uni_links) handle the URL
+    AppsFlyerLib.shared().handleOpen(url, options: options)
     return super.application(app, open: url, options: options)
   }
-  
-  // Handle deep links when app is opened via URL (alternative method)
+
+  // Handle Universal Links — pass to AppsFlyer via continueUserActivity
+  // so it records attribution WITHOUT opening Safari
   override func application(
     _ application: UIApplication,
     continue userActivity: NSUserActivity,
     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
   ) -> Bool {
-    // Handle Universal Links
-    if userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-       let url = userActivity.webpageURL {
-      return super.application(application, continue: userActivity, restorationHandler: restorationHandler)
-    }
-    return false
+    AppsFlyerLib.shared().continue(userActivity, restorationHandler: nil)
+    return super.application(application, continue: userActivity, restorationHandler: restorationHandler)
   }
 }
