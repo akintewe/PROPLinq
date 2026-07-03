@@ -382,10 +382,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
       final location = property['location'] as String? ?? '';
       final price = property['price'] as String? ?? '';
       
-      // URI scheme link opens directly in app (works in WhatsApp for installed users)
-      final uriSchemeUrl = 'proplinq://$propertyType/$propertyId';
-
-      // Create share text — URI scheme first (opens app directly), OneLink as fallback
+      // Create share text
       final shareText = '''🏠 $title
 
 📍 Location: $location
@@ -393,11 +390,12 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> with TickerPr
 
 ━━━━━━━━━━━━━━━━━━━━
 🔗 VIEW PROPERTY:
-$uriSchemeUrl
-
-📲 Don't have the app? Download here:
 $shareLinkUrl
-━━━━━━━━━━━━━━━━━━━━''';
+━━━━━━━━━━━━━━━━━━━━
+
+Tap the link above to view this property in the Proplinq app!
+
+If you don't have the app, the link will open in your browser where you can download it.''';
       
       
       // Show a preview dialog first to confirm the deep link is generated
