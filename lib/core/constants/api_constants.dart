@@ -134,15 +134,16 @@ class ApiConstants {
 
   /// Generate a shareable OneLink URL for a property.
   /// deep_link_value encodes the property path so the app can route directly to it.
-  /// af_web_dp is the fallback for desktop browsers.
+  /// NOTE: af_web_dp deliberately omitted — when present, the AppsFlyer iOS SDK
+  /// re-opens that web URL in Safari after the app is already launched via
+  /// Universal Link, causing an app→Safari→App Store bounce.
   static String generateShareLink({
     required String propertyId,
     String? propertyType,
   }) {
     final type = _normalisePropertyType(propertyType);
     final deepLinkValue = Uri.encodeComponent('property/$type/$propertyId');
-    final webFallback = Uri.encodeComponent('$shareLinkBaseUrl/$type/$propertyId');
-    return '$_oneLinkBase?pid=proplinq_app&deep_link_value=$deepLinkValue&af_web_dp=$webFallback';
+    return '$_oneLinkBase?pid=proplinq_app&deep_link_value=$deepLinkValue';
   }
 
   /// Normalise property type to the canonical slug used in deep links.

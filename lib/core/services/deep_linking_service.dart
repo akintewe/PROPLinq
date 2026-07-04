@@ -32,9 +32,23 @@ class DeepLinkingService {
   
   // Store pending deep link data for deferred deep linking
   Map<String, dynamic>? _pendingDeepLinkData;
-  
+
   // Callback function to handle deep link navigation
   Function(Map<String, dynamic>)? _onDeepLinkReceived;
+
+  // True once the splash has finished its initial routing. Until then, deep
+  // links must only be STORED (not navigated live) — otherwise the splash's
+  // pushReplacement wipes out the property screen we just pushed. The splash
+  // calls markInitialRoutingComplete() after it consumes any pending link.
+  bool _initialRoutingComplete = false;
+
+  /// Called by the splash once it has finished routing (home/guest/login) and
+  /// consumed any pending deep link. After this, live links navigate immediately.
+  void markInitialRoutingComplete() {
+    _initialRoutingComplete = true;
+  }
+
+  bool get isInitialRoutingComplete => _initialRoutingComplete;
 
   /// Initialize AppsFlyer SDK
   Future<void> initialize({
@@ -199,15 +213,24 @@ class DeepLinkingService {
         'url': url,
       };
 
-      if (_onDeepLinkReceived != null) {
-        _dbg('_handleDeepLink: firing callback (navigator ready path)');
-        _onDeepLinkReceived!(data);
-      } else {
-        _dbg('_handleDeepLink: stored pending (cold start path)');
-        _pendingDeepLinkData = data;
-      }
+      _dispatch(data);
     } catch (e) {
       _dbg('_handleDeepLink error: $e');
+    }
+  }
+
+  /// Route a resolved deep link. During the splash's initial routing phase we
+  /// only STORE the link (splash consumes it after routing finishes). Once the
+  /// app is past the splash, we navigate live.
+  void _dispatch(Map<String, dynamic> data) {
+    // Always keep a copy so the splash can consume it, even if we also fire live.
+    _pendingDeepLinkData = data;
+
+    if (_initialRoutingComplete && _onDeepLinkReceived != null) {
+      _dbg('_dispatch: firing live (post-splash)');
+      _onDeepLinkReceived!(data);
+    } else {
+      _dbg('_dispatch: stored pending (splash will consume)');
     }
   }
 
@@ -307,26 +330,19 @@ class DeepLinkingService {
       }
       
       if (propertyId != null && propertyId.isNotEmpty) {
-        
-        // Store pending deep link data
-        _pendingDeepLinkData = {
+        _dbg('_handleDeepLinkData: routed type=$propertyType id=$propertyId');
+        _dispatch({
           'propertyId': propertyId,
           'propertyType': propertyType ?? 'apartment',
           'mediaSource': mediaSource,
           'campaign': campaign,
           'customPayload': customPayload,
-        };
-
-        // Fire the callback if set. Do NOT clear _pendingDeepLinkData here —
-        // the callback in main.dart runs before the navigator context exists,
-        // so it re-stores via storePendingDeepLink. Keeping the data alive
-        // means SecondSplashView can always find it via getPendingDeepLinkData().
-        if (_onDeepLinkReceived != null) {
-          _onDeepLinkReceived!(_pendingDeepLinkData!);
-        }
+        });
       } else {
+        _dbg('_handleDeepLinkData: no propertyId resolved');
       }
     } catch (e) {
+      _dbg('_handleDeepLinkData error: $e');
     }
   }
 

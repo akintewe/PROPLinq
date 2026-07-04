@@ -166,20 +166,24 @@ class _SecondSplashViewState extends State<SecondSplashView> {
 
   void _openPendingDeepLinkAfterNav() {
     final deepLinkingService = DeepLinkingService();
-    final pendingData = deepLinkingService.getPendingDeepLinkData();
-    if (pendingData == null) return;
-
-    deepLinkingService.clearPendingDeepLinkData();
     final deepLinkRouter = DeepLinkRouter();
 
     // Wait for the pushReplacement transition (500ms) to fully complete before
-    // pushing the property screen. Using 800ms gives a safe margin so the home
-    // screen is fully on the stack before we push on top of it.
+    // pushing the property screen. 800ms gives a safe margin so the destination
+    // screen is fully on the stack before we push the property on top of it.
     Future.delayed(const Duration(milliseconds: 800), () {
-      final navContext = deepLinkRouter.navigatorKey.currentContext;
-      if (navContext != null && navContext.mounted) {
-        deepLinkRouter.handleDeepLink(navContext, pendingData);
+      final pendingData = deepLinkingService.getPendingDeepLinkData();
+      if (pendingData != null) {
+        deepLinkingService.clearPendingDeepLinkData();
+        final navContext = deepLinkRouter.navigatorKey.currentContext;
+        if (navContext != null && navContext.mounted) {
+          deepLinkRouter.handleDeepLink(navContext, pendingData);
+        }
       }
+
+      // Initial routing is done — from now on, any newly arriving deep link
+      // (foreground tap) should navigate live instead of being stored.
+      deepLinkingService.markInitialRoutingComplete();
     });
   }
 
