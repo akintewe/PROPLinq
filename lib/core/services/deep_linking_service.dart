@@ -174,11 +174,17 @@ class DeepLinkingService {
           propertyType = host;
         }
       } else if (uri.scheme == 'https' && uri.host == 'proplinq.onelink.me') {
-        // AppsFlyer OneLink — extract deep_link_value query param
-        // Format: deep_link_value=property/shortlet/UUID
-        final deepLinkValue = uri.queryParameters['deep_link_value'];
-        if (deepLinkValue != null && deepLinkValue.isNotEmpty) {
-          final segments = deepLinkValue.split('/').where((s) => s.isNotEmpty).toList();
+        // AppsFlyer OneLink. Preferred convention: deep_link_value=property_page
+        // with deep_link_sub1=UUID and deep_link_sub2=type.
+        final q = uri.queryParameters;
+        final dlv = q['deep_link_value'];
+        if (dlv == 'property_page') {
+          propertyId = q['deep_link_sub1'];
+          final sub2 = q['deep_link_sub2'];
+          propertyType = (sub2 != null && sub2.isNotEmpty) ? sub2 : 'apartment';
+        } else if (dlv != null && dlv.contains('/')) {
+          // Legacy format: deep_link_value=property/shortlet/UUID
+          final segments = dlv.split('/').where((s) => s.isNotEmpty).toList();
           if (segments.length >= 3 && segments[0] == 'property') {
             propertyType = segments[1];
             propertyId = segments[2];

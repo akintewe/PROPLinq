@@ -36,6 +36,18 @@ import GoogleMaps
     continue userActivity: NSUserActivity,
     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
   ) -> Bool {
-    return super.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    // Let the Flutter plugins (AppsFlyer + app_links) process the Universal Link.
+    super.application(application, continue: userActivity, restorationHandler: restorationHandler)
+
+    // CRITICAL: both plugins return `false` from their continueUserActivity
+    // handlers. If the aggregate delegate result is `false` for a web-browsing
+    // activity, iOS assumes the app did NOT handle the link and opens it in
+    // Safari as a fallback — which then hits AppsFlyer's store redirect and
+    // bounces to the App Store. Returning `true` here claims the link so iOS
+    // does not open Safari. The app has already handled it internally.
+    if userActivity.activityType == NSUserActivityTypeBrowsingWeb {
+      return true
+    }
+    return false
   }
 }
