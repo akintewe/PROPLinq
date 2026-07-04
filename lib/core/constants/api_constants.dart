@@ -133,7 +133,12 @@ class ApiConstants {
   static const String shareLinkBaseUrl = 'https://www.proplinq.com/property';
 
   /// Generate a shareable OneLink URL for a property.
-  /// deep_link_value encodes the property path so the app can route directly to it.
+  ///
+  /// Follows AppsFlyer's standard convention (matching the backend's spec):
+  ///   deep_link_value = property_page   (screen type — fixed on the template)
+  ///   deep_link_sub1  = {property UUID} (the item id)
+  ///   deep_link_sub2  = {property type} (shortlet / hotel / apartment)
+  ///
   /// NOTE: af_web_dp deliberately omitted — when present, the AppsFlyer iOS SDK
   /// re-opens that web URL in Safari after the app is already launched via
   /// Universal Link, causing an app→Safari→App Store bounce.
@@ -142,8 +147,10 @@ class ApiConstants {
     String? propertyType,
   }) {
     final type = _normalisePropertyType(propertyType);
-    final deepLinkValue = Uri.encodeComponent('property/$type/$propertyId');
-    return '$_oneLinkBase?pid=proplinq_app&deep_link_value=$deepLinkValue';
+    return '$_oneLinkBase?pid=proplinq_app'
+        '&deep_link_value=property_page'
+        '&deep_link_sub1=${Uri.encodeComponent(propertyId)}'
+        '&deep_link_sub2=${Uri.encodeComponent(type)}';
   }
 
   /// Normalise property type to the canonical slug used in deep links.

@@ -253,10 +253,12 @@ class DeepLinkingService {
       String? propertyId;
       String? propertyType;
       
-      // Priority 1: If deep_link_value is "property_page", use deep_link_sub1 for property ID
+      // Priority 1: If deep_link_value is "property_page" (AppsFlyer convention),
+      // deep_link_sub1 holds the property UUID and deep_link_sub2 the type.
       if (deepLinkValue != null && deepLinkValue.toString() == 'property_page') {
         propertyId = deepLinkSub1?.toString();
-        propertyType = 'apartment';
+        final sub2 = deepLinkSub2?.toString();
+        propertyType = (sub2 != null && sub2.isNotEmpty) ? sub2 : 'apartment';
       }
       // Priority 2: Try to extract property ID from deep link value if it's a URL
       else if (deepLinkValue != null && deepLinkValue.toString().isNotEmpty) {
