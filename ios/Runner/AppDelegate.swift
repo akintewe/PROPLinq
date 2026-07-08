@@ -19,35 +19,10 @@ import GoogleMaps
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  // Forward URL-scheme and Universal Link opens to the Flutter plugins
-  // (AppsFlyer + app_links) exactly once via super. Do NOT call the AppsFlyer
-  // SDK directly here as well — double-processing the userActivity makes the
-  // SDK re-open the resolved OneLink URL in Safari.
-  override func application(
-    _ app: UIApplication,
-    open url: URL,
-    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-  ) -> Bool {
-    return super.application(app, open: url, options: options)
-  }
-
-  override func application(
-    _ application: UIApplication,
-    continue userActivity: NSUserActivity,
-    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
-  ) -> Bool {
-    // Let the Flutter plugins (AppsFlyer + app_links) process the Universal Link.
-    super.application(application, continue: userActivity, restorationHandler: restorationHandler)
-
-    // CRITICAL: both plugins return `false` from their continueUserActivity
-    // handlers. If the aggregate delegate result is `false` for a web-browsing
-    // activity, iOS assumes the app did NOT handle the link and opens it in
-    // Safari as a fallback — which then hits AppsFlyer's store redirect and
-    // bounces to the App Store. Returning `true` here claims the link so iOS
-    // does not open Safari. The app has already handled it internally.
-    if userActivity.activityType == NSUserActivityTypeBrowsingWeb {
-      return true
-    }
-    return false
-  }
+  // NOTE: Deliberately NOT overriding application(open:) or
+  // continueUserActivity here. Per AppsFlyer support (ticket #1003139), the
+  // AppsFlyer Flutter plugin v6.4.0+ handles URI-scheme and Universal Link
+  // delivery automatically via swizzling. Manually forwarding to the SDK — or
+  // overriding these delegate methods — interferes with that automatic
+  // handling and was causing the app→Safari→App Store bounce.
 }

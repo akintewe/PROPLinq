@@ -139,15 +139,18 @@ class ApiConstants {
   ///   deep_link_sub1  = {property UUID} (the item id)
   ///   deep_link_sub2  = {property type} (shortlet / hotel / apartment)
   ///
-  /// NOTE: af_web_dp deliberately omitted — when present, the AppsFlyer iOS SDK
-  /// re-opens that web URL in Safari after the app is already launched via
-  /// Universal Link, causing an app→Safari→App Store bounce.
+  /// af_force_deeplink=true — per AppsFlyer support (#1002209), forces the app
+  /// to open via the URI-scheme fallback when Universal Links don't open it.
+  ///
+  /// NOTE: pid is omitted — the short link (ob0squjw) already carries
+  /// pid=my_media_source, so appending another pid conflicts. af_web_dp is also
+  /// omitted (it caused the SDK to re-open a web URL in Safari).
   static String generateShareLink({
     required String propertyId,
     String? propertyType,
   }) {
     final type = _normalisePropertyType(propertyType);
-    return '$_oneLinkBase?pid=proplinq_app'
+    return '$_oneLinkBase?af_force_deeplink=true'
         '&deep_link_value=property_page'
         '&deep_link_sub1=${Uri.encodeComponent(propertyId)}'
         '&deep_link_sub2=${Uri.encodeComponent(type)}';
