@@ -70,17 +70,19 @@ class ChatService {
         final response = await _apiService.post(
           ApiConstants.chatWebhook,
           body: body,
-          requiresAuth: true, // This will add the Bearer token
+          requiresAuth: true,
         );
 
+        print('💬 [ChatService] sendMessage status: ${response.statusCode}');
+        print('💬 [ChatService] sendMessage body: ${response.data}');
         return response.statusCode == 200 || response.statusCode == 201;
       }
     } catch (e) {
-      
-      // Print more detailed error information
+      print('💬 [ChatService] sendMessage error: $e');
       if (e is DioException) {
+        print('💬 [ChatService] DioException status: ${e.response?.statusCode}');
+        print('💬 [ChatService] DioException body: ${e.response?.data}');
       }
-      
       return false;
     }
   }

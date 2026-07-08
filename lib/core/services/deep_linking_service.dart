@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:appsflyer_sdk/appsflyer_sdk.dart';
 import 'package:app_links/app_links.dart';
 
@@ -10,18 +9,10 @@ class DeepLinkingService {
   factory DeepLinkingService() => _instance;
   DeepLinkingService._internal();
 
-  // ── On-screen debug log ─────────────────────────────────────────────
-  // Visible overlay so deep-link flow can be inspected without a cable.
-  // Remove once the flow is confirmed working.
-  static final ValueNotifier<List<String>> debugLog =
-      ValueNotifier<List<String>>(<String>[]);
-
+  // Lightweight console logging for the deep-link flow (no on-screen UI).
   static void _dbg(String msg) {
-    final ts = DateTime.now().toIso8601String().substring(11, 23);
-    final line = '$ts  $msg';
-    debugLog.value = [...debugLog.value, line];
     // ignore: avoid_print
-    print('🔗 $line');
+    print('🔗 [DeepLink] $msg');
   }
 
   AppsflyerSdk? _appsflyerSdk;
@@ -167,11 +158,22 @@ class DeepLinkingService {
       String propertyType = 'apartment';
 
       if (uri.scheme == 'proplinq') {
-        final host = uri.host;
-        final segments = uri.pathSegments;
-        propertyId = segments.isNotEmpty ? segments.first : null;
-        if (host == 'hotel' || host == 'shortlet' || host == 'apartment') {
-          propertyType = host;
+        // Two shapes arrive on this scheme:
+        //  (a) our own path form:  proplinq://shortlet/UUID
+        //  (b) AppsFlyer fallback: proplinq://?deep_link_value=property_page
+        //        &deep_link_sub1=UUID&deep_link_sub2=type
+        final q = uri.queryParameters;
+        if (q['deep_link_sub1'] != null || q['deep_link_value'] != null) {
+          propertyId = q['deep_link_sub1'];
+          final sub2 = q['deep_link_sub2'];
+          propertyType = (sub2 != null && sub2.isNotEmpty) ? sub2 : 'apartment';
+        } else {
+          final host = uri.host;
+          final segments = uri.pathSegments;
+          propertyId = segments.isNotEmpty ? segments.first : null;
+          if (host == 'hotel' || host == 'shortlet' || host == 'apartment') {
+            propertyType = host;
+          }
         }
       } else if (uri.scheme == 'https' && uri.host == 'proplinq.onelink.me') {
         // AppsFlyer OneLink. Preferred convention: deep_link_value=property_page
