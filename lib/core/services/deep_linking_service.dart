@@ -87,12 +87,21 @@ class DeepLinkingService {
       // Set up deep link listener for when app is already installed
       _appsflyerSdk?.onDeepLinking((DeepLinkResult result) {
         _dbg('onDeepLinking fired: status=${result.status}');
-        _dbg('  clickEvent=${result.deepLink?.clickEvent}');
+        final clickEvent = result.deepLink?.clickEvent;
+        _dbg('  clickEvent=$clickEvent');
         if (result.error != null) _dbg('  error=${result.error}');
 
-        if (result.deepLink != null && result.status == Status.FOUND) {
-          final clickEvent = result.deepLink!.clickEvent;
+        // Process whenever we actually have deep-link data, regardless of the
+        // exact status enum. In practice the clickEvent carries the property
+        // params (deep_link_value/sub1/sub2) even when the status check is
+        // finicky across SDK/plugin versions.
+        if (clickEvent != null &&
+            (clickEvent['deep_link_value'] != null ||
+                clickEvent['deep_link_sub1'] != null)) {
+          _dbg('  -> processing clickEvent data');
           _handleDeepLinkData(clickEvent);
+        } else {
+          _dbg('  -> no deep-link data in clickEvent (status=${result.status})');
         }
       });
 
