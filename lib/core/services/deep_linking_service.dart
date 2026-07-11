@@ -161,6 +161,19 @@ class DeepLinkingService {
       String? propertyId;
       String propertyType = 'apartment';
 
+      // AppsFlyer-wrapped URLs (proplinq://af?..., or any carrying af_deeplink/
+      // shortlink) are ALSO delivered to the AppsFlyer SDK's onDeepLinking
+      // callback, which resolves them reliably. If we also process them here via
+      // app_links, the same link is handled twice — causing a duplicate property
+      // page and a stuck-loading state. Let the SDK own these; skip here.
+      final isAppsFlyerWrapped = uri.host == 'af' ||
+          uri.queryParameters.containsKey('af_deeplink') ||
+          uri.queryParameters.containsKey('shortlink');
+      if (isAppsFlyerWrapped) {
+        _dbg('_handleDeepLink: AppsFlyer-wrapped URL, deferring to SDK onDeepLinking');
+        return;
+      }
+
       if (uri.scheme == 'proplinq') {
         // Two shapes arrive on this scheme:
         //  (a) our own path form:  proplinq://shortlet/UUID
@@ -231,10 +244,32 @@ class DeepLinkingService {
     }
   }
 
+  // Guards against opening the same property twice in quick succession. The
+  // same link can arrive via BOTH app_links and the AppsFlyer SDK callback, and
+  // multiple launch entry points (Universal Link, return-from-Safari, the
+  // "Open in app?" prompt) each re-deliver it — which caused duplicate property
+  // pages and a stuck-loading state.
+  String? _lastDispatchedId;
+  DateTime? _lastDispatchedAt;
+
   /// Route a resolved deep link. During the splash's initial routing phase we
   /// only STORE the link (splash consumes it after routing finishes). Once the
   /// app is past the splash, we navigate live.
   void _dispatch(Map<String, dynamic> data) {
+    final id = data['propertyId']?.toString();
+
+    // De-duplicate: ignore the same property re-dispatched within 5 seconds.
+    final now = DateTime.now();
+    if (id != null &&
+        id == _lastDispatchedId &&
+        _lastDispatchedAt != null &&
+        now.difference(_lastDispatchedAt!).inSeconds < 5) {
+      _dbg('_dispatch: duplicate of $id within 5s, ignored');
+      return;
+    }
+    _lastDispatchedId = id;
+    _lastDispatchedAt = now;
+
     // Always keep a copy so the splash can consume it, even if we also fire live.
     _pendingDeepLinkData = data;
 
