@@ -60,10 +60,14 @@ class DeepLinkingService {
       _onDeepLinkReceived = onDeepLinkReceived;
 
       // AppsFlyer SDK configuration
+      // NOTE: showDebug is forced true TEMPORARILY so AppsFlyer's own SDK debug
+      // logs are emitted in the TestFlight/release build. AppsFlyer support
+      // (#1003139) requires these logs as a .txt to diagnose the Universal Link
+      // Safari-bounce. Revert to `isDebug` once the ticket is resolved.
       final appsFlyerOptions = AppsFlyerOptions(
         afDevKey: 'TBCWz6fvHsJ2xegPPzHGJH',
         appId: Platform.isIOS ? '6755110033' : '', // iOS App ID for App Store (Android doesn't need appId)
-        showDebug: isDebug,
+        showDebug: true, // TEMP: force on for AppsFlyer support logs (was isDebug)
         timeToWaitForATTUserAuthorization: Platform.isIOS ? 60 : null, // iOS only
       );
 
