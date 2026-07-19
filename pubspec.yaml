@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.23+94
+version: 1.0.24+95
 
 environment:
   sdk: ^3.6.1
@@ -107,8 +107,11 @@ dependencies:
   # Push notifications with OneSignal
   onesignal_flutter: ^5.2.5
   
-  # AppsFlyer for deep linking and deferred deep linking
-  appsflyer_sdk: ^6.15.2
+  # AppsFlyer for deep linking and deferred deep linking.
+  # >=6.17.9 required: adds UIScene lifecycle support for iOS deep linking
+  # (Flutter 3.41+). Without it, Universal Links are delivered via the UIScene
+  # path and never reach the plugin, so iOS falls back to opening Safari.
+  appsflyer_sdk: ^6.18.0
   
   # app_links for handling deep links (replacement for discontinued uni_links)
   app_links: ^6.3.4

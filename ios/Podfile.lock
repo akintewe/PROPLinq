@@ -1,113 +1,26 @@
 PODS:
   - add_2_calendar (0.0.1):
     - Flutter
-  - app_links (6.4.1):
+  - appsflyer_sdk (6.18.0):
+    - appsflyer_sdk/Core (= 6.18.0)
+  - appsflyer_sdk/Core (6.18.0):
+    - AppsFlyerFramework (= 6.18.0)
     - Flutter
-  - AppAuth (1.7.6):
-    - AppAuth/Core (= 1.7.6)
-    - AppAuth/ExternalUserAgent (= 1.7.6)
-  - AppAuth/Core (1.7.6)
-  - AppAuth/ExternalUserAgent (1.7.6):
-    - AppAuth/Core
-  - AppCheckCore (11.2.0):
-    - GoogleUtilities/Environment (~> 8.0)
-    - GoogleUtilities/UserDefaults (~> 8.0)
-    - PromisesObjC (~> 2.4)
-  - appsflyer_sdk (6.17.7):
-    - appsflyer_sdk/Core (= 6.17.7)
-  - appsflyer_sdk/Core (6.17.7):
-    - AppsFlyerFramework (= 6.17.7)
-    - Flutter
-  - AppsFlyerFramework (6.17.7):
-    - AppsFlyerFramework/Main (= 6.17.7)
-  - AppsFlyerFramework/Main (6.17.7)
-  - audioplayers_darwin (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - DKImagePickerController/Core (4.3.9):
-    - DKImagePickerController/ImageDataManager
-    - DKImagePickerController/Resource
-  - DKImagePickerController/ImageDataManager (4.3.9)
-  - DKImagePickerController/PhotoGallery (4.3.9):
-    - DKImagePickerController/Core
-    - DKPhotoGallery
-  - DKImagePickerController/Resource (4.3.9)
-  - DKPhotoGallery (0.0.19):
-    - DKPhotoGallery/Core (= 0.0.19)
-    - DKPhotoGallery/Model (= 0.0.19)
-    - DKPhotoGallery/Preview (= 0.0.19)
-    - DKPhotoGallery/Resource (= 0.0.19)
-    - SDWebImage
-    - SwiftyGif
-  - DKPhotoGallery/Core (0.0.19):
-    - DKPhotoGallery/Model
-    - DKPhotoGallery/Preview
-    - SDWebImage
-    - SwiftyGif
-  - DKPhotoGallery/Model (0.0.19):
-    - SDWebImage
-    - SwiftyGif
-  - DKPhotoGallery/Preview (0.0.19):
-    - DKPhotoGallery/Model
-    - DKPhotoGallery/Resource
-    - SDWebImage
-    - SwiftyGif
-  - DKPhotoGallery/Resource (0.0.19):
-    - SDWebImage
-    - SwiftyGif
-  - file_picker (0.0.1):
-    - DKImagePickerController/PhotoGallery
-    - Flutter
+  - AppsFlyerFramework (6.18.0):
+    - AppsFlyerFramework/Main (= 6.18.0)
+  - AppsFlyerFramework/Main (6.18.0)
   - Flutter (1.0.0)
-  - flutter_local_notifications (0.0.1):
-    - Flutter
-  - geolocator_apple (1.2.0):
-    - Flutter
-    - FlutterMacOS
   - Google-Maps-iOS-Utils (5.0.0):
     - GoogleMaps (~> 8.0)
   - google_maps_flutter_ios (0.0.1):
     - Flutter
     - Google-Maps-iOS-Utils (< 7.0, >= 5.0)
     - GoogleMaps (< 10.0, >= 8.4)
-  - google_sign_in_ios (0.0.1):
-    - AppAuth (>= 1.7.4)
-    - Flutter
-    - FlutterMacOS
-    - GoogleSignIn (~> 8.0)
-    - GTMSessionFetcher (>= 3.4.0)
   - GoogleMaps (8.4.0):
     - GoogleMaps/Maps (= 8.4.0)
   - GoogleMaps/Base (8.4.0)
   - GoogleMaps/Maps (8.4.0):
     - GoogleMaps/Base
-  - GoogleSignIn (8.0.0):
-    - AppAuth (< 2.0, >= 1.7.3)
-    - AppCheckCore (~> 11.0)
-    - GTMAppAuth (< 5.0, >= 4.1.1)
-    - GTMSessionFetcher/Core (~> 3.3)
-  - GoogleUtilities/Environment (8.1.0):
-    - GoogleUtilities/Privacy
-  - GoogleUtilities/Logger (8.1.0):
-    - GoogleUtilities/Environment
-    - GoogleUtilities/Privacy
-  - GoogleUtilities/Privacy (8.1.0)
-  - GoogleUtilities/UserDefaults (8.1.0):
-    - GoogleUtilities/Logger
-    - GoogleUtilities/Privacy
-  - GTMAppAuth (4.1.1):
-    - AppAuth/Core (~> 1.7)
-    - GTMSessionFetcher/Core (< 4.0, >= 3.3)
-  - GTMSessionFetcher (3.5.0):
-    - GTMSessionFetcher/Full (= 3.5.0)
-  - GTMSessionFetcher/Core (3.5.0)
-  - GTMSessionFetcher/Full (3.5.0):
-    - GTMSessionFetcher/Core
-  - image_picker_ios (0.0.1):
-    - Flutter
-  - local_auth_darwin (0.0.1):
-    - Flutter
-    - FlutterMacOS
   - motion_sensors (0.0.1):
     - Flutter
   - NWWebSocket (0.5.10)
@@ -160,10 +73,6 @@ PODS:
     - OneSignalXCFramework/OneSignalNotifications
     - OneSignalXCFramework/OneSignalOSCore
     - OneSignalXCFramework/OneSignalOutcomes
-  - path_provider_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - PromisesObjC (2.4.0)
   - pusher_channels_flutter (0.0.1):
     - Flutter
     - PusherSwift (~> 10.1.9)
@@ -171,165 +80,63 @@ PODS:
     - NWWebSocket (~> 0.5.9)
     - PusherTweetNacl (~> 1.2.0)
   - PusherTweetNacl (1.2.0)
-  - SDWebImage (5.21.3):
-    - SDWebImage/Core (= 5.21.3)
-  - SDWebImage/Core (5.21.3)
-  - share_plus (0.0.1):
-    - Flutter
-  - shared_preferences_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
   - sign_in_with_apple (0.0.1):
     - Flutter
-  - sqflite_darwin (0.0.4):
-    - Flutter
-    - FlutterMacOS
-  - SwiftyGif (5.4.5)
-  - url_launcher_ios (0.0.1):
-    - Flutter
-  - video_player_avfoundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - webview_flutter_wkwebview (0.0.1):
-    - Flutter
-    - FlutterMacOS
 
 DEPENDENCIES:
   - add_2_calendar (from `.symlinks/plugins/add_2_calendar/ios`)
-  - app_links (from `.symlinks/plugins/app_links/ios`)
   - appsflyer_sdk (from `.symlinks/plugins/appsflyer_sdk/ios`)
-  - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
-  - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - Flutter (from `Flutter`)
-  - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
-  - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
   - google_maps_flutter_ios (from `.symlinks/plugins/google_maps_flutter_ios/ios`)
-  - google_sign_in_ios (from `.symlinks/plugins/google_sign_in_ios/darwin`)
-  - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
-  - local_auth_darwin (from `.symlinks/plugins/local_auth_darwin/darwin`)
   - motion_sensors (from `.symlinks/plugins/motion_sensors/ios`)
   - onesignal_flutter (from `.symlinks/plugins/onesignal_flutter/ios`)
-  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - pusher_channels_flutter (from `.symlinks/plugins/pusher_channels_flutter/ios`)
-  - share_plus (from `.symlinks/plugins/share_plus/ios`)
-  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/ios`)
-  - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
-  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
-  - video_player_avfoundation (from `.symlinks/plugins/video_player_avfoundation/darwin`)
-  - webview_flutter_wkwebview (from `.symlinks/plugins/webview_flutter_wkwebview/darwin`)
 
 SPEC REPOS:
   trunk:
-    - AppAuth
-    - AppCheckCore
     - AppsFlyerFramework
-    - DKImagePickerController
-    - DKPhotoGallery
     - Google-Maps-iOS-Utils
     - GoogleMaps
-    - GoogleSignIn
-    - GoogleUtilities
-    - GTMAppAuth
-    - GTMSessionFetcher
     - NWWebSocket
     - OneSignalXCFramework
-    - PromisesObjC
     - PusherSwift
     - PusherTweetNacl
-    - SDWebImage
-    - SwiftyGif
 
 EXTERNAL SOURCES:
   add_2_calendar:
     :path: ".symlinks/plugins/add_2_calendar/ios"
-  app_links:
-    :path: ".symlinks/plugins/app_links/ios"
   appsflyer_sdk:
     :path: ".symlinks/plugins/appsflyer_sdk/ios"
-  audioplayers_darwin:
-    :path: ".symlinks/plugins/audioplayers_darwin/darwin"
-  file_picker:
-    :path: ".symlinks/plugins/file_picker/ios"
   Flutter:
     :path: Flutter
-  flutter_local_notifications:
-    :path: ".symlinks/plugins/flutter_local_notifications/ios"
-  geolocator_apple:
-    :path: ".symlinks/plugins/geolocator_apple/darwin"
   google_maps_flutter_ios:
     :path: ".symlinks/plugins/google_maps_flutter_ios/ios"
-  google_sign_in_ios:
-    :path: ".symlinks/plugins/google_sign_in_ios/darwin"
-  image_picker_ios:
-    :path: ".symlinks/plugins/image_picker_ios/ios"
-  local_auth_darwin:
-    :path: ".symlinks/plugins/local_auth_darwin/darwin"
   motion_sensors:
     :path: ".symlinks/plugins/motion_sensors/ios"
   onesignal_flutter:
     :path: ".symlinks/plugins/onesignal_flutter/ios"
-  path_provider_foundation:
-    :path: ".symlinks/plugins/path_provider_foundation/darwin"
   pusher_channels_flutter:
     :path: ".symlinks/plugins/pusher_channels_flutter/ios"
-  share_plus:
-    :path: ".symlinks/plugins/share_plus/ios"
-  shared_preferences_foundation:
-    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   sign_in_with_apple:
     :path: ".symlinks/plugins/sign_in_with_apple/ios"
-  sqflite_darwin:
-    :path: ".symlinks/plugins/sqflite_darwin/darwin"
-  url_launcher_ios:
-    :path: ".symlinks/plugins/url_launcher_ios/ios"
-  video_player_avfoundation:
-    :path: ".symlinks/plugins/video_player_avfoundation/darwin"
-  webview_flutter_wkwebview:
-    :path: ".symlinks/plugins/webview_flutter_wkwebview/darwin"
 
 SPEC CHECKSUMS:
   add_2_calendar: 78896c85421aeb7c19988c2b3aad71983089b7e3
-  app_links: 3dbc685f76b1693c66a6d9dd1e9ab6f73d97dc0a
-  AppAuth: d4f13a8fe0baf391b2108511793e4b479691fb73
-  AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
-  appsflyer_sdk: 01d0cd834fe2fffd7f2372ab38690f7483587720
-  AppsFlyerFramework: ae7caf1688348f2d7a742037bd4fc6966d39d362
-  audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
-  DKImagePickerController: 946cec48c7873164274ecc4624d19e3da4c1ef3c
-  DKPhotoGallery: b3834fecb755ee09a593d7c9e389d8b5d6deed60
-  file_picker: a0560bc09d61de87f12d246fc47d2119e6ef37be
+  appsflyer_sdk: 334ef01a9d1a1b1483ef092c729da0bbd2f115c3
+  AppsFlyerFramework: c1e1e4cd3b98ffdca2fe32b17ae93909e409b6ab
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_local_notifications: 643a3eda1ce1c0599413ca31672536d423dee214
-  geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
   Google-Maps-iOS-Utils: 66d6de12be1ce6d3742a54661e7a79cb317a9321
   google_maps_flutter_ios: 0291eb2aa252298a769b04d075e4a9d747ff7264
-  google_sign_in_ios: b48bb9af78576358a168361173155596c845f0b9
   GoogleMaps: 8939898920281c649150e0af74aa291c60f2e77d
-  GoogleSignIn: ce8c89bb9b37fb624b92e7514cc67335d1e277e4
-  GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
-  GTMAppAuth: f69bd07d68cd3b766125f7e072c45d7340dea0de
-  GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
-  image_picker_ios: 7fe1ff8e34c1790d6fff70a32484959f563a928a
-  local_auth_darwin: c3ee6cce0a8d56be34c8ccb66ba31f7f180aaebb
   motion_sensors: 741e702c17467b9569a92165dda8d4d88c6167f1
   NWWebSocket: 873eb4b18acd0317da70cdba388d792a3187ce00
   onesignal_flutter: 3a2b51f9262c851166a882a553d71a8ccec4e29c
   OneSignalXCFramework: 7112f3e89563e41ebc23fe807788f11985ac541c
-  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
-  PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   pusher_channels_flutter: 2723222f2686852dd91d13780938d11cca114a39
   PusherSwift: 84a45a6b62c137c52ca948626817989d3127c022
   PusherTweetNacl: 015f56f2cf010e718703f2bd9bca66fdcc91b208
-  SDWebImage: 16309af6d214ba3f77a7c6f6fdda888cb313a50a
-  share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
-  shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   sign_in_with_apple: c5dcc141574c8c54d5ac99dd2163c0c72ad22418
-  sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
-  SwiftyGif: 706c60cf65fa2bc5ee0313beece843c8eb8194d4
-  url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
-  video_player_avfoundation: 2cef49524dd1f16c5300b9cd6efd9611ce03639b
-  webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
 
 PODFILE CHECKSUM: de97cdd71230554f2f9175b64953d8f22054f2bf
 
