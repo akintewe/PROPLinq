@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>AppsFlyerDevKey</key>
+	<string>TBCWz6fvHsJ2xegPPzHGJH</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -22,45 +24,72 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.proplinq.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>proplinq</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.proplinq.app.google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1001918940088-2sevr50al9csf6spbgm8q37cj4i3eg19</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
+	<key>GIDClientID</key>
+	<string>1001918940088-2sevr50al9csf6spbgm8q37cj4i3eg19.apps.googleusercontent.com</string>
 	<key>GMSApiKey</key>
 	<string>AIzaSyAtLvjrEcosVTq266ARbO2KBFN_9RSyobQ</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>UIDeviceFamily</key>
-	<array>
-		<integer>1</integer>
-		<integer>2</integer>
-	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Proplinq needs your location to show you properties near you and provide accurate location-based property recommendations.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Proplinq needs access to your calendar to help you schedule property viewings and manage booking appointments.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Proplinq needs access to your camera to take photos for property listings and chat messages.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Proplinq uses Face ID to securely sign you in to your account.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Proplinq needs your location to show you properties near you and provide accurate location-based property recommendations.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Proplinq needs your location to show you properties near you and provide accurate location-based property recommendations.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Proplinq needs access to your photo library so you can upload property photos and personalize your listings.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Proplinq needs access to save photos to your photo library when you take pictures for property listings or chat messages.</string>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Proplinq uses Face ID to securely sign you in to your account.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Proplinq needs access to your camera to take photos for property listings and chat messages.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Proplinq needs your location to show you properties near you and provide accurate location-based property recommendations.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Proplinq needs access to your microphone to record videos with audio for property listings and chat messages.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>Proplinq needs access to your calendar to help you schedule property viewings and manage booking appointments.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Proplinq needs access to save photos to your photo library when you take pictures for property listings or chat messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Proplinq needs access to your photo library so you can upload property photos and personalize your listings.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+	</array>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+		<integer>2</integer>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -81,49 +110,5 @@
 	</array>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
-	
-	<!-- Google Sign-In iOS client ID -->
-	<key>GIDClientID</key>
-	<string>1001918940088-2sevr50al9csf6spbgm8q37cj4i3eg19.apps.googleusercontent.com</string>
-
-	<!-- Deep Linking URL Schemes -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string>com.proplinq.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>proplinq</string>
-			</array>
-		</dict>
-		<!-- Google Sign-In reversed iOS client ID scheme -->
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string>com.proplinq.app.google</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.1001918940088-2sevr50al9csf6spbgm8q37cj4i3eg19</string>
-			</array>
-		</dict>
-	</array>
-	
-	<!-- AppsFlyer Configuration -->
-	<key>AppsFlyerDevKey</key>
-	<string>TBCWz6fvHsJ2xegPPzHGJH</string>
-	
-	<!-- Universal Links (Associated Domains) - Configure in Xcode -->
-	<!-- Steps:
-	     1. Open ios/Runner.xcworkspace in Xcode
-	     2. Select Runner target → Signing & Capabilities tab
-	     3. Click "+ Capability" → Add "Associated Domains"
-	     4. Add: applinks:proplinq.com
-	     5. Backend must host .well-known/apple-app-site-association at https://proplinq.com/.well-known/apple-app-site-association
-	        covering paths: /property/*
-	-->
 </dict>
 </plist>
