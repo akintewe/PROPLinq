@@ -74,13 +74,28 @@ class DeepLinkingService {
       _appsflyerSdk = AppsflyerSdk(appsFlyerOptions);
       print('✅ [DeepLinkingService] AppsFlyer SDK instance created');
       
-      // Set up deep link listener
+      // Set up deep link listener (deferred deep linking on first launch)
       _appsflyerSdk?.onInstallConversionData((data) {
-        final status = data['status'];
-        _dbg('onInstallConversionData: status=$status first=${data['is_first_launch']}');
-        // Check if this is a deferred deep link (user installed after clicking link)
-        if (status == 'NON_ORGANIC' && data['is_first_launch'] == true) {
-          _handleDeepLinkData(data);
+        // AppsFlyer sends status under 'af_status' or 'status'; is_first_launch
+        // and is_deferred may arrive as bool OR string, so normalise both.
+        final status = (data['af_status'] ?? data['status'])?.toString();
+        final firstRaw = data['is_first_launch'];
+        final isFirstLaunch =
+            firstRaw == true || firstRaw?.toString() == 'true';
+        final deferredRaw = data['is_deferred'];
+        final isDeferred =
+            deferredRaw == true || deferredRaw?.toString() == 'true';
+        _dbg('onInstallConversionData: status=$status '
+            'first=$isFirstLaunch deferred=$isDeferred');
+        _dbg('  full data=$data');
+        // Handle the deferred deep link on the first non-organic launch.
+        if (status == 'Non-organic' ||
+            status == 'NON_ORGANIC' ||
+            isDeferred) {
+          if (isFirstLaunch || isDeferred) {
+            _dbg('  -> processing deferred conversion data');
+            _handleDeepLinkData(data);
+          }
         }
       });
 

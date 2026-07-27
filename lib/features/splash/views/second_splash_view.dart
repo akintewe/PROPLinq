@@ -41,6 +41,20 @@ class _SecondSplashViewState extends State<SecondSplashView> {
       // Check if user is logged in
       final isLoggedIn = await _storageService.isLoggedIn();
       final token = await _storageService.getToken();
+
+      // Deferred deep links resolve via a network call that can land AFTER the
+      // splash is ready to route. On a fresh install (not logged in, onboarding
+      // not seen), briefly poll for a pending deep link so a deferred property
+      // link isn't lost to the onboarding path. Capped so launch never hangs.
+      if (!(isLoggedIn && token != null)) {
+        final hasSeenOnboarding = await _storageService.hasSeenOnboarding();
+        if (!hasSeenOnboarding) {
+          for (var i = 0; i < 12; i++) {
+            if (DeepLinkingService().getPendingDeepLinkData() != null) break;
+            await Future.delayed(const Duration(milliseconds: 250));
+          }
+        }
+      }
       
       if (isLoggedIn && token != null) {
         // Check if remember me is enabled and still valid (within 5 days)
@@ -63,7 +77,16 @@ class _SecondSplashViewState extends State<SecondSplashView> {
           }
         }
       } else {
-        // User is not logged in
+        // User is not logged in.
+        // If a deep link is pending (e.g. a DEFERRED deep link on a fresh
+        // install), skip onboarding and go straight to guest home so the
+        // property opens — onboarding does not consume pending deep links.
+        final pendingDeepLink =
+            DeepLinkingService().getPendingDeepLinkData();
+        if (pendingDeepLink != null) {
+          _navigateToGuestHome();
+          return;
+        }
         // Show onboarding only on the very first launch; afterwards go straight to guest dashboard
         final hasSeenOnboarding = await _storageService.hasSeenOnboarding();
         if (hasSeenOnboarding) {
