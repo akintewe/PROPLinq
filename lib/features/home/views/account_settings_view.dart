@@ -523,12 +523,15 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   }
 
   String _getKycStatusText() {
-    if (_currentUser?.kycStatus == true) {
-      return 'Identity verified';
-    } else if (_currentUser?.kycData != null) {
-      return 'Verification in progress';
-    } else {
-      return 'Identity verification required';
+    switch (_currentUser?.verificationStatus) {
+      case 'Verified':
+        return 'Identity verified';
+      case 'Pending':
+        return 'Verification in progress';
+      case 'Rejected':
+        return 'Verification rejected';
+      default:
+        return 'Identity verification required';
     }
   }
 
@@ -620,9 +623,9 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
                         icon: Icons.verified_user_outlined,
                         title: 'KYC Verification',
                         subtitle: _getKycStatusText(),
-                        isVerified: _currentUser!.kycStatus == true,
-                        onVerify: _currentUser!.kycStatus != true 
-                            ? _navigateToKycScreen 
+                        isVerified: _currentUser!.verificationStatus == 'Verified',
+                        onVerify: _currentUser!.verificationStatus != 'Verified'
+                            ? _navigateToKycScreen
                             : null,
                       ),
                       
