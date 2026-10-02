@@ -140,12 +140,54 @@ class _PropertyListingViewState extends State<PropertyListingView> {
     super.dispose();
   }
 
-  void _nextStep() {
+  Future<void> _nextStep() async {
+    if (_currentStep == 0 && !_descriptionController.text.toLowerCase().contains('caution')) {
+      final shouldContinue = await _showCautionFeeReminderDialog();
+      if (shouldContinue != true) return;
+    }
     if (_currentStep < _totalSteps - 1) {
       setState(() {
         _currentStep++;
       });
     }
+  }
+
+  Future<bool?> _showCautionFeeReminderDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: Color(0xFFE6A817), size: 24),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Add your caution fee?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Your description doesn\'t mention a caution fee. If you charge one, clearly state the exact amount in the description now, agents who disclose fees upfront build more trust with clients.',
+          style: TextStyle(fontSize: 15, color: Color(0xFF444444), height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Continue anyway', style: TextStyle(color: Color(0xFF868686))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Let me add it',
+              style: TextStyle(color: Color(0xFF426DC2), fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _previousStep() {
