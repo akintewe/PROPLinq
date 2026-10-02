@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:proplinq/core/constants/app_colors.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/views/login_view.dart';
@@ -24,6 +26,73 @@ class SettingsView extends StatefulWidget {
 class _SettingsViewState extends State<SettingsView> {
   final AuthService _authService = AuthService();
   bool _isLoggingOut = false;
+
+  final ShorebirdUpdater _updater = ShorebirdUpdater();
+  String _appVersion = '';
+  int? _currentPatchNumber;
+  UpdateStatus? _updateStatus;
+  bool _isCheckingForUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersionInfo();
+  }
+
+  Future<void> _loadVersionInfo() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    Patch? currentPatch;
+    if (_updater.isAvailable) {
+      try {
+        currentPatch = await _updater.readCurrentPatch();
+      } catch (_) {
+        // Ignore - patch info is optional for display purposes.
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _appVersion = '${packageInfo.version} (${packageInfo.buildNumber})';
+      _currentPatchNumber = currentPatch?.number;
+    });
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (!_updater.isAvailable || _isCheckingForUpdate) return;
+    setState(() {
+      _isCheckingForUpdate = true;
+      _updateStatus = null;
+    });
+    try {
+      final status = await _updater.checkForUpdate();
+      if (!mounted) return;
+      setState(() => _updateStatus = status);
+      if (status == UpdateStatus.outdated) {
+        await _updater.update();
+        if (!mounted) return;
+        setState(() => _updateStatus = UpdateStatus.restartRequired);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _updateStatus = UpdateStatus.unavailable);
+    } finally {
+      if (mounted) setState(() => _isCheckingForUpdate = false);
+    }
+  }
+
+  String _updateStatusLabel() {
+    if (_isCheckingForUpdate) return 'Checking for updates…';
+    switch (_updateStatus) {
+      case UpdateStatus.upToDate:
+        return "You're on the latest update";
+      case UpdateStatus.restartRequired:
+        return 'Update downloaded — restart the app to apply';
+      case UpdateStatus.outdated:
+        return 'Downloading update…';
+      case UpdateStatus.unavailable:
+      case null:
+        return 'Tap to check for updates';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +223,10 @@ class _SettingsViewState extends State<SettingsView> {
                           _showLogoutDialog(context);
                         },
                       ),
+
+                      const SizedBox(height: 24),
+
+                      _buildVersionFooter(),
                     ],
                   ),
                 ),
@@ -161,6 +234,52 @@ class _SettingsViewState extends State<SettingsView> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildVersionFooter() {
+    return GestureDetector(
+      onTap: _updater.isAvailable ? _checkForUpdate : null,
+      child: Column(
+        children: [
+          Text(
+            _appVersion.isEmpty ? 'Loading version…' : 'Version $_appVersion',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+          if (_updater.isAvailable) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_isCheckingForUpdate || _updateStatus == UpdateStatus.outdated) ...[
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 1.5),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  _currentPatchNumber != null
+                      ? 'Patch $_currentPatchNumber · ${_updateStatusLabel()}'
+                      : _updateStatusLabel(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: _updateStatus == UpdateStatus.restartRequired
+                        ? const Color(0xFF426DC2)
+                        : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
