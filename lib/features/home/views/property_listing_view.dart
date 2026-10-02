@@ -564,7 +564,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         // Description
         CustomTextField(
           label: 'Description',
-          hintText: 'Type description here',
+          hintText: 'Type description here. Remember to include your caution fee (amount) if applicable.',
           controller: _descriptionController,
           maxLines: 4,
         ),

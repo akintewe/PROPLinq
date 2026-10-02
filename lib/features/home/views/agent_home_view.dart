@@ -693,9 +693,6 @@ class _AgentHomeViewState extends State<AgentHomeView> with TickerProviderStateM
   Future<void> _showCautionFeeNoticeIfNeeded() async {
     if (_currentUser == null) return;
 
-    final agentType = _currentUser!.agentType?.toLowerCase().replaceAll(' ', '_') ?? '';
-    if (agentType != 'shortlet') return;
-
     final alreadySeen = await _prefsService.hasDismissedCautionFeeNotice();
     if (alreadySeen) return;
 
