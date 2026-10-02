@@ -159,7 +159,7 @@ class _PropertyListingViewState extends State<PropertyListingView> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.info_outline_rounded, color: Color(0xFFE6A817), size: 24),
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFE6A817), size: 24),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
