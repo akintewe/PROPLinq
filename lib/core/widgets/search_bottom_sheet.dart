@@ -328,7 +328,7 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
                 'description': property.description,
                 'features': property.features,
                 'imageUrl': property.imageUrl,
-                'images': property.imageUrl != null ? [{'full_url': property.imageUrl}] : null,
+                'images': property.images ?? (property.imageUrl != null ? [{'full_url': property.imageUrl}] : null),
                 'rooms': property.rawJson?['rooms'],
                 'has_units': property.rawJson?['has_units'],
                 'user': property.user?.toJson(),
